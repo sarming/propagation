@@ -1,7 +1,6 @@
-import re
 import networkx as nx
-import pandas as pd
 import numpy as np
+import pandas as pd
 import scipy as sp
 
 
@@ -12,9 +11,9 @@ def adjlist(file, save_as=None):
     return graph
 
 
-def save_labelled_graph(filename, A, node_labels):
-    np.savez_compressed(filename, data=A.data, indices=A.indices, indptr=A.indptr, shape=A.shape, node_list=node_labels)
-    # np.savez(filename, data=A.data, indices=A.indices, indptr=A.indptr, shape=A.shape, node_labels=node_labels)
+def save_labelled_graph(filename, A, node_labels, compressed=False):
+    savez = np.savez_compressed if compressed else np.savez
+    savez(filename, data=A.data, indices=A.indices, indptr=A.indptr, shape=A.shape, node_labels=node_labels)
 
 
 def labelled_graph(filename):
@@ -40,4 +39,3 @@ def tweets(file, node_labels):
     csv['source'] = pd.Series((reverse.get(author, None) for author in csv['author']), dtype='Int64')
 
     return csv[['source', 'author_feature', 'tweet_feature', 'retweets']]
-
