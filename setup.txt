@@ -1,0 +1,17 @@
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh
+bash
+conda config --set auto_activate_base false
+
+# If intel is desired (untested)
+conda config --add channels intel
+conda update -n base -c defaults conda
+conda create --name propagation intelpython3_core python=3
+
+# Otherwise
+conda create --name propagation python=3
+
+conda activate propagation
+conda install matplotlib graphviz networkx pandas numpy scipy
+conda install -c conda-forge jupyterlab
+pip install profilehooks ray
