@@ -7,7 +7,7 @@ import scipy as sp
 import propagation
 
 
-def ray_simulator(chunks=8):
+def ray_simulator(num_chunks=None):
     @ray.remote
     def worker(A, sources, p, discount, depth, max_nodes, samples):
         A = sp.sparse.csr_matrix(*A)
@@ -26,7 +26,7 @@ def ray_simulator(chunks=8):
     def simulate(A, sources, p, discount=1., depth=1, max_nodes=1000, samples=1, return_stats=True):
         """Simulate tweets starting from sources, return mean retweets and retweet probability."""
         A = ray.put(((A.data, A.indices, A.indptr), A.shape))
-        res = [worker.remote(A, s, p, discount, depth, max_nodes, samples) for s in chunk(sources, chunks)]
+        res = [worker.remote(A, s, p, discount, depth, max_nodes, samples) for s in chunk(sources, num_chunks)]
         retweets = itertools.chain(*ray.get(res))
 
         if return_stats:
@@ -34,6 +34,9 @@ def ray_simulator(chunks=8):
         return retweets
 
     ray.init(ignore_reinit_error=True)
+    if num_chunks is None:
+        num_chunks = int(ray.cluster_resources()['CPU']) * 4
+
     return simulate
 
 
