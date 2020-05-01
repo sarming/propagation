@@ -50,6 +50,8 @@ def invert_monotone(fun, goal, lb, ub, eps):
 
 
 def logging(fun):
+    """Simple function decorator that prints every function invocation."""
+
     @wraps(fun)
     def wrapper(*args, **kwargs):
         print(f'calling {fun.__name__}({args},{kwargs})')
@@ -58,38 +60,42 @@ def logging(fun):
     return wrapper
 
 
+def tweet_statistics(tweets, min_size=10):
+    stats = tweets.groupby(['author_feature', 'tweet_feature']).agg(
+        tweets=('source', 'size'),
+        retweet_probability=('retweets', lambda s: s.astype(bool).mean()),
+        mean_retweets=('retweets', 'mean'),
+        median_retweets=('retweets', 'median'),
+        max_retweets=('retweets', 'max'),
+        # sources=('source', list),
+    ).dropna().astype({'tweets': 'Int64', 'max_retweets': 'Int64'})
+    stats = stats[stats.tweets >= min_size]  # Remove small classes
+    return stats
+
+
+def tweet_sources(tweets):
+    return tweets.dropna().groupby('author_feature')['source'].unique()
+
+
 class Simulation:
-    def __init__(self, A, tweets, simulate=propagation.simulate):
+    def __init__(self, A, tweets, simulator=propagation.simulate):
         self.A = A
-        self.stats = Simulation.tweet_statistics(tweets)
+        self.stats = tweet_statistics(tweets)
+        self.sources = tweet_sources(tweets)
         self.params = pd.DataFrame({'freq': self.stats.tweets / self.stats.tweets.sum(),
                                     'edge_probability': np.NaN,  # will be calculated below
                                     'discount_factor': 1.0,
-                                    'max_retweets': 10 * self.stats.max_retweets,
+                                    'max_retweets': 100 * self.stats.max_retweets,
                                     'depth': 10,
                                     })
-        self.sources = tweets.dropna().groupby('author_feature')['source'].unique()
         self.features = self.stats.index
 
-        self._simulate = simulate
-        # self._simulate = parallel.ray_simulator(8)
-        # self._simulate = parallel.pool_simulator(self.A)
-        self._simulate = logging(self._simulate)
+        self.simulator = simulator
+        # self.simulator = parallel.ray_simulator()
+        # self.simulator = parallel.pool_simulator(self.A)
+        self.simulator = logging(self.simulator)
 
         self.params['edge_probability'] = self.edge_probability_from_retweet_probability()
-
-    @staticmethod
-    def tweet_statistics(tweets, min_size=10):
-        stats = tweets.groupby(['author_feature', 'tweet_feature']).agg(
-            tweets=('source', 'size'),
-            retweet_probability=('retweets', lambda s: s.astype(bool).mean()),
-            mean_retweets=('retweets', 'mean'),
-            median_retweets=('retweets', 'median'),
-            max_retweets=('retweets', 'max'),
-            # sources=('source', list),
-        ).dropna().astype({'tweets': 'Int64', 'max_retweets': 'Int64'})
-        stats = stats[stats.tweets >= min_size]  # Remove small classes
-        return stats
 
     @classmethod
     def from_files(cls, graph_file, tweet_file):
@@ -155,16 +161,17 @@ class Simulation:
                             eps) for f in features), index=features)
 
     @timecall
-    def discount_factor_from_mean_retweets(self, sources=None, depth=10, samples=1000, eps=0.1, features=None):
+    def discount_factor_from_mean_retweets(self, sources=None, depth=10, max_nodes=None, samples=1000, eps=0.1, features=None):
         """Find discount factor for given feature vector (or all if none given)."""
         if features is None:
             features = self.features
         return pd.Series((
-            invert_monotone(lambda d: self._simulate(A=self.A,
+            invert_monotone(lambda d: self.simulator(A=self.A,
                                                      sources=self._default_sources(sources, f, True),
                                                      p=self.params.loc[f, 'edge_probability'],
                                                      discount=d,
                                                      depth=depth,
+                                                     max_nodes=max_nodes,
                                                      samples=samples)[0],
                             self.stats.loc[f, 'mean_retweets'],
                             0, 1,
@@ -176,7 +183,7 @@ class Simulation:
             sources = self._default_sources(sources, feature)
         params = self._default_params(params, feature)
 
-        return self._simulate(self.A,
+        return self.simulator(self.A,
                               sources,
                               p=params.edge_probability,
                               discount=params.discount_factor,
