@@ -129,9 +129,9 @@ class Simulation:
             try:
                 try:
                     return sources[feature]
-                except KeyError:
+                except (KeyError, TypeError, IndexError):
                     return sources[author_feature]
-            except TypeError:
+            except (KeyError, TypeError, IndexError):
                 pass
         return sources
 
@@ -147,7 +147,7 @@ class Simulation:
             if maybe_per_feature:
                 try:
                     params = params[feature]
-                except KeyError:
+                except (KeyError, TypeError, IndexError):
                     pass
 
         if not isinstance(params, pd.Series):
@@ -167,7 +167,8 @@ class Simulation:
                             eps) for f in features), index=features)
 
     @timecall
-    def discount_factor_from_mean_retweets(self, sources=None, depth=10, max_nodes=None, samples=1000, eps=0.1, features=None):
+    def discount_factor_from_mean_retweets(self, sources=None, depth=10, max_nodes=None, samples=1000, eps=0.1,
+                                           features=None):
         """Find discount factor for given feature vector (or all if none given)."""
         if features is None:
             features = self.features
@@ -183,10 +184,10 @@ class Simulation:
                             0, 1,
                             eps=eps) for f in features), index=features)
 
-    def simulate(self, feature=None, sources=None, params=None, samples=1, return_stats=True):
+    def simulate(self, feature=None, sources=None, params=None, samples=1, return_stats=True, args_map_feature=False):
         """Simulate messages with given feature vector."""
-        sources = self._default_sources(sources, feature)
-        params = self._default_params(params, feature)
+        sources = self._default_sources(sources, feature, args_map_feature)
+        params = self._default_params(params, feature, args_map_feature)
 
         return self.simulator(self.A,
                               sources,
@@ -196,6 +197,11 @@ class Simulation:
                               max_nodes=params.max_nodes,
                               samples=samples,
                               return_stats=return_stats)
+
+    def run(self, num_features, sources=1, params=None, samples=100):
+        for feature in self.sample_feature(num_features):
+            yield self.simulate(feature, sources=sources, params=params, samples=samples, return_stats=False,
+                                args_map_feature=True)
 
 
 if __name__ == "__main__":
@@ -220,7 +226,8 @@ if __name__ == "__main__":
     # print(sim.params.edge_probability)
     # ray.get(sim.discount_factor_from_mean_retweets(samples=1000, eps=0.1))
     # pool = multiprocessing.Pool(500, initializer=make_global, initargs=(sim.A,))
-    sim.discount_factor_from_mean_retweets(samples=1000, eps=0.1, features=[('0010', '0010')])
+    sim.edge_probability_from_retweet_probability(features=[('0000', '0001')], sources=sim.sources['0101'])
+    # sim.discount_factor_from_mean_retweets(samples=1000, eps=0.1, features=[('0010', '0010')])
     # sim.search_parameters(samples=1, eps=0.5,  feature=('0000', '0101') )
     # , feature=('0010', '1010'))
     # print(sim.features.loc[('0010', '1010')])
