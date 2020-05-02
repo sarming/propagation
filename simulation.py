@@ -17,7 +17,9 @@ def calculate_retweet_probability(A, sources, p):
         sources: List of source nodes, one per tweet.
         p: Edge probability.
 
-    Returns: mean_{x in sources} 1-(1-p)^{deg-(x)}
+    Returns:
+        mean_{x in sources} 1-(1-p)^{deg-(x)}
+        This is the expected value of simulate(A, sources, p, depth=1)[1].
     """
     return sum(1 - (1 - p) ** float(A.indptr[x + 1] - A.indptr[x]) for x in sources) / len(sources)
 
@@ -61,6 +63,7 @@ def logging(fun):
 
 
 def tweet_statistics(tweets, min_size=10):
+    """Return statistics dataframe for tweets. Throw away feature classes smaller than min_size."""
     stats = tweets.groupby(['author_feature', 'tweet_feature']).agg(
         tweets=('source', 'size'),
         retweet_probability=('retweets', lambda s: s.astype(bool).mean()),
@@ -74,14 +77,15 @@ def tweet_statistics(tweets, min_size=10):
 
 
 def tweet_sources(tweets):
+    """Return map from author feature to list of sources with this feature."""
     return tweets.dropna().groupby('author_feature')['source'].unique()
 
 
 class Simulation:
-    def __init__(self, A, tweets, simulator=propagation.simulate):
+    def __init__(self, A, stats, sources, simulator=propagation.simulate):
         self.A = A
-        self.stats = tweet_statistics(tweets)
-        self.sources = tweet_sources(tweets)
+        self.stats = stats
+        self.sources = sources
         self.params = pd.DataFrame({'freq': self.stats.tweets / self.stats.tweets.sum(),
                                     'edge_probability': np.NaN,  # will be calculated below
                                     'discount_factor': 1.0,
@@ -98,13 +102,15 @@ class Simulation:
         self.params['edge_probability'] = self.edge_probability_from_retweet_probability()
 
     @classmethod
-    def from_files(cls, graph_file, tweet_file):
+    def from_files(cls, graph_file, tweet_file, simulator=propagation.simulate):
         A, node_labels = read.labelled_graph(graph_file)
         tweets = read.tweets(tweet_file, node_labels)
-        return cls(A, tweets)
+        stats = tweet_statistics(tweets)
+        sources = tweet_sources(tweets)
+        return cls(A, stats, sources, simulator)
 
     def sample_feature(self, size=None):
-        """Return a sample of feature vectors."""
+        """Return a sample of feature vectors (according to feature distribution)."""
         return np.random.choice(self.features, size, p=self.params.freq)
 
     def sample_source(self, author_feature, size=None):
@@ -215,7 +221,7 @@ if __name__ == "__main__":
     # print(sim.params.edge_probability)
     # ray.get(sim.discount_factor_from_mean_retweets(samples=1000, eps=0.1))
     # pool = multiprocessing.Pool(500, initializer=make_global, initargs=(sim.A,))
-    sim.discount_factor_from_mean_retweets(samples=1000, eps=0.01, features=[('0010', '0010')])
+    sim.discount_factor_from_mean_retweets(samples=1000, eps=0.1, features=[('0010', '0010')])
     # sim.search_parameters(samples=1, eps=0.5,  feature=('0000', '0101') )
     # , feature=('0010', '1010'))
     # print(sim.features.loc[('0010', '1010')])

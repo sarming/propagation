@@ -55,13 +55,28 @@ def edge_sample(A, node, p):
 
 
 def simulation_stats(simulation_results):
+    """Take simulation results (list of lists) and return mean retweets and retweet probability."""
     retweets = [tweet for source in simulation_results for tweet in source]  # Flatten
     return sum(retweets) / len(retweets), np.count_nonzero(retweets) / len(retweets)
 
 
 # @timecall
 def simulate(A, sources, p, discount=1., depth=None, max_nodes=None, samples=1, return_stats=True):
-    """Simulate tweets starting from sources, return mean retweets and retweet probability."""
+    """ Propagate messages and return mean retweets and retweet probability.
+
+    Args:
+        A: Sparse adjacency matrix of graph.
+        sources (list): List of source nodes.
+        p (float): Probability that message passes along an edge.
+        discount (float): Discount factor <=1.0 that is multiplied at each level.
+        depth (int): Maximum depth.
+        max_nodes (int): Maximum number of nodes.
+        samples (int): Number of samples per source node.
+        return_stats (bool): If set to false, yield full results (list of lists) instead of stats.
+
+    Returns:
+        (int, int): Mean retweets and retweet probability over all runs.
+    """
     retweets = ((edge_propagate(A, source, p=p, discount=discount, depth=depth, max_nodes=max_nodes)
                  for _ in range(samples)) for source in sources)
     if return_stats: return simulation_stats(retweets)
