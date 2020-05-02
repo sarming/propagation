@@ -18,9 +18,9 @@ def edge_propagate(A, source, p, discount=1., depth=None, max_nodes=None):
     """
     # return edge_propagate_tree(A, start, p, discount, depth).number_of_nodes() - 1
     if depth is None:
-        depth = A.shape[0]
+        depth = int(A.shape[0])
     if max_nodes is None:
-        max_nodes = A.shape[0]
+        max_nodes = int(A.shape[0])
     visited = {source}
     leaves = {source}
     for i in range(depth):

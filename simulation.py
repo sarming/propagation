@@ -141,7 +141,7 @@ class Simulation:
                                         'discount_factor': 1.,
                                         'max_nodes': 1000,
                                         'depth': 10,
-                                        })
+                                        }, dtype=object)
         else:
             default_params = self.params.loc[feature]
             if maybe_per_feature:
@@ -152,7 +152,7 @@ class Simulation:
 
         if not isinstance(params, pd.Series):
             params = pd.Series(params, index=default_params.index, dtype=object)
-        return params.fillna(default_params)
+        return params.fillna(default_params, downcast={'max_nodes': int, 'depth': int})
 
     def edge_probability_from_retweet_probability(self, sources=None, eps=1e-5, features=None):
         """Find edge probability for given feature vector (or all if none given)."""
@@ -185,8 +185,7 @@ class Simulation:
 
     def simulate(self, feature=None, sources=None, params=None, samples=1, return_stats=True):
         """Simulate messages with given feature vector."""
-        if feature:
-            sources = self._default_sources(sources, feature)
+        sources = self._default_sources(sources, feature)
         params = self._default_params(params, feature)
 
         return self.simulator(self.A,
