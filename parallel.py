@@ -8,6 +8,12 @@ import propagation
 
 
 def ray_simulator(num_chunks=None):
+    """Return a simulate function that uses ray.
+
+    The sources in a simulate call will be split up among num_chunks workers.
+    Default is 4 times the CPU's available in ray cluster.
+    """
+
     @ray.remote
     def worker(A, sources, p, discount, depth, max_nodes, samples):
         A = sp.sparse.csr_matrix(*A)
@@ -50,7 +56,22 @@ def pool_worker(source, p, discount, depth, max_nodes, samples):
             for _ in range(samples)]
 
 
-def pool_simulator(A, processes=None):
+def pool_simulator(A, processes=None, **kwargs):
+    """Return a simulate function using multiprocessing.pool for a fixed matrix A.
+
+    Note:
+        The graph must be passed up front to this function. It will be sent to the initializer of the worker processes
+        to avoid passing it on every call. The returned function ignores its first argument.
+
+    Args:
+        A: matrix used for all simulate calls
+        processes: number of processes in pool
+        **kwargs: remaining kwargs passed to Pool()
+
+
+    Returns: simulate function (that ignores its first argument).
+    """
+
     def simulate(A: None, sources, p, discount=1., depth=1, max_nodes=1000, samples=1, return_stats=True):
         """Simulate tweets starting from sources, return mean retweets and retweet probability."""
         sample_calls = [(source, p, discount, depth, max_nodes, samples) for source in sources]
@@ -59,5 +80,5 @@ def pool_simulator(A, processes=None):
             return propagation.simulation_stats(retweets)
         return retweets
 
-    pool = multiprocessing.Pool(processes, initializer=make_global, initargs=(A,))
+    pool = multiprocessing.Pool(processes, initializer=make_global, initargs=(A,), **kwargs)
     return simulate

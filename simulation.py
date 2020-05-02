@@ -89,7 +89,7 @@ class Simulation:
         self.params = pd.DataFrame({'freq': self.stats.tweets / self.stats.tweets.sum(),
                                     'edge_probability': np.NaN,  # will be calculated below
                                     'discount_factor': 1.0,
-                                    'max_retweets': 100 * self.stats.max_retweets,
+                                    'max_nodes': 100 * self.stats.max_retweets,
                                     'depth': 10,
                                     })
         self.features = self.stats.index
@@ -139,7 +139,7 @@ class Simulation:
         if feature is None:
             default_params = pd.Series({'edge_probability': pd.NA,
                                         'discount_factor': 1.,
-                                        'max_retweets': 1000,
+                                        'max_nodes': 1000,
                                         'depth': 10,
                                         })
         else:
