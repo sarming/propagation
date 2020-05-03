@@ -122,7 +122,7 @@ class Simulation:
         """Sample uniformly from sources with author_feature."""
         return np.random.choice(self.sources[author_feature], size)
 
-    def _default_sources(self, sources, feature, maybe_per_feature=False):
+    def _default_sources(self, sources, feature):
         if feature is None:
             return sources
         author_feature, _ = feature
@@ -130,17 +130,16 @@ class Simulation:
             return self.sources[author_feature]
         elif isinstance(sources, int):
             return self.sample_source(author_feature, size=sources)
-        elif maybe_per_feature:
+        try:
             try:
-                try:
-                    return sources[feature]
-                except (KeyError, TypeError, IndexError):
-                    return sources[author_feature]
+                return sources[feature]
             except (KeyError, TypeError, IndexError):
-                pass
+                return sources[author_feature]
+        except (KeyError, TypeError, IndexError):
+            pass
         return sources
 
-    def _default_params(self, params, feature, maybe_per_feature=False):
+    def _default_params(self, params, feature):
         if feature is None:
             default_params = pd.Series({'edge_probability': pd.NA,
                                         'discount_factor': 1.,
@@ -149,11 +148,10 @@ class Simulation:
                                         }, dtype=object)
         else:
             default_params = self.params.loc[feature]
-            if maybe_per_feature:
-                try:
-                    params = params.loc[feature]
-                except (KeyError, TypeError, IndexError):
-                    pass
+            try:
+                params = params.loc[feature]
+            except (KeyError, TypeError, IndexError):
+                pass
 
         if not isinstance(params, pd.Series):
             params = pd.Series(params, index=default_params.index, dtype=object)
@@ -165,7 +163,7 @@ class Simulation:
             features = self.features
         return pd.Series((
             invert_monotone(lambda p: calculate_retweet_probability(self.A,
-                                                                    self._default_sources(sources, f, True),
+                                                                    self._default_sources(sources, f),
                                                                     p),
                             self.stats.loc[f, 'retweet_probability'],
                             0, 1,
@@ -179,7 +177,7 @@ class Simulation:
             features = self.features
         return pd.Series((
             invert_monotone(lambda d: self.simulator(A=self.A,
-                                                     sources=self._default_sources(sources, f, True),
+                                                     sources=self._default_sources(sources, f),
                                                      p=self.params.loc[f, 'edge_probability'],
                                                      discount=d,
                                                      depth=depth,
@@ -189,10 +187,10 @@ class Simulation:
                             0, 1,
                             eps=eps, logging=True) for f in features), index=features)
 
-    def simulate(self, feature=None, sources=None, params=None, samples=1, return_stats=True, args_map_feature=False):
+    def simulate(self, feature=None, sources=None, params=None, samples=1, return_stats=True):
         """Simulate messages with given feature vector."""
-        sources = self._default_sources(sources, feature, args_map_feature)
-        params = self._default_params(params, feature, args_map_feature)
+        sources = self._default_sources(sources, feature)
+        params = self._default_params(params, feature)
 
         return self.simulator(self.A,
                               sources,
@@ -205,8 +203,7 @@ class Simulation:
 
     def run(self, num_features, sources=1, params=None, samples=100):
         for feature in self.sample_feature(num_features):
-            yield self.simulate(feature, sources=sources, params=params, samples=samples, return_stats=False,
-                                feature_maps=True)
+            yield self.simulate(feature, sources=sources, params=params, samples=samples, return_stats=False)
 
 
 if __name__ == "__main__":
