@@ -50,9 +50,9 @@ def invert_monotone(fun, goal, lb, ub, eps, logging=False):
     if logging:
         print(f"{f}{'<' if f < goal else '>'}{goal} [{lb},{ub}]")
     if f < goal:
-        return invert_monotone(fun, goal, mid, ub, eps)
+        return invert_monotone(fun, goal, mid, ub, eps, logging)
     else:
-        return invert_monotone(fun, goal, lb, mid, eps)
+        return invert_monotone(fun, goal, lb, mid, eps, logging)
 
 
 def logging(fun):
@@ -133,9 +133,9 @@ class Simulation:
         try:
             try:
                 return sources[feature]
-            except (KeyError, TypeError, IndexError):
+            except (IndexError, KeyError, TypeError):
                 return sources[author_feature]
-        except (KeyError, TypeError, IndexError):
+        except (IndexError, KeyError, TypeError):
             pass
         return sources
 
@@ -150,7 +150,7 @@ class Simulation:
             default_params = self.params.loc[feature]
             try:
                 params = params.loc[feature]
-            except (KeyError, TypeError, IndexError):
+            except (AttributeError, IndexError, KeyError, TypeError):
                 pass
 
         if not isinstance(params, pd.Series):
@@ -170,8 +170,7 @@ class Simulation:
                             eps) for f in features), index=features)
 
     @timecall
-    def discount_factor_from_mean_retweets(self, sources=None, depth=10, max_nodes=None, samples=1000, eps=0.1,
-                                           features=None):
+    def discount_factor_from_mean_retweets(self, sources=None, params=None, samples=1000, eps=0.1, features=None):
         """Find discount factor for given feature vector (or all if none given)."""
         if features is None:
             features = self.features
@@ -180,8 +179,8 @@ class Simulation:
                                                      sources=self._default_sources(sources, f),
                                                      p=self.params.loc[f, 'edge_probability'],
                                                      discount=d,
-                                                     depth=depth,
-                                                     max_nodes=max_nodes,
+                                                     depth=self._default_params(params, f)['depth'],
+                                                     max_nodes=self._default_params(params, f)['max_nodes'],
                                                      samples=samples)[0],
                             self.stats.loc[f, 'mean_retweets'],
                             0, 1,
