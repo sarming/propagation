@@ -24,7 +24,7 @@ def calculate_retweet_probability(A, sources, p):
     return sum(1 - (1 - p) ** float(A.indptr[x + 1] - A.indptr[x]) for x in sources) / len(sources)
 
 
-def invert_monotone(fun, goal, lb, ub, eps):
+def invert_monotone(fun, goal, lb, ub, eps, logging=False):
     """Find fun^-1( goal ) by binary search.
 
     Note:
@@ -37,14 +37,18 @@ def invert_monotone(fun, goal, lb, ub, eps):
         lb: Initial lower bound.
         ub: Initial upper bound.
         eps: Precision at which to stop.
+        logging: Print function calls and results.
 
     Returns: x s.t. lb<x<ub and there is y with |x-y|<=eps and fun(y)=goal
     """
     mid = (ub + lb) / 2
     if ub - lb < eps:
         return mid
+    if logging:
+        print(f'f({mid})=', end='')
     f = fun(mid)
-    # print(f"f({mid})={f}{'<' if f < goal else '>'}{goal} [{lb},{ub}]")
+    if logging:
+        print(f"{f}{'<' if f < goal else '>'}{goal} [{lb},{ub}]")
     if f < goal:
         return invert_monotone(fun, goal, mid, ub, eps)
     else:
@@ -97,12 +101,13 @@ class Simulation:
         self.simulator = simulator
         # self.simulator = parallel.ray_simulator()
         # self.simulator = parallel.pool_simulator(self.A)
-        self.simulator = logging(self.simulator)
+        # self.simulator = logging(self.simulator)
 
         self.params['edge_probability'] = self.edge_probability_from_retweet_probability()
 
     @classmethod
     def from_files(cls, graph_file, tweet_file, simulator=propagation.simulate):
+        """Return Simulation using for the given files."""
         A, node_labels = read.labelled_graph(graph_file)
         tweets = read.tweets(tweet_file, node_labels)
         stats = tweet_statistics(tweets)
@@ -146,7 +151,7 @@ class Simulation:
             default_params = self.params.loc[feature]
             if maybe_per_feature:
                 try:
-                    params = params[feature]
+                    params = params.loc[feature]
                 except (KeyError, TypeError, IndexError):
                     pass
 
@@ -182,7 +187,7 @@ class Simulation:
                                                      samples=samples)[0],
                             self.stats.loc[f, 'mean_retweets'],
                             0, 1,
-                            eps=eps) for f in features), index=features)
+                            eps=eps, logging=True) for f in features), index=features)
 
     def simulate(self, feature=None, sources=None, params=None, samples=1, return_stats=True, args_map_feature=False):
         """Simulate messages with given feature vector."""
@@ -201,7 +206,7 @@ class Simulation:
     def run(self, num_features, sources=1, params=None, samples=100):
         for feature in self.sample_feature(num_features):
             yield self.simulate(feature, sources=sources, params=params, samples=samples, return_stats=False,
-                                args_map_feature=True)
+                                feature_maps=True)
 
 
 if __name__ == "__main__":
