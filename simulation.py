@@ -187,7 +187,7 @@ class Simulation:
                             eps=eps, logging=True) for f in features), index=features)
 
     def simulate(self, feature=None, sources=None, params=None, samples=1, return_stats=True):
-        """Simulate messages with given feature vector."""
+        """Simulate message with given feature vector."""
         sources = self._default_sources(sources, feature)
         params = self._default_params(params, feature)
 
@@ -227,8 +227,9 @@ if __name__ == "__main__":
     # print(sim.params.edge_probability)
     # ray.get(sim.discount_factor_from_mean_retweets(samples=1000, eps=0.1))
     # pool = multiprocessing.Pool(500, initializer=make_global, initargs=(sim.A,))
+    sim.simulator= parallel.ray_simulator()
     sim.edge_probability_from_retweet_probability(features=[('0000', '0001')], sources=sim.sources['0101'])
-    # sim.discount_factor_from_mean_retweets(samples=1000, eps=0.1, features=[('0010', '0010')])
+    sim.discount_factor_from_mean_retweets(samples=1000, eps=0.1, features=[('0010', '0010')])
     # sim.search_parameters(samples=1, eps=0.5,  feature=('0000', '0101') )
     # , feature=('0010', '1010'))
     # print(sim.features.loc[('0010', '1010')])
