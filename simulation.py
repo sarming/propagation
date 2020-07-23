@@ -69,7 +69,7 @@ def logging(fun):
 def tweet_statistics(tweets, min_size=10):
     """Return statistics dataframe for tweets. Throw away feature classes smaller than min_size."""
     stats = tweets.groupby(['author_feature', 'tweet_feature']).agg(
-        tweets=('source', 'size'),
+        tweets=('retweets', 'size'),
         retweet_probability=('retweets', lambda s: s.astype(bool).mean()),
         mean_retweets=('retweets', 'mean'),
         median_retweets=('retweets', 'median'),
@@ -206,8 +206,9 @@ class Simulation:
 
 
 if __name__ == "__main__":
+    # import sys, ray
+    # ray.init(address=sys.argv[1], redis_password=sys.argv[2])
     # ray.init(num_cpus=50, memory=1000000000)
-    # ray.init()
     datadir = 'data'
     # datadir = '/Users/ian/Nextcloud'
     # datadir = '/home/sarming'
@@ -227,7 +228,7 @@ if __name__ == "__main__":
     # print(sim.params.edge_probability)
     # ray.get(sim.discount_factor_from_mean_retweets(samples=1000, eps=0.1))
     # pool = multiprocessing.Pool(500, initializer=make_global, initargs=(sim.A,))
-    sim.simulator= parallel.ray_simulator()
+    sim.simulator = parallel.ray_simulator()
     sim.edge_probability_from_retweet_probability(features=[('0000', '0001')], sources=sim.sources['0101'])
     sim.discount_factor_from_mean_retweets(samples=1000, eps=0.1, features=[('0010', '0010')])
     # sim.search_parameters(samples=1, eps=0.5,  feature=('0000', '0101') )
