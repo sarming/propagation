@@ -37,8 +37,8 @@ def edge_propagate(A, source, p, discount=1., depth=None, max_nodes=None):
     return len(visited) - 1
 
 
-def edge_sample(A, node, p):
-    """Return Bernoulli sample of node's children using probability p.
+def edge_sample(A, node, p, bernoulli=True):
+    """Return sample of node's children using probability p.
 
     Note:
          This is the inner loop, rewrite in Cython might be worthwhile.
@@ -47,6 +47,8 @@ def edge_sample(A, node, p):
     # return A.indices[l:r][np.random.rand(r - l) < p]
     if l == r:
         return []
+    if not bernoulli:
+        p = 1 - (1 - p) ** (1 / (r - l))
     num = np.random.binomial(r - l, p)
 
     # return A.indices[np.random.choice(r - l, num, replace=False) + l]
