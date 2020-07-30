@@ -2,7 +2,7 @@ from functools import wraps
 
 import numpy as np
 import pandas as pd
-from profilehooks import timecall
+# from profilehooks import timecall
 
 import parallel
 import propagation
@@ -21,6 +21,7 @@ def calculate_retweet_probability(A, sources, p):
         mean_{x in sources} 1-(1-p)^{deg-(x)}
         This is the expected value of simulate(A, sources, p, depth=1)[1].
     """
+    # return p
     return sum(1 - (1 - p) ** float(A.indptr[x + 1] - A.indptr[x]) for x in sources) / len(sources)
 
 
@@ -169,7 +170,7 @@ class Simulation:
                             0, 1,
                             eps) for f in features), index=features)
 
-    @timecall
+    # @timecall
     def discount_factor_from_mean_retweets(self, sources=None, params=None, samples=1000, eps=0.1, features=None):
         """Find discount factor for given feature vector (or all if none given)."""
         if features is None:
@@ -229,8 +230,14 @@ if __name__ == "__main__":
     # ray.get(sim.discount_factor_from_mean_retweets(samples=1000, eps=0.1))
     # pool = multiprocessing.Pool(500, initializer=make_global, initargs=(sim.A,))
     sim.simulator = parallel.ray_simulator()
-    sim.edge_probability_from_retweet_probability(features=[('0000', '0001')], sources=sim.sources['0101'])
-    sim.discount_factor_from_mean_retweets(samples=1000, eps=0.1, features=[('0010', '0010')])
+
+    # sim.edge_probability_from_retweet_probability(features=[('0000', '0001')], sources=sim.sources['0101'])
+    # sim.discount_factor_from_mean_retweets(samples=1000, eps=0.1, features=[('0010', '0010')])
     # sim.search_parameters(samples=1, eps=0.5,  feature=('0000', '0101') )
     # , feature=('0010', '1010'))
     # print(sim.features.loc[('0010', '1010')])
+
+    for feature in sim.features:
+        stats = sim.stats.loc[feature]
+        result = sim.simulate(feature, sources=10000, samples=1000)
+        print(f'{feature}: {stats.mean_retweets} vs {result[0]}, {stats.retweet_probability} vs {result[1]}')
