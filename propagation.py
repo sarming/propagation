@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def edge_propagate(A, source, p, discount=1., depth=None, max_nodes=None):
+def edge_propagate(A, source, p, corr=0., discount=1., depth=None, max_nodes=None):
     """Propagate message in graph A and return number of nodes visited.
 
     Args:
@@ -26,7 +26,7 @@ def edge_propagate(A, source, p, discount=1., depth=None, max_nodes=None):
     for i in range(depth):
         next_leaves = set()
         for node in leaves:
-            children = set(edge_sample(A, node, p))
+            children = set(edge_sample(A, node, p, corr))
             children -= visited
             next_leaves |= children
             visited |= children
@@ -37,7 +37,7 @@ def edge_propagate(A, source, p, discount=1., depth=None, max_nodes=None):
     return len(visited) - 1
 
 
-def edge_sample(A, node, p, bernoulli=True):
+def edge_sample(A, node, p, corr=0., at_least_one=True):
     """Return sample of node's children using probability p.
 
     Note:
@@ -47,9 +47,11 @@ def edge_sample(A, node, p, bernoulli=True):
     # return A.indices[l:r][np.random.rand(r - l) < p]
     if l == r:
         return []
-    if not bernoulli:
+    if at_least_one:
         p = 1 - (1 - p) ** (1 / (r - l))
     num = np.random.binomial(r - l, p)
+    if num > 0:
+        num += np.random.binomial(r - l - num, corr)
 
     # return A.indices[np.random.choice(r - l, num, replace=False) + l]
     children = A.indices[l:r]
@@ -63,7 +65,7 @@ def simulation_stats(simulation_results):
 
 
 # @timecall
-def simulate(A, sources, p, discount=1., depth=None, max_nodes=None, samples=1, return_stats=True):
+def simulate(A, sources, p, discount=1., corr=0., depth=None, max_nodes=None, samples=1, return_stats=True):
     """ Propagate messages and return mean retweets and retweet probability.
 
     Args:
@@ -79,7 +81,7 @@ def simulate(A, sources, p, discount=1., depth=None, max_nodes=None, samples=1, 
     Returns:
         (int, int): Mean retweets and retweet probability over all runs.
     """
-    retweets = ((edge_propagate(A, source, p=p, discount=discount, depth=depth, max_nodes=max_nodes)
+    retweets = ((edge_propagate(A, source, p=p, corr=corr, discount=discount, depth=depth, max_nodes=max_nodes)
                  for _ in range(samples)) for source in sources)
     if return_stats: return simulation_stats(retweets)
     return retweets

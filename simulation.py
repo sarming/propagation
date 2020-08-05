@@ -21,8 +21,8 @@ def calculate_retweet_probability(A, sources, p):
         mean_{x in sources} 1-(1-p)^{deg-(x)}
         This is the expected value of simulate(A, sources, p, depth=1)[1].
     """
-    # return p
-    return sum(1 - (1 - p) ** float(A.indptr[x + 1] - A.indptr[x]) for x in sources) / len(sources)
+    return p
+    # return sum(1 - (1 - p) ** float(A.indptr[x + 1] - A.indptr[x]) for x in sources) / len(sources)
 
 
 def invert_monotone(fun, goal, lb, ub, eps, logging=False):
@@ -94,7 +94,7 @@ class Simulation:
         self.params = pd.DataFrame({'freq': self.stats.tweets / self.stats.tweets.sum(),
                                     'edge_probability': np.NaN,  # will be calculated below
                                     'discount_factor': 1.0,
-                                    'max_nodes': 100 * self.stats.max_retweets,
+                                    'max_nodes': 10 * self.stats.max_retweets,
                                     'depth': 10,
                                     })
         self.features = self.stats.index
@@ -187,6 +187,23 @@ class Simulation:
                             0, 1,
                             eps=eps, logging=True) for f in features), index=features)
 
+    # @timecall
+    def corr_from_mean_retweets(self, sources=None, params=None, samples=1000, eps=0.1, features=None):
+        """Find corr for given feature vector (or all if none given)."""
+        if features is None:
+            features = self.features
+        return pd.Series((
+            invert_monotone(lambda c: self.simulator(A=self.A,
+                                                     sources=self._default_sources(sources, f),
+                                                     p=self.params.loc[f, 'edge_probability'],
+                                                     corr=c,
+                                                     depth=self._default_params(params, f)['depth'],
+                                                     max_nodes=self._default_params(params, f)['max_nodes'],
+                                                     samples=samples)[0],
+                            self.stats.loc[f, 'mean_retweets'],
+                            0., .01,
+                            eps=eps, logging=True) for f in features), index=features)
+
     def simulate(self, feature=None, sources=None, params=None, samples=1, return_stats=True):
         """Simulate message with given feature vector."""
         sources = self._default_sources(sources, feature)
@@ -229,15 +246,15 @@ if __name__ == "__main__":
     # print(sim.params.edge_probability)
     # ray.get(sim.discount_factor_from_mean_retweets(samples=1000, eps=0.1))
     # pool = multiprocessing.Pool(500, initializer=make_global, initargs=(sim.A,))
-    sim.simulator = parallel.ray_simulator()
+    # sim.simulator = parallel.ray_simulator()
 
     # sim.edge_probability_from_retweet_probability(features=[('0000', '0001')], sources=sim.sources['0101'])
-    # sim.discount_factor_from_mean_retweets(samples=1000, eps=0.1, features=[('0010', '0010')])
+    sim.corr_from_mean_retweets(samples=1000, eps=0.001, features=[('0010', '0010')])
     # sim.search_parameters(samples=1, eps=0.5,  feature=('0000', '0101') )
     # , feature=('0010', '1010'))
     # print(sim.features.loc[('0010', '1010')])
 
-    for feature in sim.features:
-        stats = sim.stats.loc[feature]
-        result = sim.simulate(feature, sources=10000, samples=1000)
-        print(f'{feature}: {stats.mean_retweets} vs {result[0]}, {stats.retweet_probability} vs {result[1]}')
+    # for feature in sim.features:
+    #     stats = sim.stats.loc[feature]
+    #     result = sim.simulate(feature, sources=10000, samples=1000)
+    #     print(f'{feature}: {stats.mean_retweets} vs {result[0]}, {stats.retweet_probability} vs {result[1]}')
