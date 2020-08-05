@@ -95,7 +95,7 @@ class Simulation:
                                     'edge_probability': np.NaN,  # will be calculated below
                                     'discount_factor': 1.0,
                                     'max_nodes': 10 * self.stats.max_retweets,
-                                    'depth': 10,
+                                    'max_depth': 10,
                                     })
         self.features = self.stats.index
 
@@ -145,7 +145,7 @@ class Simulation:
             default_params = pd.Series({'edge_probability': pd.NA,
                                         'discount_factor': 1.,
                                         'max_nodes': 1000,
-                                        'depth': 10,
+                                        'max_depth': 10,
                                         }, dtype=object)
         else:
             default_params = self.params.loc[feature]
@@ -156,7 +156,7 @@ class Simulation:
 
         if not isinstance(params, pd.Series):
             params = pd.Series(params, index=default_params.index, dtype=object)
-        return params.fillna(default_params, downcast={'max_nodes': int, 'depth': int})
+        return params.fillna(default_params, downcast={'max_nodes': int, 'max_depth': int})
 
     def edge_probability_from_retweet_probability(self, sources=None, eps=1e-5, features=None):
         """Find edge probability for given feature vector (or all if none given)."""
@@ -180,7 +180,7 @@ class Simulation:
                                                      sources=self._default_sources(sources, f),
                                                      p=self.params.loc[f, 'edge_probability'],
                                                      discount=d,
-                                                     depth=self._default_params(params, f)['depth'],
+                                                     depth=self._default_params(params, f)['max_depth'],
                                                      max_nodes=self._default_params(params, f)['max_nodes'],
                                                      samples=samples)[0],
                             self.stats.loc[f, 'mean_retweets'],
@@ -197,7 +197,7 @@ class Simulation:
                                                      sources=self._default_sources(sources, f),
                                                      p=self.params.loc[f, 'edge_probability'],
                                                      corr=c,
-                                                     depth=self._default_params(params, f)['depth'],
+                                                     depth=self._default_params(params, f)['max_depth'],
                                                      max_nodes=self._default_params(params, f)['max_nodes'],
                                                      samples=samples)[0],
                             self.stats.loc[f, 'mean_retweets'],
@@ -213,7 +213,7 @@ class Simulation:
                               sources,
                               p=params.edge_probability,
                               discount=params.discount_factor,
-                              depth=params.depth,
+                              depth=params.max_depth,
                               max_nodes=params.max_nodes,
                               samples=samples,
                               return_stats=return_stats)
