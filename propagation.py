@@ -16,6 +16,7 @@ def edge_propagate(A, source, p, corr=0., discount=1., depth=None, max_nodes=Non
         Number of nodes visited (without initial).
 
     """
+    # print(f"propagate from {source}")
     # return edge_propagate_tree(A, start, p, discount, depth).number_of_nodes() - 1
     if depth is None:
         depth = int(A.shape[0])
@@ -34,10 +35,11 @@ def edge_propagate(A, source, p, corr=0., discount=1., depth=None, max_nodes=Non
                 return max_nodes
         leaves = next_leaves
         p *= discount
+    # print(f"done {len(visited)}")
     return len(visited) - 1
 
 
-def edge_sample(A, node, p, corr=0., at_least_one=True):
+def edge_sample(A, node, p, corr=0., at_least_one=False):
     """Return sample of node's children using probability p.
 
     Note:
