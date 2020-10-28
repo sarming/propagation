@@ -2,7 +2,7 @@ from functools import wraps
 
 import numpy as np
 import pandas as pd
-# from profilehooks import timecall
+from profilehooks import timecall
 
 import parallel
 import propagation
@@ -203,7 +203,7 @@ class Simulation:
                             self.stats.loc[f, 'mean_retweets'],
                             0., .01,
                             eps=eps, logging=True) for f in features), index=features)
-
+    @timecall
     def simulate(self, feature=None, sources=None, params=None, samples=1, return_stats=True):
         """Simulate message with given feature vector."""
         sources = self._default_sources(sources, feature)
@@ -249,12 +249,18 @@ if __name__ == "__main__":
     # sim.simulator = parallel.ray_simulator()
 
     # sim.edge_probability_from_retweet_probability(features=[('0000', '0001')], sources=sim.sources['0101'])
-    sim.corr_from_mean_retweets(samples=1000, eps=0.001, features=[('0010', '0010')])
+    # sim.corr_from_mean_retweets(samples=1000, eps=0.001, features=[('0010', '0010')])
     # sim.search_parameters(samples=1, eps=0.5,  feature=('0000', '0101') )
     # , feature=('0010', '1010'))
     # print(sim.features.loc[('0010', '1010')])
+    def most_frequent():
+        s = sorted(sim.features, key=lambda f: sim.stats.loc[f].tweets)
+        return list(s)
 
-    # for feature in sim.features:
-    #     stats = sim.stats.loc[feature]
-    #     result = sim.simulate(feature, sources=10000, samples=1000)
-    #     print(f'{feature}: {stats.mean_retweets} vs {result[0]}, {stats.retweet_probability} vs {result[1]}')
+    @timecall
+    def run():
+        for feature in most_frequent()[:10]:
+            stats = sim.stats.loc[feature]
+            result = sim.simulate(feature, sources=1000, samples=1000)
+            print(f'{feature}: {stats.mean_retweets} vs {result[0]}, {stats.retweet_probability} vs {result[1]}')
+    run()
