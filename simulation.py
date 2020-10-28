@@ -21,8 +21,8 @@ def calculate_retweet_probability(A, sources, p):
         mean_{x in sources} 1-(1-p)^{deg-(x)}
         This is the expected value of simulate(A, sources, p, depth=1)[1].
     """
-    # return p
-    return sum(1 - (1 - p) ** float(A.indptr[x + 1] - A.indptr[x]) for x in sources) / len(sources)
+    return p
+    # return sum(1 - (1 - p) ** float(A.indptr[x + 1] - A.indptr[x]) for x in sources) / len(sources)
 
 
 def invert_monotone(fun, goal, lb, ub, eps, logging=False):

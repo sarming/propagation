@@ -39,7 +39,7 @@ def edge_propagate(A, source, p, corr=0., discount=1., depth=None, max_nodes=Non
     return len(visited) - 1
 
 
-def edge_sample(A, node, p, corr=0., at_least_one=False):
+def edge_sample(A, node, p, corr=0., at_least_one=True):
     """Return sample of node's children using probability p.
 
     Note:
