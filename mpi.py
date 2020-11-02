@@ -1,6 +1,10 @@
-from mpi4py import MPI
-import scipy as sp
+from contextlib import contextmanager
+
 import numpy as np
+import scipy as sp
+from mpi4py import MPI
+from profilehooks import timecall
+
 import propagation
 
 
@@ -116,15 +120,6 @@ def split_jobs(sources, runs_per_source, num_chunks):
     return jobs
 
 
-def mpi_worker(A, comm=MPI.COMM_WORLD, root=0):
-    rank = comm.Get_rank()
-    while True:
-        job = comm.recv(source=root)
-        if job is None:
-            return
-        distribute_jobs()
-
-
 def mpi_simulator(A, comm=MPI.COMM_WORLD, root=0, num_chunks=None):
     """
     Returns: simulate function (that ignores its first argument).
@@ -166,6 +161,63 @@ def mpi_simulator(A, comm=MPI.COMM_WORLD, root=0, num_chunks=None):
     return simulate
 
 
+def make_global(A):
+    global global_A
+    global_A = A
+
+
+def worker(params):
+    # print(params)
+    return propagation.simulate(global_A, *params)
+
+
+@contextmanager
+def mpi_futures_simulator(A, comm=MPI.COMM_WORLD, root=0, num_chunks=None):
+    """Return a simulate function using mpi4py.futures for a fixed matrix A.
+    FIXME
+
+    Note:
+        The graph must be passed up front to this function.
+        The returned function ignores its first argument.
+
+    Args:
+        A: matrix used for all simulate calls
+
+    Returns: simulate function (that ignores its first argument).
+    """
+    from mpi4py.futures import MPICommExecutor
+
+    @timecall
+    def simulate(A: None, sources, p, corr=0., discount=1., depth=None, max_nodes=None, samples=1, return_stats=True):
+        """Simulate tweets starting from sources, return mean retweets and retweet probability."""
+        samples = max(samples // num_chunks, 1)
+        sample_calls = [(sources, p, corr, discount, depth, max_nodes, samples, return_stats) for _ in
+                        range(num_chunks)]
+        results = list(executor.map(worker, sample_calls))
+
+        if return_stats:
+            mean_retweets, retweet_probability = tuple(zip(*results))
+            return np.mean(mean_retweets), np.mean(retweet_probability)
+
+        return results
+
+    rank = comm.Get_rank()
+    assert A is not None or rank != 0
+    size = comm.Get_size()
+
+    if num_chunks is None:
+        num_chunks = size * 4
+
+    assert root == 0
+    make_global(bcast_csr_matrix(A, comm))
+
+    with MPICommExecutor(comm=comm, root=root) as executor:
+        if executor is None:
+            yield None
+        else:
+            yield simulate
+
+
 if __name__ == "__main__":
     import read
 
@@ -174,7 +226,7 @@ if __name__ == "__main__":
     if i_am_head:
         datadir = 'data'
         A, node_labels = read.labelled_graph(f'{datadir}/outer_neos.npz')
-    simulate = mpi_simulator(A)
-    r = simulate(None, range(4), p=0.0001, corr=0., samples=100, max_nodes=100)
-    if i_am_head:
-        print(r)
+    with mpi_futures_simulator(A, num_chunks=1000) as simulate:
+        if simulate is not None:
+            r = simulate(None, range(100), p=0.0001, corr=0., samples=1000, max_nodes=100)
+            print(r)
