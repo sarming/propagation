@@ -1,0 +1,18 @@
+#!/bin/bash
+#PBS -N prop
+#PBS -l select=16:node_type=rome:mpiprocs=128
+#PBS -l walltime=24:00:00
+#PBS -W group_list=s33594
+
+cd $PBS_O_WORKDIR/propagation
+
+#module load openmpi
+module load gcc/9.2.0  openmpi/4.0.4
+module load python/3.8
+module load mpi4py
+
+OUTFILE=propagation-$PBS_JOBID-$(date +"%Y%m%dT%H%M").out
+uniq $PBS_NODEFILE|wc -l > $OUTFILE
+cat $PBS_NODEFILE|wc -l >>$OUTFILE
+
+/usr/bin/time mpirun python run.py neos_20200311 >>$OUTFILE 2>&1

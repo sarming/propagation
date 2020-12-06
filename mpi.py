@@ -3,7 +3,6 @@ from contextlib import contextmanager
 import numpy as np
 import scipy as sp
 from mpi4py import MPI
-from profilehooks import timecall
 
 import propagation
 
@@ -187,10 +186,12 @@ def mpi_futures_simulator(A, comm=MPI.COMM_WORLD, root=0, num_chunks=None):
     """
     from mpi4py.futures import MPICommExecutor
 
-    @timecall
+    # @timecall
     def simulate(A: None, sources, p, corr=0., discount=1., depth=None, max_nodes=None, samples=1, return_stats=True):
         """Simulate tweets starting from sources, return mean retweets and retweet probability."""
         samples = max(samples // num_chunks, 1)
+        print(f'{samples * num_chunks} samples')
+
         sample_calls = [(sources, p, corr, discount, depth, max_nodes, samples, return_stats) for _ in
                         range(num_chunks)]
         results = list(executor.map(worker, sample_calls))
@@ -216,17 +217,3 @@ def mpi_futures_simulator(A, comm=MPI.COMM_WORLD, root=0, num_chunks=None):
             yield None
         else:
             yield simulate
-
-
-if __name__ == "__main__":
-    import read
-
-    A = None
-    i_am_head = MPI.COMM_WORLD.Get_rank() == 0
-    if i_am_head:
-        datadir = 'data'
-        A, node_labels = read.labelled_graph(f'{datadir}/outer_neos.npz')
-    with mpi_futures_simulator(A, num_chunks=1000) as simulate:
-        if simulate is not None:
-            r = simulate(None, range(100), p=0.0001, corr=0., samples=1000, max_nodes=100)
-            print(r)
