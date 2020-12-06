@@ -1,12 +1,12 @@
 import os
 import sys
+from datetime import datetime
 
+import numpy as np
 import pandas as pd
 from mpi4py import MPI
-import numpy as np
-import scipy as sp
-from mpi import mpi_futures
 
+from mpi import mpi_futures
 from simulation import Simulation
 
 
@@ -22,9 +22,15 @@ if __name__ == "__main__":
     if i_am_head:
         datadir = 'data'
         topic = 'bvb_20200409'
+
         if len(sys.argv) > 1:
             topic = sys.argv[1]
         print(f'topic: {topic}')
+
+        runid = os.environ.get("PBS_JOBID")
+        if runid is None:
+            runid = str(datetime.now())
+
         # A, node_labels = read.labelled_graph(f'{datadir}/outer_neos.npz')
         sim = Simulation.from_files(f'{datadir}/outer_{topic}.npz', f'{datadir}/sim_features_{topic}.csv')
 
@@ -36,9 +42,9 @@ if __name__ == "__main__":
             # discount = sim.discount_factor_from_mean_retweets(samples=8000, eps=0.001)
             # sim.params.discount_factor.update(discount)
             # print(discount.to_csv())
-            # discount.to_csv(f'{datadir}/discount-{topic}-{os.environ.get("PBS_JOBID")}.csv')
+            # discount.to_csv(f'{datadir}/discount-{topic}-{runid}.csv')
             print(sim.params.to_csv())
-            sim.params.to_csv(f'{datadir}/params-{topic}-{os.environ.get("PBS_JOBID")}.csv')
+            sim.params.to_csv(f'{datadir}/params-{topic}-{runid}.csv')
             # sys.exit()
             sources = 1000
             samples = 8000
@@ -54,7 +60,7 @@ if __name__ == "__main__":
                 results.loc[feature].simulation_mean_retweets = result[0]
                 results.loc[feature].simulation_retweet_probability = result[1]
                 print(f'{feature}: {stats.mean_retweets} vs {result[0]}, {stats.retweet_probability} vs {result[1]}')
-            results.to_csv(f'{datadir}/results-{topic}-{os.environ.get("PBS_JOBID")}.csv')
+            results.to_csv(f'{datadir}/results-{topic}-{runid}.csv')
             mae_retweet_probability = results.real_retweet_probability.sub(
                 results.simulation_retweet_probability).abs().mean()
             mae_mean_retweets = results.real_mean_retweets.sub(results.simulation_mean_retweets).abs().mean()
