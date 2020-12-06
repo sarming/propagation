@@ -11,7 +11,7 @@ def adjlist(file, save_as=None):
     return graph
 
 
-def save_labelled_graph(filename, A, node_labels, compressed=False):
+def save_labelled_graph(filename, A, node_labels, compressed=True):
     savez = np.savez_compressed if compressed else np.savez
     savez(filename, data=A.data, indices=A.indices, indptr=A.indptr, shape=A.shape, node_labels=node_labels)
 
@@ -39,3 +39,8 @@ def tweets(file, node_labels):
     csv['source'] = pd.Series((reverse.get(author, None) for author in csv['author']), dtype='Int64')
 
     return csv[['source', 'author_feature', 'tweet_feature', 'retweets']]
+
+if __name__ == "__main__":
+    for g in ['fpoe_20200311','neos_20200311','bvb_20200409','schalke_20200409','vegan_20200407']:
+        print(g)
+        adjlist(f'data/anonymized_outer_graph_{g}.adjlist', save_as=f'outer_{g}.npz')
