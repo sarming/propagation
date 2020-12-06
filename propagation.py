@@ -24,6 +24,7 @@ def edge_propagate(A, source, p, corr=0., discount=1., depth=None, max_nodes=Non
         max_nodes = int(A.shape[0])
     visited = {source}
     leaves = {source}
+    # done = {source}
     for i in range(depth):
         next_leaves = set()
         for node in leaves:
@@ -31,6 +32,7 @@ def edge_propagate(A, source, p, corr=0., discount=1., depth=None, max_nodes=Non
             children -= visited
             next_leaves |= children
             visited |= children
+            # done |= set(A.indices[A.indptr[node]:A.indptr[node + 1]])
             if len(visited) > max_nodes:
                 return max_nodes
         leaves = next_leaves
@@ -52,7 +54,7 @@ def edge_sample(A, node, p, corr=0., at_least_one=True):
     if at_least_one:
         p = 1 - (1 - p) ** (1 / (r - l))
     num = np.random.binomial(r - l, p)
-    if num > 0:
+    if num > 0 and corr > 0:
         num += np.random.binomial(r - l - num, corr)
 
     # return A.indices[np.random.choice(r - l, num, replace=False) + l]
