@@ -171,7 +171,7 @@ def worker(params):
 
 
 @contextmanager
-def mpi_futures_simulator(A, comm=MPI.COMM_WORLD, root=0, num_chunks=None):
+def mpi_futures(sim, comm=MPI.COMM_WORLD, root=0, num_chunks=None):
     """Return a simulate function using mpi4py.futures for a fixed matrix A.
     FIXME
 
@@ -203,7 +203,10 @@ def mpi_futures_simulator(A, comm=MPI.COMM_WORLD, root=0, num_chunks=None):
         return results
 
     rank = comm.Get_rank()
-    assert A is not None or rank != 0
+    A = None
+    if rank == 0:
+        A = sim.A
+
     size = comm.Get_size()
 
     if num_chunks is None:
@@ -216,4 +219,7 @@ def mpi_futures_simulator(A, comm=MPI.COMM_WORLD, root=0, num_chunks=None):
         if executor is None:
             yield None
         else:
-            yield simulate
+            old_simulator = sim.simulator
+            sim.simulator = simulate
+            yield sim
+            sim.simulator = old_simulator

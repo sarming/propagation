@@ -5,7 +5,7 @@ import pandas as pd
 from mpi4py import MPI
 import numpy as np
 import scipy as sp
-from mpi import mpi_futures_simulator
+from mpi import mpi_futures
 
 from simulation import Simulation
 
@@ -17,7 +17,7 @@ def read_discount(file):
 
 
 if __name__ == "__main__":
-    A = None
+    sim = None
     i_am_head = MPI.COMM_WORLD.Get_rank() == 0
     if i_am_head:
         datadir = 'data'
@@ -27,13 +27,11 @@ if __name__ == "__main__":
         print(f'topic: {topic}')
         # A, node_labels = read.labelled_graph(f'{datadir}/outer_neos.npz')
         sim = Simulation.from_files(f'{datadir}/outer_{topic}.npz', f'{datadir}/sim_features_{topic}.csv')
-        A = sim.A
 
         sim.params.discount_factor.update(read_discount(f'discount-{topic}.csv'))
 
-    with mpi_futures_simulator(A, num_chunks=16000) as simulate:
-        if simulate is not None:
-            sim.simulator = simulate
+    with mpi_futures(sim, num_chunks=16000) as sim:
+        if sim is not None:
             # discount = sim.discount_factor_from_mean_retweets(samples=1, eps=1)
             # discount = sim.discount_factor_from_mean_retweets(samples=8000, eps=0.001)
             # sim.params.discount_factor.update(discount)
@@ -42,8 +40,8 @@ if __name__ == "__main__":
             print(sim.params.to_csv())
             sim.params.to_csv(f'params-{topic}-{os.environ.get("PBS_JOBID")}.csv')
             # sys.exit()
-            sources = 100
-            samples = 80000
+            sources = 1000
+            samples = 8000
             print(f'{len(sim.features)} features, {sources} sources, {samples} samples')
             results = pd.DataFrame({'real_retweet_probability': sim.stats.retweet_probability,
                                     'simulation_retweet_probability': np.NaN,
