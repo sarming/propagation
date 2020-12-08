@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from mpi4py import MPI
 
-from mpi import mpi_futures
+import mpi
 from simulation import Simulation
 
 
@@ -36,7 +36,7 @@ if __name__ == "__main__":
 
         sim.params.discount_factor.update(read_discount(f'{datadir}/discount-{topic}.csv'))
 
-    with mpi_futures(sim, num_chunks=16000) as sim:
+    with mpi.futures(sim, num_chunks=16000) as sim:
         if sim is not None:
             # discount = sim.discount_factor_from_mean_retweets(samples=1, eps=1)
             # discount = sim.discount_factor_from_mean_retweets(samples=8000, eps=0.001)
@@ -57,6 +57,7 @@ if __name__ == "__main__":
             for feature in sim.features:
                 stats = sim.stats.loc[feature]
                 result = sim.simulate(feature, sources=sources, samples=samples)
+                # result = mpi.stats_from_futures(result)
                 results.loc[feature].simulation_mean_retweets = result[0]
                 results.loc[feature].simulation_retweet_probability = result[1]
                 print(f'{feature}: {stats.mean_retweets} vs {result[0]}, {stats.retweet_probability} vs {result[1]}')

@@ -160,9 +160,7 @@ def mpi_simulator(A, comm=MPI.COMM_WORLD, root=0, num_chunks=None):
     return simulate
 
 
-def make_global(A):
-    global global_A
-    global_A = A
+global_A = None
 
 
 def worker(params):
@@ -171,7 +169,7 @@ def worker(params):
 
 
 @contextmanager
-def mpi_futures(sim, comm=MPI.COMM_WORLD, root=0, num_chunks=None):
+def futures(sim, comm=MPI.COMM_WORLD, root=0, num_chunks=None):
     """Return a simulate function using mpi4py.futures for a fixed matrix A.
     FIXME
 
@@ -194,12 +192,11 @@ def mpi_futures(sim, comm=MPI.COMM_WORLD, root=0, num_chunks=None):
 
         sample_calls = [(sources, p, corr, discount, depth, max_nodes, samples, return_stats) for _ in
                         range(num_chunks)]
-        results = list(executor.map(worker, sample_calls))
-
+        results = executor.map(worker, sample_calls)
         if return_stats:
-            mean_retweets, retweet_probability = tuple(zip(*results))
-            return np.mean(mean_retweets), np.mean(retweet_probability)
+            return stats_from_futures(results)
 
+        assert False
         return results
 
     rank = comm.Get_rank()
@@ -213,7 +210,10 @@ def mpi_futures(sim, comm=MPI.COMM_WORLD, root=0, num_chunks=None):
         num_chunks = size * 4
 
     assert root == 0
-    make_global(bcast_csr_matrix(A, comm))
+
+    global global_A
+    assert global_A is None
+    global_A = bcast_csr_matrix(A, comm)
 
     with MPICommExecutor(comm=comm, root=root) as executor:
         if executor is None:
@@ -223,3 +223,11 @@ def mpi_futures(sim, comm=MPI.COMM_WORLD, root=0, num_chunks=None):
             sim.simulator = simulate
             yield sim
             sim.simulator = old_simulator
+
+    global_A = None
+
+
+def stats_from_futures(results):
+    results = list(results)
+    mean_retweets, retweet_probability = tuple(zip(*results))
+    return np.mean(mean_retweets), np.mean(retweet_probability)
