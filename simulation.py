@@ -87,7 +87,7 @@ def tweet_sources(tweets):
 
 
 class Simulation:
-    def __init__(self, A, stats, sources, simulator=propagation.simulate):
+    def __init__(self, A, stats, sources, params=None, simulator=propagation.simulate):
         self.A = A
         self.stats = stats
         self.sources = sources
@@ -104,7 +104,10 @@ class Simulation:
         # self.simulator = parallel.pool_simulator(self.A)
         # self.simulator = logging(self.simulator)
 
-        self.params['edge_probability'] = self.edge_probability_from_retweet_probability()
+        if params is not None:
+            self.params.update(params)
+        else:
+            self.params['edge_probability'] = self.edge_probability_from_retweet_probability()
 
     @classmethod
     def from_files(cls, graph_file, tweet_file, simulator=propagation.simulate):
@@ -113,7 +116,7 @@ class Simulation:
         tweets = read.tweets(tweet_file, node_labels)
         stats = tweet_statistics(tweets)
         sources = tweet_sources(tweets)
-        return cls(A, stats, sources, simulator)
+        return cls(A, stats, sources, None, simulator)
 
     def sample_feature(self, size=None):
         """Return a sample of feature vectors (according to feature distribution)."""
@@ -203,11 +206,13 @@ class Simulation:
                             self.stats.loc[f, 'mean_retweets'],
                             0., .01,
                             eps=eps, logging=True) for f in features), index=features)
+
     @timecall
     def simulate(self, feature=None, sources=None, params=None, samples=1, return_stats=True):
         """Simulate message with given feature vector."""
         sources = self._default_sources(sources, feature)
         params = self._default_params(params, feature)
+        # print(params)
 
         return self.simulator(self.A,
                               sources,
@@ -234,11 +239,11 @@ if __name__ == "__main__":
     # read.adjlist(f'{datadir}/anonymized_outer_graph_neos_20200311.adjlist',
     #              save_as=f'{datadir}/outer_neos.npz')
     # A, node_labels = read.labelled_graph(f'{datadir}/outer_neos.npz')
-    # tweets = read.tweets(f'{datadir}/authors_tweets_features_neos.csv', node_labels)
+    # tweets = read.tweets(f'{datadir}/sim_features_neos.csv', node_labels)
     # stats = Simulation.tweet_statistics(tweets)
     # features = stats.index
-    sim = Simulation.from_files(f'{datadir}/outer_neos.npz', f'{datadir}/authors_tweets_features_neos.csv')
-    # pool = Simulation.pool_from_files(f'{datadir}/outer_neos.npz', f'{datadir}/authors_tweets_features_neos.csv')
+    sim = Simulation.from_files(f'{datadir}/outer_neos.npz', f'{datadir}/sim_features_neos_20200311.csv')
+    # pool = Simulation.pool_from_files(f'{datadir}/outer_neos.npz', f'{datadir}/sim_features_neos.csv')
     # print(
     #     list(pool.map(lambda a, f: a.discount_factor_from_mean_retweets.remote(samples=1000, eps=0.1, features=[f]),
     #                   sim.features)))
