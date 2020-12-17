@@ -52,6 +52,17 @@ def tweets(file, node_labels):
     return csv[['source', 'author_feature', 'tweet_feature', 'retweets']]
 
 
+def stats(file):
+    # TODO optionally remove max_retweets
+    stats = pd.read_csv(file, dtype={'author_feature': str,
+                                     'tweet_feature': str,
+                                     'retweets': 'Int64',
+                                     'tweets': 'Int64',
+                                     'max_retweets': 'Int64'})
+    stats.set_index(['author_feature', 'tweet_feature'], inplace=True)
+    return stats
+
+
 if __name__ == "__main__":
     for g in ['fpoe_20200311', 'neos_20200311', 'bvb_20200409', 'schalke_20200409', 'vegan_20200407']:
         print(g)
