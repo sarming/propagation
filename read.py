@@ -63,6 +63,15 @@ def stats(file):
     return stats
 
 
+def source_map(file):
+    sources = pd.read_csv(file, dtype={'author_feature': str, 'source': 'Int64'})
+    return sources.dropna().groupby('author_feature')['source'].unique()
+
+
+def save_source_map(file, source_map):
+    source_map.explode().reset_index(level=0).set_index('source').to_csv(file)
+
+
 if __name__ == "__main__":
     for g in ['fpoe_20200311', 'neos_20200311', 'bvb_20200409', 'schalke_20200409', 'vegan_20200407']:
         print(g)
