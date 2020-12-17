@@ -24,6 +24,17 @@ def labelled_graph(filename):
     return A, node_list
 
 
+def metis(filename, zero_based=False):
+    with open(filename) as f:
+        (n, m) = f.readline().split()
+        n = int(n)
+        mtx = sp.sparse.lil_matrix((n, n))
+        for (node, neighbors) in enumerate(f.readlines()):
+            neighbors = [int(v) - (1 if not zero_based else 0) for v in neighbors.split()]
+            mtx[node, neighbors] = 1.
+        return mtx.tocsr()
+
+
 def tweets(file, node_labels):
     def str_cat_series(*series):
         # return list(map(str,zip(*series))) # to support nonbinary features
@@ -40,7 +51,8 @@ def tweets(file, node_labels):
 
     return csv[['source', 'author_feature', 'tweet_feature', 'retweets']]
 
+
 if __name__ == "__main__":
-    for g in ['fpoe_20200311','neos_20200311','bvb_20200409','schalke_20200409','vegan_20200407']:
+    for g in ['fpoe_20200311', 'neos_20200311', 'bvb_20200409', 'schalke_20200409', 'vegan_20200407']:
         print(g)
         adjlist(f'data/anonymized_outer_graph_{g}.adjlist', save_as=f'outer_{g}.npz')
