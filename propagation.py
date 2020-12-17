@@ -49,17 +49,18 @@ def edge_sample(A, node, p, corr=0., at_least_one=True):
     """
     l, r = A.indptr[node], A.indptr[node + 1]
     # return A.indices[l:r][np.random.rand(r - l) < p]
-    if l == r:
+    num_follower = r - l
+    if num_follower == 0:
         return []
     if at_least_one:
-        p = 1 - (1 - p) ** (1 / (r - l))
-    num = np.random.binomial(r - l, p)
-    if num > 0 and corr > 0:
-        num += np.random.binomial(r - l - num, corr)
+        p = 1 - (1 - p) ** (1 / num_follower)
+    num_retweeter = np.random.binomial(num_follower, p)
+    if num_retweeter > 0 and corr > 0:
+        num_retweeter += np.random.binomial(num_follower - num_retweeter, corr)
 
     # return A.indices[np.random.choice(r - l, num, replace=False) + l]
     children = A.indices[l:r]
-    return np.random.choice(children, num, replace=False)
+    return np.random.choice(children, num_retweeter, replace=False)
 
 
 def simulation_stats(simulation_results):
