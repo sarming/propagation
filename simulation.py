@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 from profilehooks import timecall
 
-import parallel
 import propagation
 import read
 
@@ -93,7 +92,9 @@ class Simulation:
         self.sources = sources
         self.params = pd.DataFrame({'freq': self.stats.tweets / self.stats.tweets.sum(),
                                     'edge_probability': np.NaN,  # will be calculated below
+                                    'at_least_one': True,
                                     'discount_factor': 1.0,
+                                    'corr': 0.0,
                                     'max_nodes': 10 * self.stats.max_retweets,
                                     'max_depth': 10,
                                     })
@@ -146,7 +147,9 @@ class Simulation:
     def _default_params(self, params, feature):
         if feature is None:
             default_params = pd.Series({'edge_probability': pd.NA,
-                                        'discount_factor': 1.,
+                                        'at_least_one': True,
+                                        'discount_factor': 1.0,
+                                        'corr': 0.0,
                                         'max_nodes': 1000,
                                         'max_depth': 10,
                                         }, dtype=object)
@@ -174,38 +177,32 @@ class Simulation:
                             eps) for f in features), index=features)
 
     # @timecall
-    def discount_factor_from_mean_retweets(self, sources=None, params=None, samples=1000, eps=0.1, features=None):
-        """Find discount factor for given feature vector (or all if none given)."""
+    def learn(self, param, goal_stat, lb, ub, eps, sources, samples, features, params):
+        def helper(x, f):
+            p = self._default_params(params, f)
+            p.update({param: x})
+            return p
+
         if features is None:
             features = self.features
         return pd.Series((
-            invert_monotone(lambda d: self.simulator(A=self.A,
+            invert_monotone(lambda x: self.simulator(A=self.A,
                                                      sources=self._default_sources(sources, f),
-                                                     p=self.params.loc[f, 'edge_probability'],
-                                                     discount=d,
-                                                     depth=self._default_params(params, f)['max_depth'],
-                                                     max_nodes=self._default_params(params, f)['max_nodes'],
-                                                     samples=samples)[0],
-                            self.stats.loc[f, 'mean_retweets'],
-                            0, 1,
+                                                     params=helper(x,f),
+                                                     samples=samples)[0 if goal_stat == 'mean_retweets' else 1],
+                            self.stats.loc[f, goal_stat],
+                            lb, ub,
                             eps=eps, logging=True) for f in features), index=features)
 
-    # @timecall
+    def discount_factor_from_mean_retweets(self, sources=None, params=None, samples=1000, eps=0.1, features=None):
+        """Find discount factor for given feature vector (or all if none given)."""
+        return self.learn('discount', 'mean_retweets', 0., 1., sources=sources, params=params, samples=samples, eps=eps,
+                          features=features)
+
     def corr_from_mean_retweets(self, sources=None, params=None, samples=1000, eps=0.1, features=None):
         """Find corr for given feature vector (or all if none given)."""
-        if features is None:
-            features = self.features
-        return pd.Series((
-            invert_monotone(lambda c: self.simulator(A=self.A,
-                                                     sources=self._default_sources(sources, f),
-                                                     p=self.params.loc[f, 'edge_probability'],
-                                                     corr=c,
-                                                     depth=self._default_params(params, f)['max_depth'],
-                                                     max_nodes=self._default_params(params, f)['max_nodes'],
-                                                     samples=samples)[0],
-                            self.stats.loc[f, 'mean_retweets'],
-                            0., .01,
-                            eps=eps, logging=True) for f in features), index=features)
+        return self.learn('corr', 'mean_retweets', 0., .01, sources=sources, params=params, samples=samples, eps=eps,
+                          features=features)
 
     @timecall
     def simulate(self, feature=None, sources=None, params=None, samples=1, return_stats=True):
@@ -216,10 +213,7 @@ class Simulation:
 
         return self.simulator(self.A,
                               sources,
-                              p=params.edge_probability,
-                              discount=params.discount_factor,
-                              depth=params.max_depth,
-                              max_nodes=params.max_nodes,
+                              params,
                               samples=samples,
                               return_stats=return_stats)
 
@@ -243,6 +237,8 @@ if __name__ == "__main__":
     # stats = Simulation.tweet_statistics(tweets)
     # features = stats.index
     sim = Simulation.from_files(f'{datadir}/outer_neos.npz', f'{datadir}/sim_features_neos_20200311.csv')
+
+
     # pool = Simulation.pool_from_files(f'{datadir}/outer_neos.npz', f'{datadir}/sim_features_neos.csv')
     # print(
     #     list(pool.map(lambda a, f: a.discount_factor_from_mean_retweets.remote(samples=1000, eps=0.1, features=[f]),
@@ -262,10 +258,13 @@ if __name__ == "__main__":
         s = sorted(sim.features, key=lambda f: sim.stats.loc[f].tweets)
         return list(s)
 
+
     @timecall
     def run():
         for feature in most_frequent()[:10]:
             stats = sim.stats.loc[feature]
             result = sim.simulate(feature, sources=1000, samples=1000)
             print(f'{feature}: {stats.mean_retweets} vs {result[0]}, {stats.retweet_probability} vs {result[1]}')
+
+
     run()

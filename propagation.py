@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def edge_propagate(A, source, p, corr=0., discount=1., depth=None, max_nodes=None):
+def edge_propagate(A, source, p, corr=0., discount=1., depth=None, max_nodes=None, at_least_one=True):
     """Propagate message in graph A and return number of nodes visited.
 
     Args:
@@ -28,7 +28,7 @@ def edge_propagate(A, source, p, corr=0., discount=1., depth=None, max_nodes=Non
     for i in range(depth):
         next_leaves = set()
         for node in leaves:
-            children = set(edge_sample(A, node, p, corr))
+            children = set(edge_sample(A, node, p, corr, at_least_one))
             children -= visited
             next_leaves |= children
             visited |= children
@@ -70,7 +70,7 @@ def simulation_stats(simulation_results):
 
 
 # @timecall
-def simulate(A, sources, p, discount=1., corr=0., depth=None, max_nodes=None, samples=1, return_stats=True):
+def simulate(A, sources, params, samples=1, return_stats=True):
     """ Propagate messages and return mean retweets and retweet probability.
 
     Args:
@@ -86,7 +86,14 @@ def simulate(A, sources, p, discount=1., corr=0., depth=None, max_nodes=None, sa
     Returns:
         (int, int): Mean retweets and retweet probability over all runs.
     """
-    retweets = ((edge_propagate(A, source, p=p, corr=corr, discount=discount, depth=depth, max_nodes=max_nodes)
+    p = params['edge_probability']
+    corr = params['corr']
+    depth = params['max_depth']
+    max_nodes = params['max_nodes']
+    at_least_one = params['at_least_one']
+    discount = params['discount_factor']
+    retweets = ((edge_propagate(A, source, p=p, corr=corr, discount=discount, depth=depth, max_nodes=max_nodes,
+                                at_least_one=at_least_one)
                  for _ in range(samples)) for source in sources)
     if return_stats: return simulation_stats(retweets)
     return retweets

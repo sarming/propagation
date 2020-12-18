@@ -165,11 +165,17 @@ global_A = None
 
 def worker(params):
     # print(params)
-    return propagation.simulate(global_A, *params)
+    r = propagation.simulate(global_A, *params)
+
+    if params[3]:  # return_stats
+        return r
+    else:
+        return list(list(r)[0])
+        # return [list(source) for source in r]
 
 
 @contextmanager
-def futures(sim, comm=MPI.COMM_WORLD, root=0, num_chunks=None):
+def futures(sim, comm=MPI.COMM_WORLD, root=0, chunksize=1):
     """Return a simulate function using mpi4py.futures for a fixed matrix A.
     FIXME
 
@@ -185,18 +191,13 @@ def futures(sim, comm=MPI.COMM_WORLD, root=0, num_chunks=None):
     from mpi4py.futures import MPICommExecutor
 
     # @timecall
-    def simulate(A: None, sources, p, corr=0., discount=1., depth=None, max_nodes=None, samples=1, return_stats=True):
+    def simulate(A: None, sources, params, samples=1, return_stats=True):
         """Simulate tweets starting from sources, return mean retweets and retweet probability."""
-        samples = max(samples // num_chunks, 1)
-        print(f'{samples * num_chunks} samples')
+        sample_calls = [([source], params, samples, return_stats) for source in sources]
+        results = executor.map(worker, sample_calls, chunksize=chunksize)
 
-        sample_calls = [(sources, p, corr, discount, depth, max_nodes, samples, return_stats) for _ in
-                        range(num_chunks)]
-        results = executor.map(worker, sample_calls)
         if return_stats:
             return stats_from_futures(results)
-
-        assert False
         return results
 
     rank = comm.Get_rank()
@@ -205,9 +206,6 @@ def futures(sim, comm=MPI.COMM_WORLD, root=0, num_chunks=None):
         A = sim.A
 
     size = comm.Get_size()
-
-    if num_chunks is None:
-        num_chunks = size * 4
 
     assert root == 0
 
@@ -229,5 +227,6 @@ def futures(sim, comm=MPI.COMM_WORLD, root=0, num_chunks=None):
 
 def stats_from_futures(results):
     results = list(results)
+    # print(results)
     mean_retweets, retweet_probability = tuple(zip(*results))
     return np.mean(mean_retweets), np.mean(retweet_probability)
