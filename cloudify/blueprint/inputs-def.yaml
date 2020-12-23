@@ -1,0 +1,147 @@
+inputs:
+
+  ## HPC Infrastructure
+
+  hpc_base_dir:
+    description: HPC working directory
+    default: $HOME
+
+  hpc_config:
+    description: Timezone and HPC interface
+    default:
+      country_tz: Europe/Madrid
+      infrastructure_interface: SLURM
+
+  hpc_credentials:
+    description: HPC credentials
+    default: {}
+
+  hpc_job_prefix:
+    description: Job prefix
+    default: SN_
+
+  hpc_monitor_period:
+    description: Monitoring period for status of the job
+    default: 2
+
+  hpc_monitor_entrypoint:
+    default: ''
+
+  hpc_skip_cleanup:
+    description: Can we skip after running the job
+    default: True
+
+  hpc_workdir_prefix:
+    description: Working directory for submitting the jobs
+    default: SN_cfy
+
+
+
+  ## Job Options
+
+  job_skip_cleanup:
+    description: Skip cleaning
+    default: True
+
+  job_option_type:
+    description: Type of Job
+    default: "SBATCH"
+
+  job_max_time:
+    description: Duration of the Job
+    default: "00:30:00"
+
+  job_num_nodes:
+    description: Number of Nodes for the Job
+    default: 1
+
+  job_tasks_per_node:
+    description: Number of Tasks per Node
+    default: 28
+
+  job_partition:
+    default: standard
+
+  job_memory:
+    default: 32G
+
+
+  # Source code
+
+  git_repo:
+    description: URL of git Repository for Code
+    default: https://github.com/sarming/propagation
+
+  git_branch:
+    description: Git Branch to use
+    default: master
+
+
+  # CKAN
+
+  ckan_entrypoint:
+    description: CKAN Repository
+    default: "https://hidalgo1.man.poznan.pl"
+
+  ckan_api_key:
+    description: CKAN API Key
+    default: ''
+
+  # Job ID - This should be changed
+  id:
+    description: ID of deployment/run. Temporary hack.
+    default: 'cfyid'
+
+  # Inputs
+  topic:
+    description: Name of Topic
+    default: "cfytopic"
+
+  graph_url:
+    description: URL of Follower Graph
+    default: "https://hidalgo1.man.poznan.pl/dataset/02ef431b-7fb5-4fe5-9ea2-828e2038b395/resource/17bf2d21-60ec-42b9-bcfd-c38f478a8485/download/anonymized_outer_graph_neos_20200311.adjlist"
+
+  source_map_url:
+    description: URL of Source Map
+    default: ''
+
+  stats_url:
+    description: URL of Statistics Table
+    default: ''
+
+
+  # Parameter learning
+  param_epsilon:
+    description: Epsilon for Parameter Learning
+      default: 0.001
+
+  param_samples:
+    description: Number of Samples for Parameter Learning
+    default: 10000
+
+#  param_sources:
+#    description: Number of Sources for Parameter Learning
+#    default: 100
+
+  param_output_dataset:
+    description: CKAN Dataset for Output of Parameter Learning
+    default: ''
+
+
+  # Simulation
+
+  sim_features:
+    description: Number of Features for Simulation
+    default: 10000
+
+  sim_sources:
+    description: Number of Sources for Simulation
+    default: 1
+
+  sim_samples:
+    description: Number of Sources for Simulation
+    default: 1
+
+  sim_output_dataset:
+    description: CKAN Dataset for Output of Simulation
+    default: ''

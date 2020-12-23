@@ -53,13 +53,15 @@ if __name__ == "__main__":
     parser.add_argument('--params', help="params file (.csv)")
     parser.add_argument('--discounts', help="discounts file (.csv)")
     parser.add_argument('--source_map', help="source map file (.csv)")
+    parser.add_argument('--indir', help="input directory (default: data)", default='data')
     parser.add_argument('--outdir', help="output directory (default: data)", default='data')
-    parser.add_argument('-a', '--sources', help="number of authors per feature class", type=int)
+    parser.add_argument('-f', '--features', help="number of features to simulate", type=int, default=1)
+    parser.add_argument('-a', '--sources', help="number of authors per feature class", type=int, default=1)
     parser.add_argument('-s', '--samples', help="number of samples per tweet", type=int, default=1)
     parser.add_argument('--epsilon', help="epsilon for parameter learning", type=float, default=0.001)
 
-    parser.add_argument("topic")
     parser.add_argument("command", choices=['learn', 'sim', 'mae'])
+    parser.add_argument("topic")
     args = parser.parse_args()
 
     # Defaults
@@ -69,9 +71,9 @@ if __name__ == "__main__":
         else:
             args.runid = datetime.now().isoformat()
     if not args.graph:
-        args.graph = f'data/anonymized_outer_graph_{args.topic}.npz'
+        args.graph = f'{args.indir}/anonymized_outer_graph_{args.topic}.npz'
     if not args.tweets and not args.stats:
-        args.tweets = f'data/sim_features_{args.topic}.csv'
+        args.tweets = f'{args.indir}/sim_features_{args.topic}.csv'
 
     sim = None
     i_am_head = MPI.COMM_WORLD.Get_rank() == 0
@@ -98,7 +100,8 @@ if __name__ == "__main__":
                     # result = mpi.stats_from_futures(result)
                     results.loc[feature].simulation_mean_retweets = result[0]
                     results.loc[feature].simulation_retweet_probability = result[1]
-                    print(f'{feature}: {stats.mean_retweets} vs {result[0]}, {stats.retweet_probability} vs {result[1]}')
+                    print(
+                        f'{feature}: {stats.mean_retweets} vs {result[0]}, {stats.retweet_probability} vs {result[1]}')
                 results.to_csv(f'{args.outdir}/results-{args.topic}-{args.runid}.csv')
                 mae_retweet_probability = results.real_retweet_probability.sub(
                     results.simulation_retweet_probability).abs().mean()
@@ -107,5 +110,14 @@ if __name__ == "__main__":
                 # r = simulate(None, range(100), p=0.0001, corr=0., samples=1000, max_nodes=100)
                 # print(r)
             elif args.command == 'sim':
-                for feature in sim.sample_feature(args.samples):
-                    print(sim.simulate(feature, sources=args.sources, samples=args.samples))
+                r = pd.DataFrame(((feature, sim.simulate(feature, sources=args.sources, samples=args.samples))
+                                  for feature in sim.sample_feature(args.features)),
+                                 columns=['feature', 'results'])
+                r[['author_feature', 'tweet_feature']] = pd.DataFrame(r['feature'].tolist())
+                r[['mean_retweets', 'retweet_probability']] = pd.DataFrame(r['results'].tolist())
+                results = r.groupby(['author_feature', 'tweet_feature']).agg(
+                    tweets=('feature', 'size'),
+                    mean_retweets=('mean_retweets', 'mean'),
+                    retweet_probability=('retweet_probability', 'mean'))
+                results.to_csv(f'{args.outdir}/results-{args.topic}-{args.runid}.csv')
+                print(results)

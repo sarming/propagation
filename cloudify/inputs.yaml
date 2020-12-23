@@ -1,0 +1,56 @@
+# EAGLE ACCOUNT
+#hpc_interface_credentials:
+#  host: eagle.man.poznan.pl
+#  user:
+#  password:
+# TARINING INFRASTRUCTURE ACCOUNT
+# hpc_interface_credentials:
+  # host: 62.3.171.192
+  # user: akos
+  # private_key: |
+    # -----BEGIN RSA PRIVATE KEY-----
+    # -----END RSA PRIVATE KEY-----
+  # private_key_password: ""
+
+#hpc_base_dir: $HOME
+#hpc_job_prefix: SN_
+#hpc_monitor_period: 2
+#hpc_monitor_entrypoint: ''
+#hpc_skip_cleanup: True
+#hpc_workdir_prefix: SN_cfy
+
+# CKAN
+ckan_entrypoint: "https://hidalgo1.man.poznan.pl"
+ckan_api_key: ""
+
+# Job limits
+job_max_time: "00:30:00"
+job_memory: 32G
+job_num_nodes: 1
+job_tasks_per_node: 28
+job_partition: standard
+
+# Source code
+#git_repo: https://github.com/sarming/propagation
+#git_branch: master
+
+# Job ID
+id: changeme
+
+# Input
+topic: 'neos_20200311'
+graph_url: 'anonymized_outer_graph_neos_20200311.adjlist'
+source_map_url: ''
+stats_url: ''
+
+# Parameter learning
+param_samples: 10000
+param_epsilon: 0.001
+param_output_dataset: ''
+
+# Simulation
+sim_features: 10000
+sim_sources: 1
+sim_samples: 1
+sim_output_dataset: ''
+

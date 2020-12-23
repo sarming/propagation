@@ -1,0 +1,106 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - https://raw.githubusercontent.com/hlrs-121991-germany/croupier/master/plugin.yaml
+  - https://raw.githubusercontent.com/hlrs-121991-germany/croupier/master/resources/types/cfy_types.yaml
+  - inputs-def.yaml
+
+node_templates:
+  hpc_interface:
+    type: croupier.nodes.WorkloadManager
+    properties:
+      config: { get_input: hpc_config }
+      credentials: { get_input: hpc_credentials }
+      job_prefix: { get_input: hpc_job_prefix }
+      base_dir: { get_input: hpc_base_dir }
+      monitor_period: { get_input: hpc_monitor_period }
+      external_monitor_entrypoint: { get_input: monitor_entrypoint }
+      skip_cleanup: {get_input: hpc_skip_cleanup}
+      workdir_prefix: {get_input: hpc_workdir_prefix}
+
+  learn_job:
+    type: croupier.nodes.Job
+    properties:
+      job_options:
+        type: { get_input: job_option_type }
+        nodes: { get_input: job_num_nodes }
+        tasks_per_node: { get_input: job_tasks_per_node }
+        partition: { get_input: job_partition }
+        max_time: { get_input: job_max_time }
+        memory: { get_input: job_memory }
+        pre:
+          - 'module load python/3.8'
+          - 'module load openmpi'
+        script: ["scripts/learn.sh"]
+        arguments:
+          - { get_input: topic }
+          - { get_input: id }
+          - { get_input: graph_url }
+          - { get_input: source_map_url }
+          - { get_input: stats_url }
+          - { get_input: param_samples }
+          - { get_input: param_epsilon }
+      deployment:
+        bootstrap: 'scripts/install.sh'
+        inputs:
+          - { get_input: git_repo }
+          - { get_input: git_branch }
+          - { get_input: graph_url }
+          - { get_input: source_map_url }
+          - { get_input: stats_url }
+      publish:
+        - type: CKAN
+          entrypoint: { get_input: ckan_entrypoint }
+          api_key: { get_input: ckan_api_key }
+          dataset: { get_input: learn_param_output_dataset }
+          file_path:  {concat: ['output/params-',{get_input: topic},'-',{get_input: id},'.csv']}
+          name: {concat: ['params-',{get_input: topic},'-',{get_input: id},'.csv']}
+          description: "Resulting Parameters from Parameter Learning."
+      skip_cleanup: { get_input: job_skip_cleanup }
+
+    relationships:
+      - type: job_managed_by_interface
+        target: hpc_interface
+
+  sim_job:
+    type: croupier.nodes.Job
+    properties:
+      job_options:
+        type: { get_input: job_option_type }
+        nodes: { get_input: job_num_nodes }
+        tasks_per_node: { get_input: job_tasks_per_node }
+        partition: { get_input: job_partition }
+        max_time: { get_input: job_max_time }
+        memory: { get_input: job_memory }
+        pre:
+          - 'module load python/3.8'
+          - 'module load openmpi'
+        script: 'scripts/learn.sh'
+        arguments:
+          - { get_input: topic }
+          - { get_input: id }
+          - { get_input: graph_url }
+          - { get_input: source_map_url }
+          - { get_input: sim_features }
+          - { get_input: sim_sources }
+          - { get_input: sim_samples }
+      publish:
+        - type: CKAN
+          entrypoint: { get_input: ckan_entrypoint }
+          api_key: { get_input: ckan_api_key }
+          dataset: { get_input: learn_param_output_dataset }
+          file_path:  {concat: ['output/results-',{get_input: topic},'-',{get_input: id},'.csv']}
+          name: {concat: ['stats-',{get_input: topic},'-',{get_input: id},'.csv']}
+          description: "Resulting Statistics Table from Simulation."
+      skip_cleanup: { get_input: job_skip_cleanup }
+
+    relationships:
+      - type: job_managed_by_interface
+        target: hpc_interface
+      - type: job_depends_on
+          target: learn_job
+
+outputs:
+  hello_world_job_name:
+    description: hello_world_job job name in the HPC
+    value: { get_attribute: [hello_world_job, job_name] }
