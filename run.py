@@ -89,26 +89,23 @@ def main():
                 sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
             elif args.command == 'mae':
                 print(f'{len(sim.features)} features, {args.sources} sources, {args.samples} samples')
-                results = pd.DataFrame({'real_retweet_probability': sim.stats.retweet_probability,
-                                        'simulation_retweet_probability': np.NaN,
-                                        'real_mean_retweets': sim.stats.mean_retweets,
-                                        'simulation_mean_retweets': np.NaN,
-                                        })
-                for feature in sim.features:
-                    stats = sim.stats.loc[feature]
-                    result = sim.simulate(feature, sources=args.sources, samples=args.samples)
-                    # result = mpi.stats_from_futures(result)
-                    results.loc[feature].simulation_mean_retweets = result[0]
-                    results.loc[feature].simulation_retweet_probability = result[1]
-                    print(
-                        f'{feature}: {stats.mean_retweets} vs {result[0]}, {stats.retweet_probability} vs {result[1]}')
-                results.to_csv(f'{args.outdir}/results-{args.topic}-{args.runid}.csv')
-                mae_retweet_probability = results.real_retweet_probability.sub(
-                    results.simulation_retweet_probability).abs().mean()
-                mae_mean_retweets = results.real_mean_retweets.sub(results.simulation_mean_retweets).abs().mean()
+                r = result_statistics((feature, sim.simulate(feature, sources=args.sources, samples=args.samples))
+                                      for feature in sim.features)
+
+                assert r.index.equals(sim.stats.index)
+                r['real_mean_retweets'] = sim.stats.mean_retweets
+                r['real_retweet_probability'] = sim.stats.retweet_probability
+                # r.rename(columns={'mean_retweets': 'simulation_mean_retweets',
+                #                   'retweet_probability': 'simulation_retweet_probability'}, inplace=True)
+
+                for feature, i in r.iterrows():
+                    print( f'{feature}: {i.real_mean_retweets} vs {i.mean_retweets}, {i.real_retweet_probability} vs {i.retweet_probability}')
+                r.to_csv(f'{args.outdir}/results-{args.topic}-{args.runid}.csv')
+
+                mae_retweet_probability = r.real_retweet_probability.sub(r.retweet_probability).abs().mean()
+                mae_mean_retweets = r.real_mean_retweets.sub(r.mean_retweets).abs().mean()
                 print(f'MAE: retweet_probability: {mae_retweet_probability} mean_retweets: {mae_mean_retweets}')
-                # r = simulate(None, range(100), p=0.0001, corr=0., samples=1000, max_nodes=100)
-                # print(r)
+
             elif args.command == 'sim':
                 r = result_statistics((feature, sim.simulate(feature, sources=args.sources, samples=args.samples))
                                       for feature in sim.sample_feature(args.features))
