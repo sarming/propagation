@@ -163,11 +163,11 @@ def mpi_simulator(A, comm=MPI.COMM_WORLD, root=0, num_chunks=None):
 global_A = None
 
 
-def worker(params):
+def worker(args):
     # print(params)
-    r = propagation.simulate(global_A, *params)
+    r = propagation.simulate(global_A, *args)
 
-    if params[3]:  # return_stats
+    if args[3]:  # return_stats
         return r
     else:
         return list(list(r)[0])
@@ -228,5 +228,7 @@ def futures(sim, comm=MPI.COMM_WORLD, root=0, chunksize=1):
 def stats_from_futures(results):
     results = list(results)
     # print(results)
-    mean_retweets, retweet_probability = tuple(zip(*results))
-    return np.mean(mean_retweets), np.mean(retweet_probability)
+    mean_retweets, retweet_probability = tuple(zip(*results))  # list of pairs to pair of lists
+    # return np.mean(mean_retweets), np.mean(retweet_probability)
+    yield np.mean(mean_retweets)
+    yield np.mean(retweet_probability)

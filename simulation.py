@@ -178,18 +178,21 @@ class Simulation:
 
     # @timecall
     def learn(self, param, goal_stat, lb, ub, eps, sources, samples, features, params):
-        def helper(x, f):
-            p = self._default_params(params, f)
-            p.update({param: x})
+        def set_param(value, feature):
+            p = self._default_params(params, feature)
+            p.update({param: value})
             return p
+
+        def goal(results):
+            return list(results)[0 if goal_stat == 'mean_retweets' else 1]
 
         if features is None:
             features = self.features
         return pd.Series((
-            invert_monotone(lambda x: self.simulator(A=self.A,
-                                                     sources=self._default_sources(sources, f),
-                                                     params=helper(x,f),
-                                                     samples=samples)[0 if goal_stat == 'mean_retweets' else 1],
+            invert_monotone(lambda x: goal(self.simulator(A=self.A,
+                                                          sources=self._default_sources(sources, f),
+                                                          params=set_param(x, f),
+                                                          samples=samples)),
                             self.stats.loc[f, goal_stat],
                             lb, ub,
                             eps=eps, logging=True) for f in features), index=features)
