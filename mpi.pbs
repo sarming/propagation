@@ -15,4 +15,4 @@ OUTFILE=propagation-$PBS_JOBID-$(date +"%Y%m%dT%H%M").out
 uniq $PBS_NODEFILE|wc -l > $OUTFILE
 cat $PBS_NODEFILE|wc -l >>$OUTFILE
 
-/usr/bin/time mpirun python run.py neos_20200311 >>$OUTFILE 2>&1
+/usr/bin/time mpirun python run.py mae neos_20200311 >>$OUTFILE 2>&1

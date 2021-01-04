@@ -8,9 +8,9 @@ import pandas as pd
 from mpi4py import MPI
 
 import mpi
-from simulation import Simulation
 import read
 import simulation
+from simulation import Simulation
 
 
 def build_sim(args):
@@ -21,8 +21,9 @@ def build_sim(args):
     elif args.graph.endswith('.npz'):
         A, node_labels = read.labelled_graph(args.graph)
     else:
-        parser.error(f'Unknown graph file format {args.graph}')
+        raise ValueError(f'Unknown graph file format {args.graph}')
 
+    # Input files
     if args.tweets:
         tweets = read.tweets(args.tweets, node_labels)
         stats = simulation.tweet_statistics(tweets)
@@ -43,7 +44,7 @@ def build_sim(args):
     return sim
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--runid')
     parser.add_argument('--graph', help="graph file (.npz, .metis or .adjlist)")
@@ -76,8 +77,7 @@ if __name__ == "__main__":
         args.tweets = f'{args.indir}/sim_features_{args.topic}.csv'
 
     sim = None
-    i_am_head = MPI.COMM_WORLD.Get_rank() == 0
-    if i_am_head:
+    if MPI.COMM_WORLD.Get_rank() == 0:
         sim = build_sim(args)
         print(f'topic: {args.topic}')
     with mpi.futures(sim, chunksize=1) as sim:
@@ -110,14 +110,22 @@ if __name__ == "__main__":
                 # r = simulate(None, range(100), p=0.0001, corr=0., samples=1000, max_nodes=100)
                 # print(r)
             elif args.command == 'sim':
-                r = pd.DataFrame(((feature, sim.simulate(feature, sources=args.sources, samples=args.samples))
-                                  for feature in sim.sample_feature(args.features)),
-                                 columns=['feature', 'results'])
-                r[['author_feature', 'tweet_feature']] = pd.DataFrame(r['feature'].tolist())
-                r[['mean_retweets', 'retweet_probability']] = pd.DataFrame(r['results'].tolist())
-                results = r.groupby(['author_feature', 'tweet_feature']).agg(
-                    tweets=('feature', 'size'),
-                    mean_retweets=('mean_retweets', 'mean'),
-                    retweet_probability=('retweet_probability', 'mean'))
-                results.to_csv(f'{args.outdir}/results-{args.topic}-{args.runid}.csv')
-                print(results)
+                r = result_statistics((feature, sim.simulate(feature, sources=args.sources, samples=args.samples))
+                                      for feature in sim.sample_feature(args.features))
+                r.to_csv(f'{args.outdir}/results-{args.topic}-{args.runid}.csv')
+                print(r)
+
+
+def result_statistics(feature_results):
+    r = pd.DataFrame(feature_results, columns=['feature', 'results'])
+    r[['author_feature', 'tweet_feature']] = pd.DataFrame(r['feature'].tolist())
+    r[['mean_retweets', 'retweet_probability']] = pd.DataFrame(r['results'].tolist())
+    stats = r.groupby(['author_feature', 'tweet_feature']).agg(
+        tweets=('feature', 'size'),
+        mean_retweets=('mean_retweets', 'mean'),
+        retweet_probability=('retweet_probability', 'mean'))
+    return stats
+
+
+if __name__ == "__main__":
+    main()
