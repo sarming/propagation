@@ -38,6 +38,11 @@ def build_sim(args):
     else:
         sim = Simulation(A, stats, source_map)
 
+    if args.max_depth:
+        sim.params.max_depth = args.max_depth
+    if args.max_nodes:
+        sim.params.max_nodes = args.max_nodes
+
     if args.discounts:
         sim.params.discount_factor.update(read.single_param(args.discounts))
 
@@ -60,6 +65,8 @@ def main():
     parser.add_argument('-a', '--sources', help="number of authors per feature class", type=int, default=1)
     parser.add_argument('-s', '--samples', help="number of samples per tweet", type=int, default=1)
     parser.add_argument('--epsilon', help="epsilon for parameter learning", type=float, default=0.001)
+    parser.add_argument('--max_depth', help="maximum depth to simulate", type=int)
+    parser.add_argument('--max_nodes', help="maximum retweet count to simulate", type=int)
 
     parser.add_argument("command", choices=['learn', 'sim', 'mae'])
     parser.add_argument("topic")

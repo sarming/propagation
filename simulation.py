@@ -96,7 +96,7 @@ class Simulation:
                                     'discount_factor': 1.0,
                                     'corr': 0.0,
                                     'max_nodes': 10 * self.stats.max_retweets,
-                                    'max_depth': 10,
+                                    'max_depth': 50,
                                     })
         self.features = self.stats.index
 
@@ -151,7 +151,7 @@ class Simulation:
                                         'discount_factor': 1.0,
                                         'corr': 0.0,
                                         'max_nodes': 1000,
-                                        'max_depth': 10,
+                                        'max_depth': 50,
                                         }, dtype=object)
         else:
             default_params = self.params.loc[feature]
@@ -207,7 +207,7 @@ class Simulation:
         return self.learn('corr', 'mean_retweets', 0., .01, sources=sources, params=params, samples=samples, eps=eps,
                           features=features)
 
-    @timecall
+    # @timecall
     def simulate(self, feature=None, sources=None, params=None, samples=1, return_stats=True):
         """Simulate message with given feature vector."""
         sources = self._default_sources(sources, feature)
