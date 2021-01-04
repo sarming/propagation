@@ -12,7 +12,6 @@ cd $CURRENT_WORKDIR
 pip install --user pandas
 pip install --user scipy
 pip install --user profilehooks
-pip install --user networkx
 
 git clone -b $git_branch $git_repo src
 

@@ -12,6 +12,9 @@ conda create --name propagation intelpython3_core python=3
 conda create --name propagation python=3
 
 conda activate propagation
-conda install matplotlib graphviz networkx pandas numpy scipy
+conda install pandas numpy scipy
 conda install -c conda-forge jupyterlab
-pip install profilehooks ray
+pip install profilehooks
+
+# If ray is desired (deprecated)
+pip install ray

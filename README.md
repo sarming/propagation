@@ -1,6 +1,8 @@
 # propagation
 Simulate Twitter message propagation 
 
-See [setup.txt](setup.txt) for installation instructions, and [simulation.ipynb](simulation.ipynb) for general usage information.
+See [setup.txt](setup.txt) for installation instructions, and [simulation.ipynb](simulation.ipynb) for general
+information about the library.
 
-On training cluster, install and run `sbatch slurm.sh`.
+Run `./run.py --help` for usage information.
+
