@@ -1,16 +1,36 @@
-import networkx as nx
 import numpy as np
 import pandas as pd
 import scipy as sp
 
 
-def adjlist(file, save_as=None):
-    graph = nx.read_adjlist(file, nodetype=int, create_using=nx.DiGraph)
-    A = nx.to_scipy_sparse_matrix(graph)
-    node_labels = graph.nodes()
+def adjlist(filename, save_as=None):
+    from collections import OrderedDict
+
+    labels = OrderedDict()
+    with open(filename) as f:
+        for line in f:
+            for i in line.split():
+                labels[int(i)] = None
+    for i, label in enumerate(labels.keys()):
+        labels[label] = i
+    node_labels = list(labels.keys())
+
+    n = len(node_labels)
+    mtx = sp.sparse.lil_matrix((n, n))
+    with open(filename) as f:
+        for line in f:
+            nodes = [labels[int(v)] for v in line.split()]
+            mtx[nodes[0], sorted(nodes[1:])] = 1.
+    mtx = mtx.tocsr()
+
+    # graph = nx.read_adjlist(filename, nodetype=int, create_using=nx.DiGraph)
+    # A = nx.to_scipy_sparse_matrix(graph)
+    # assert node_labels == list(graph.nodes())
+    # assert (mtx != A).nnz == 0
+
     if save_as:
-        save_labelled_graph(save_as, A, node_labels)
-    return A, node_labels
+        save_labelled_graph(save_as, mtx, node_labels)
+    return mtx, node_labels
 
 
 def save_labelled_graph(filename, A, node_labels, compressed=True):
@@ -34,7 +54,7 @@ def metis(filename, zero_based=False):
         for (node, neighbors) in enumerate(f.readlines()):
             neighbors = [int(v) - (1 if not zero_based else 0) for v in neighbors.split()]
             mtx[node, neighbors] = 1.
-        node_labels = range(n) if zero_based else range(1, n+1)
+        node_labels = range(n) if zero_based else range(1, n + 1)
         return mtx.tocsr(), node_labels
 
 
