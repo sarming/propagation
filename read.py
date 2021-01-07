@@ -79,8 +79,9 @@ def stats(file):
     # TODO optionally remove max_retweets
     stats = pd.read_csv(file, dtype={'author_feature': str,
                                      'tweet_feature': str,
-                                     'retweets': 'Int64',
                                      'tweets': 'Int64',
+                                     'retweet_probability': float,
+                                     'mean_retweets': float,
                                      'max_retweets': 'Int64'})
     stats.set_index(['author_feature', 'tweet_feature'], inplace=True)
     return stats

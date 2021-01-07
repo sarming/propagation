@@ -14,4 +14,4 @@ cd $CURRENT_WORKDIR
 
 export PYTHONPATH=$PWD/src:$PYTHONPATH
 
-srun python run.py learn cfytopic -id cfyid -s $samples --epsilon $epsilon --graph $graph_file --source_map $source_map_file --stats $stats_file --indir input --outdir output
+srun python run.py learn $topic -id $id -s $samples --epsilon $epsilon --graph $graph_file --source_map $source_map_file --stats $stats_file --indir input --outdir output

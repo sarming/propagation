@@ -18,7 +18,7 @@ node_templates:
       skip_cleanup: {get_input: hpc_skip_cleanup}
       workdir_prefix: {get_input: hpc_workdir_prefix}
 
-  learn_job:
+  learn_param_job:
     type: croupier.nodes.Job
     properties:
       job_options:
@@ -52,7 +52,7 @@ node_templates:
         - type: CKAN
           entrypoint: { get_input: ckan_entrypoint }
           api_key: { get_input: ckan_api_key }
-          dataset: { get_input: learn_param_output_dataset }
+          dataset: { get_input: param_output_dataset }
           file_path:  {concat: ['output/params-',{get_input: topic},'-',{get_input: id},'.csv']}
           name: {concat: ['params-',{get_input: topic},'-',{get_input: id},'.csv']}
           description: "Resulting Parameters from Parameter Learning."
@@ -88,7 +88,7 @@ node_templates:
         - type: CKAN
           entrypoint: { get_input: ckan_entrypoint }
           api_key: { get_input: ckan_api_key }
-          dataset: { get_input: learn_param_output_dataset }
+          dataset: { get_input: sim_output_dataset }
           file_path:  {concat: ['output/results-',{get_input: topic},'-',{get_input: id},'.csv']}
           name: {concat: ['stats-',{get_input: topic},'-',{get_input: id},'.csv']}
           description: "Resulting Statistics Table from Simulation."
@@ -98,9 +98,9 @@ node_templates:
       - type: job_managed_by_interface
         target: hpc_interface
       - type: job_depends_on
-          target: learn_job
+        target: learn_param_job
 
-outputs:
-  hello_world_job_name:
-    description: hello_world_job job name in the HPC
-    value: { get_attribute: [hello_world_job, job_name] }
+#outputs:
+#  hello_world_job_name:
+#    description: hello_world_job job name in the HPC
+#    value: { get_attribute: [hello_world_job, job_name] }
