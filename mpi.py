@@ -8,6 +8,8 @@ import propagation
 
 
 def bcast_array(arr=None, comm=MPI.COMM_WORLD, root=0):
+    """Broadcast an arbitrary numpy array."""
+
     rank = comm.Get_rank()
     assert arr is not None or rank != root
 
@@ -23,7 +25,15 @@ def bcast_array(arr=None, comm=MPI.COMM_WORLD, root=0):
 
 
 def bcast_array_shm(arr=None, comm=MPI.COMM_WORLD, root=0):
-    """comm needs to be shared memory."""
+    """Broadcast a numpy array via shared memory.
+
+    Args:
+        arr: numpy array
+        comm: shared memory communicator
+        root: root rank in comm
+
+    Returns: copy of arr in shared memory
+    """
     rank = comm.Get_rank()
     assert arr is not None or rank != root
 
@@ -44,6 +54,15 @@ def bcast_array_shm(arr=None, comm=MPI.COMM_WORLD, root=0):
 
 
 def bcast_csr_matrix(A=None, comm=MPI.COMM_WORLD):
+    """Broadcast a csr_matrix to shared memory of every node.
+
+    Args:
+        A: csr_matrix (must be set in rank 0)
+        comm: MPI communicator
+
+    Returns: copy of A in shared memory
+
+    """
     rank = comm.Get_rank()
     assert A is not None or rank != 0
 
@@ -72,6 +91,7 @@ global_A = None
 
 
 def worker(args):
+    """Worker function for futures implentation below."""
     # print(params)
     r = propagation.simulate(global_A, *args)
 
@@ -84,18 +104,6 @@ def worker(args):
 
 @contextmanager
 def futures(sim, comm=MPI.COMM_WORLD, root=0, chunksize=1):
-    """Return a simulate function using mpi4py.futures for a fixed matrix A.
-    FIXME
-
-    Note:
-        The graph must be passed up front to this function.
-        The returned function ignores its first argument.
-
-    Args:
-        A: matrix used for all simulate calls
-
-    Returns: simulate function (that ignores its first argument).
-    """
     from mpi4py.futures import MPICommExecutor
 
     # @timecall
@@ -134,6 +142,14 @@ def futures(sim, comm=MPI.COMM_WORLD, root=0, chunksize=1):
 
 
 def stats_from_futures(results):
+    """Lazily (as generator instead of pair) compute mean_retweets and retweet_probability.
+
+    Args:
+        results: iterable of (mean_retweets, retweet_probability) pairs.
+
+    Yields: mean mean_retweets followed by mean retweet_probability.
+
+    """
     results = list(results)
     # print(results)
     mean_retweets, retweet_probability = tuple(zip(*results))  # list of pairs to pair of lists
