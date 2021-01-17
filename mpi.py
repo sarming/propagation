@@ -1,8 +1,8 @@
 from contextlib import contextmanager
 
 import numpy as np
-import scipy as sp
 from mpi4py import MPI
+from scipy.sparse import csr_matrix
 
 import propagation
 
@@ -65,7 +65,7 @@ def bcast_csr_matrix(A=None, comm=MPI.COMM_WORLD):
     Ai = bcast_array_shm(Ai, node_comm)
     Ap = bcast_array_shm(Ap, node_comm)
 
-    return sp.sparse.csr_matrix((Ad, Ai, Ap))
+    return csr_matrix((Ad, Ai, Ap))
 
 
 global_A = None

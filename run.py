@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 import argparse
 import os
-import sys
 from datetime import datetime
 
-import numpy as np
 import pandas as pd
 from mpi4py import MPI
 
@@ -87,6 +85,7 @@ def main():
     sim = None
     if MPI.COMM_WORLD.Get_rank() == 0:
         sim = build_sim(args)
+        print(f'args: {args}')
         print(f'topic: {args.topic}')
     with mpi.futures(sim, chunksize=1) as sim:
         if sim is not None:
@@ -126,7 +125,7 @@ def result_statistics(feature_results):
     r[['author_feature', 'tweet_feature']] = pd.DataFrame(r['feature'].tolist())
     r[['mean_retweets', 'retweet_probability']] = pd.DataFrame(r['results'].tolist())
     stats = r.groupby(['author_feature', 'tweet_feature']).agg(
-        tweets=('feature', 'size'),
+        tweets=('feature', 'size'), #TODO: multiply with authors * samples
         mean_retweets=('mean_retweets', 'mean'),
         retweet_probability=('retweet_probability', 'mean'))
     return stats

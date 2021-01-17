@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import scipy as sp
+from scipy.sparse import lil_matrix, csr_matrix
 
 
 def adjlist(filename, save_as=None):
@@ -16,7 +16,7 @@ def adjlist(filename, save_as=None):
     node_labels = list(labels.keys())
 
     n = len(node_labels)
-    mtx = sp.sparse.lil_matrix((n, n))
+    mtx = lil_matrix((n, n))
     with open(filename) as f:
         for line in f:
             nodes = [labels[int(v)] for v in line.split()]
@@ -40,7 +40,7 @@ def save_labelled_graph(filename, A, node_labels, compressed=True):
 
 def labelled_graph(filename):
     loader = np.load(filename)
-    A = sp.sparse.csr_matrix((loader['data'], loader['indices'], loader['indptr']),
+    A = csr_matrix((loader['data'], loader['indices'], loader['indptr']),
                              shape=loader['shape'])
     node_labels = loader['node_labels']
     return A, node_labels
@@ -50,7 +50,7 @@ def metis(filename, zero_based=False):
     with open(filename) as f:
         (n, m) = f.readline().split()
         n = int(n)
-        mtx = sp.sparse.lil_matrix((n, n))
+        mtx = lil_matrix((n, n))
         for (node, neighbors) in enumerate(f.readlines()):
             neighbors = [int(v) - (1 if not zero_based else 0) for v in neighbors.split()]
             mtx[node, neighbors] = 1.

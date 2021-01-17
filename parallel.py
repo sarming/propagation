@@ -3,6 +3,7 @@ import multiprocessing
 
 import ray
 import scipy as sp
+import scipy.sparse
 
 import propagation
 
