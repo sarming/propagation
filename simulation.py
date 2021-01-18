@@ -209,7 +209,18 @@ class Simulation:
 
     # @timecall
     def simulate(self, feature=None, sources=None, params=None, samples=1, return_stats=True):
-        """Simulate message with given feature vector."""
+        """Simulate message with given feature vector.
+
+        Args:
+            feature (pair): author_feature and tweet_feature.
+            sources: list of sources or number of sources (may also be dict from (author) feature to sources)
+            params (dict-like): overwrite parameters, missing values will be filled by params for feature (may also be dict from feature to parameters)
+            samples: number of samples
+            return_stats: return (mean_retweets, retweet_probability) instead
+
+        Returns:
+            List of lists of retweet counts.
+        """
         sources = self._default_sources(sources, feature)
         params = self._default_params(params, feature)
         # print(params)
