@@ -105,10 +105,9 @@ class Simulation:
         # self.simulator = parallel.pool_simulator(self.A)
         # self.simulator = logging(self.simulator)
 
+        self.params['edge_probability'] = self.edge_probability_from_retweet_probability()
         if params is not None:
             self.params.update(params)
-        else:
-            self.params['edge_probability'] = self.edge_probability_from_retweet_probability()
 
     @classmethod
     def from_files(cls, graph_file, tweet_file, simulator=propagation.simulate):
