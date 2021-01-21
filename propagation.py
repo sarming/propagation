@@ -7,10 +7,12 @@ def edge_propagate(A, source, p, corr=0., discount=1., depth=None, max_nodes=Non
     Args:
         A: Sparse adjacency matrix of graph.
         source (int): Initial node.
-        p (float): Probability that message passes along an edge.
+        p (float): Probability parameter.
+        corr (float): Correlation probability.
         discount (float): Discount factor <=1.0 that is multiplied at each level.
         depth (int): Maximum depth.
         max_nodes (int): Maximum number of nodes.
+        at_least_one (bool): If true, p is retweet probability. If false, p is edge probability.
 
     Returns:
         Number of nodes visited (without initial).
@@ -76,12 +78,9 @@ def simulate(A, sources, params, samples=1, return_stats=True):
     Args:
         A: Sparse adjacency matrix of graph.
         sources (list): List of source nodes.
-        p (float): Probability that message passes along an edge.
-        discount (float): Discount factor <=1.0 that is multiplied at each level.
-        depth (int): Maximum depth.
-        max_nodes (int): Maximum number of nodes.
+        params (dict-like): Simulation parameters.
         samples (int): Number of samples per source node.
-        return_stats (bool): If set to false, yield full results (list of lists) instead of stats.
+        return_stats (bool): If set to false, return full results (list of lists) instead of stats.
 
     Returns:
         (int, int): Mean retweets and retweet probability over all runs.
