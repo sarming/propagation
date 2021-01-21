@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-module load openmpi/4.0.0_gcc620
+#module load openmpi/4.0.0_gcc620
 source $HOME/miniconda3/etc/profile.d/conda.sh
 conda activate propagation
 
