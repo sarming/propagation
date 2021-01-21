@@ -7,12 +7,9 @@ conda activate propagation
 topic=$1 #"neos_20200311"
 id=$2 #123 #TODO dynamic numbering
 #graph_file="https://hidalgo1.man.poznan.pl/dataset/02ef431b-7fb5-4fe5-9ea2-828e2038b395/resource/17bf2d21-60ec-42b9-bcfd-c38f478a8485/download/anonymized_outer_graph_neos_20200311.adjlist" 
-graph_file=`basename $3` #TODO naming and directory
-#basename refers to filename without leading path
-#graph_file="input/anonymized_outer_graph_neos_20200311.adjlist" #for testing
-
-source_map_file=`basename $4` #""
-stats_file=`basename $5` #"" 
+graph_file="$(basename -- $3)" #TODO naming and directory
+source_map_file="$(basename -- $4)" #""
+stats_file="$(basename -- $5)" #"" 
 samples=$6 #20
 epsilon=$7 #0.1
 
