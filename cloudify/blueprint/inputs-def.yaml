@@ -10,7 +10,7 @@ inputs:
     description: Timezone and HPC interface
     default:
       country_tz: Europe/Madrid
-      infrastructure_interface: SLURM
+      workload_manager: SLURM
 
   hpc_credentials:
     description: HPC credentials
@@ -25,7 +25,7 @@ inputs:
     default: 2
 
   hpc_monitor_entrypoint:
-    default: ''
+    default: ""
 
   hpc_skip_cleanup:
     description: Can we skip after running the job
@@ -56,8 +56,12 @@ inputs:
     default: 1
 
   job_tasks_per_node:
-    description: Number of Tasks per Node
+    description: Number of Tasks per Node #todo check if it means cores
     default: 28
+    
+  job_num_processes:
+    description: Number of Processes #further division of tasks?
+    default: 1
 
   job_partition:
     default: standard
@@ -65,6 +69,11 @@ inputs:
   job_memory:
     default: 32G
 
+  # Job ID - This should be changed
+  job_id:
+    description: ID of deployment/run. Temporary hack.
+    default: cfyid
+    
 
   # Source code
 
@@ -85,17 +94,13 @@ inputs:
 
   ckan_api_key:
     description: CKAN API Key
-    default: ''
+    default: ""
 
-  # Job ID - This should be changed
-  id:
-    description: ID of deployment/run. Temporary hack.
-    default: 'cfyid'
 
   # Inputs
   topic:
     description: Name of Topic
-    default: "cfytopic"
+    default: "neos_20200311"
 
   graph_url:
     description: URL of Follower Graph
@@ -103,33 +108,31 @@ inputs:
 
   source_map_url:
     description: URL of Source Map
-    default: ''
+    default: ""
 
   stats_url:
     description: URL of Statistics Table
-    default: ''
+    default: ""
 
 
   # Parameter learning
-  param_epsilon:
-    description: Epsilon for Parameter Learning
-      default: 0.001
-
   param_samples:
     description: Number of Samples for Parameter Learning
     default: 10000
-
+    
+  param_epsilon:
+    description: Epsilon for Parameter Learning
+    default: 0.001
 #  param_sources:
 #    description: Number of Sources for Parameter Learning
 #    default: 100
 
   param_output_dataset:
     description: CKAN Dataset for Output of Parameter Learning
-    default: ''
+    default: ""
 
 
   # Simulation
-
   sim_features:
     description: Number of Features for Simulation
     default: 10000
@@ -144,4 +147,6 @@ inputs:
 
   sim_output_dataset:
     description: CKAN Dataset for Output of Simulation
-    default: ''
+    default: ""
+    
+    
