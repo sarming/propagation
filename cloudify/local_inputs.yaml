@@ -6,8 +6,8 @@ hpc_config:
 # EAGLE ACCOUNT
 hpc_credentials:
   host: eagle.man.poznan.pl
-  user: ""
-  password: ""
+  user: 
+  password: 
 # TRAINING INFRASTRUCTURE ACCOUNT
 # hpc_wm_credentials:
   # host: 62.3.171.192
@@ -33,8 +33,7 @@ job_tasks_per_node: 20
 #job_num_processes: 1
 job_partition: standard
 job_memory: 32G
-#job_command: "$HOME/helloworld/run2.sh" 
-job_id: 123 #changeme 
+job_id: 123 #changeme
 
 
 # Source code
@@ -48,17 +47,17 @@ ckan_api_key: ""
 # Input
 topic: "neos_20200311"
 graph_url: "https://hidalgo1.man.poznan.pl/dataset/02ef431b-7fb5-4fe5-9ea2-828e2038b395/resource/17bf2d21-60ec-42b9-bcfd-c38f478a8485/download/anonymized_outer_graph_neos_20200311.adjlist"
-source_map_url: ""
-stats_url: ""
+source_map_url: "default" #requires some value, otherwise input variables are shuffled
+stats_url: "default"
 
 # Parameter learning
 param_samples: 20
 param_epsilon: 0.1
-param_output_dataset: ""
+param_output_dataset: "default"
 
 # Simulation
-sim_features: 10000
-sim_sources: 1
-sim_samples: 1
-sim_output_dataset: ""
+sim_features: 50
+sim_sources: 3
+sim_samples: 4
+sim_output_dataset: "default"
 

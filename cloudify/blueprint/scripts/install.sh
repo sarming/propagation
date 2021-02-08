@@ -3,12 +3,16 @@
 git_repo=$1
 git_branch=$2
 graph_url=$3
-source_map=$8
-stats_url=$9
-topic=$4
-job_id=$5
-param_samples=$6
-param_epsilon=$7
+source_map=$4
+stats_url=$5
+topic=$6
+job_id=$7
+param_samples=$8
+param_epsilon=$9
+sim_features=${10}
+sim_sources=${11}
+sim_samples=${12} 
+
 
 # DYNAMIC VARIABLES
 cd $CURRENT_WORKDIR
@@ -48,5 +52,7 @@ echo "SOURCE_MAP_URL=$source_map" >> $configfile
 echo "STATS_URL=$stats_url" >> $configfile
 echo "PARAM_SAMPLES=$param_samples" >> $configfile
 echo "PARAM_EPSILON=$param_epsilon" >> $configfile
-
+echo "SIM_FEATURES=$sim_features" >> $configfile
+echo "SIM_SOURCES=$sim_sources" >> $configfile
+echo "SIM_SAMPLES=$sim_samples" >> $configfile
 
