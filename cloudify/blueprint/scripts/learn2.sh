@@ -39,10 +39,10 @@ export PATH=$HOME/.local/bin:$PATH
 # DYNAMIC VARIABLES
 #comment out the assignment of the directory
 #CURRENT_WORKDIR=$HOME"/SN_cfy_20210409_093752"
-cd $CURRENT_WORKDIR
+#cd $CURRENT_WORKDIR
 
-export PYTHONPATH=$CURRENT_WORKDIR"/src"
-
+#export PYTHONPATH=$CURRENT_WORKDIR"/src"
+export PYTHONPATH=$PWD"/src"
 
 #srun --mpi=pmix_v3 --nodes=1 --ntasks-per-node=20 python $CURRENT_WORKDIR/src/run.py learn $topic --runid $id -s $samples --epsilon $epsilon --graph $CURRENT_WORKDIR/$graph_file --indir data --outdir output
 
