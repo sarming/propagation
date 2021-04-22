@@ -14,7 +14,7 @@ if [ -z "$SOURCE_MAP_URL" ] || [ "$SOURCE_MAP_URL" = "default" ]
     then
         source_map_file=""
     else
-        source_map_file="$(basename -- $SOURCE_MAP_URL)" 
+        source_map_file="$(basename -- $SOURCE_MAP_URL)"
 fi
 echo "$source_map_file"
 if [ -z "$STATS_URL" ] || [ "$STATS_URL" = "default" ]
@@ -42,5 +42,4 @@ export PYTHONPATH=$CURRENT_WORKDIR"/src"
 #srun --mpi=pmix_v3 --nodes=1 --ntasks-per-node=20 python $PYTHONPATH/run.py sim $topic --runid $id -f $features -a $sources -s $samples --graph $CURRENT_WORKDIR/input/$graph_file --source_map $CURRENT_WORKDIR/input/$source_map_file --params $CURRENT_WORKDIR/output/params-$topic-$id.csv --indir $CURRENT_WORKDIR/input --outdir $CURRENT_WORKDIR/output
 #TODO source_map_file and params
 
-mpirun -n $SLURM_NTASKS python $PYTHONPATH/run.py sim $topic -f $features -a $sources -s $samples --graph $CURRENT_WORKDIR/input/$graph_file --indir $CURRENT_WORKDIR/src/data --outdir $CURRENT_WORKDIR/output
-
+mpirun -n $tasks_per_node python $PYTHONPATH/run.py sim $topic -f $features -a $sources -s $samples --graph $CURRENT_WORKDIR/input/$graph_file --indir $CURRENT_WORKDIR/src/data --outdir $CURRENT_WORKDIR/output
