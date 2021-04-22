@@ -3,7 +3,7 @@
 source $HOME/miniconda3/etc/profile.d/conda.sh
 conda activate propagation
 
-source config.txt
+source $PWD/config.txt
 
 topic="$TOPIC"
 id="$JOB_ID" #TODO dynamic numbering
