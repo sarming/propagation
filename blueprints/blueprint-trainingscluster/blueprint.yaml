@@ -1,0 +1,99 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - https://raw.githubusercontent.com/hlrs-121991-germany/croupier/master/plugin.yaml
+  - https://raw.githubusercontent.com/hlrs-121991-germany/croupier/master/resources/types/cfy_types.yaml
+  - inputs-def.yaml
+#take care, links to yaml files are different from UAP pilot
+
+node_templates:
+  hpc_interface:
+    type: croupier.nodes.WorkloadManager
+    properties:
+      config: { get_input: hpc_config }
+      credentials: { get_input: hpc_credentials }
+      job_prefix: { get_input: hpc_job_prefix }
+      base_dir: { get_input: hpc_base_dir }
+      monitor_period: { get_input: hpc_monitor_period }
+      external_monitor_entrypoint: { get_input: hpc_monitor_entrypoint }
+      skip_cleanup: {get_input: hpc_skip_cleanup}
+      workdir_prefix: {get_input: hpc_workdir_prefix}
+
+  learn_job:
+    type: croupier.nodes.Job
+    properties:
+      job_options:
+        type: { get_input: job_option_type }
+        nodes: { get_input: job_num_nodes }
+        tasks_per_node: { get_input: job_tasks_per_node }
+        command: "source src/scripts/trainingcluster/learn.sh"
+      deployment:
+        bootstrap: "scripts/install.sh"
+        inputs:
+          - { get_input: git_repo }
+          - { get_input: git_branch }
+          - { get_input: graph_url }
+          - { get_input: source_map_url }
+          - { get_input: stats_url }
+          - { get_input: topic }
+          - { get_input: job_id }
+          - { get_input: job_tasks_per_node }
+          - { get_input: param_samples }
+          - { get_input: param_epsilon }
+          - { get_input: sim_features }
+          - { get_input: sim_sources }
+          - { get_input: sim_samples }
+          - { get_input: ckan_entrypoint } 
+          - { get_input: ckan_api_key }        
+      publish:
+        - dataset: { get_input: param_output_dataset }
+          file_path: { get_input: output_filepath }
+          name: { get_input: filename_on_ckan }
+          description: "Resulting Parameters from Parameter Learning."
+      skip_cleanup: { get_input: job_skip_cleanup }
+    relationships:
+      - type: job_managed_by_wm
+        target: hpc_interface
+  sim_job:
+    type: croupier.nodes.Job
+    properties:
+      job_options:
+        type: { get_input: job_option_type }
+        nodes: { get_input: job_num_nodes }
+        tasks_per_node: { get_input: job_tasks_per_node }
+        command: "source src/scripts/trainingcluster/sim.sh"
+      deployment:
+        bootstrap: "scripts/install.sh"
+        inputs:
+          - { get_input: git_repo }
+          - { get_input: git_branch }
+          - { get_input: graph_url }
+          - { get_input: source_map_url }
+          - { get_input: stats_url }
+          - { get_input: topic }
+          - { get_input: job_id }
+          - { get_input: job_tasks_per_node }
+          - { get_input: param_samples }
+          - { get_input: param_epsilon }
+          - { get_input: sim_features }
+          - { get_input: sim_sources }
+          - { get_input: sim_samples }
+          - { get_input: ckan_entrypoint } 
+          - { get_input: ckan_api_key } 
+      publish:
+        - type: CKAN
+          entrypoint: { get_input: ckan_entrypoint }
+          api_key: { get_input: ckan_api_key }
+          dataset: { get_input: sim_output_dataset }
+          file_path:  {concat: ["output/sim-",{get_input: topic},"-",{get_input: job_id},".csv"]}
+          name: {concat: ["sim-",{get_input: topic},"-",{get_input: job_id},".csv"]}
+          description: "Resulting Simulation."
+      skip_cleanup: { get_input: job_skip_cleanup }
+    relationships:
+      - type: job_managed_by_wm
+        target: hpc_interface
+      
+outputs:
+  hello_world_job_name:
+    description: hello_world_job job name in the HPC
+    value: { get_attribute: [learn_job, job_name] }
