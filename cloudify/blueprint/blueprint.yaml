@@ -30,8 +30,8 @@ node_templates:
         max_time: { get_input: job_max_time }
         memory: { get_input: job_memory }
         pre:
-          - "module load openmpi/4.0.0_gcc620" 
-        command: "src/cloudify/blueprint/scripts/learn.sh"
+          - "module load openmpi/4.0.0_gcc620"
+        command: "src/scripts/eagle/learn.sh"
       deployment:
         bootstrap: "scripts/install.sh"
         inputs:
@@ -70,8 +70,8 @@ node_templates:
         max_time: { get_input: job_max_time }
         memory: { get_input: job_memory }
         pre:
-          - "module load openmpi/4.0.0_gcc620" 
-        command: "src/cloudify/blueprint/scripts/sim.sh"
+          - "module load openmpi/4.0.0_gcc620"
+        command: "src/scripts/eagle/sim.sh"
       publish:
         - type: CKAN
           entrypoint: { get_input: ckan_entrypoint }
@@ -86,7 +86,7 @@ node_templates:
         target: hpc_interface
       - type: job_depends_on
         target: learn_job
-        
+
 outputs:
   hello_world_job_name:
     description: hello_world_job job name in the HPC

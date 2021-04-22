@@ -13,7 +13,7 @@ if [ -z "$SOURCE_MAP_URL" ] || [ "$SOURCE_MAP_URL" = "default" ]
     then
         source_map_file=""
     else
-        source_map_file="$(basename -- $SOURCE_MAP_URL)" 
+        source_map_file="$(basename -- $SOURCE_MAP_URL)"
 fi
 
 features="$SIM_FEATURES"
@@ -32,5 +32,4 @@ export PYTHONPATH=$CURRENT_WORKDIR"/src"
 #srun python run.py sim $topic -id $id -f $features -a $sources -s $samples --graph $graph_file --source_map $source_map_file --params output/params-$topic-$id.csv --indir input --outdir output
 #TODO source_map_file and params
 
-mpirun -n $SLURM_NTASKS python $PYTHONPATH/run.py sim $topic -f $features -a $sources -s $samples --graph $CURRENT_WORKDIR/input/$graph_file --indir src/data --outdir output
-
+mpirun -n $SLURM_NTASKS python $PYTHONPATH/run.py sim $topic -f $features -a $sources -s $samples --graph $CURRENT_WORKDIR/input/$graph_file --indir $CURRENT_WORKDIR/src/data --outdir $CURRENT_WORKDIR/output
