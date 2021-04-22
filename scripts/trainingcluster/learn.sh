@@ -13,14 +13,14 @@ tasks_per_node="$TASKS_PER_NODE"
 graph_file="$(basename -- $GRAPH_URL)" #TODO naming and directory
 echo "$graph_file"
 
-if [ -z "$SOURCE_MAP_URL" ]
+if [ -z "$SOURCE_MAP_URL" ] || [ "$SOURCE_MAP_URL" = "default" ]
     then
         source_map_file=""
     else
         source_map_file="$(basename -- $SOURCE_MAP_URL)" #""
 fi
 echo "$source_map_file"
-if [ -z "$STATS_URL" ]
+if [ -z "$STATS_URL" ] || [ "$STATS_URL" = "default" ]
     then
         stats_file=""
     else
@@ -40,6 +40,6 @@ export PATH=$HOME/.local/bin:$PATH
 #cd $CURRENT_WORKDIR
 export PYTHONPATH=$CURRENT_WORKDIR"/src"
 
-#srun --mpi=pmix_v3 --nodes=1 --ntasks-per-node=20 python $CURRENT_WORKDIR/src/run.py learn $topic --runid $id -s $samples --epsilon $epsilon --graph $CURRENT_WORKDIR/$graph_file --indir data --outdir output
+#srun --mpi=pmix_v3 --nodes=1 --ntasks-per-node=20 python $PYTHONPATH/run.py learn $topic --runid $id -s $samples --epsilon $epsilon --graph $CURRENT_WORKDIR/input/$graph_file --indir $CURRENT_WORKDIR/src/data --outdir $CURRENT_WORKDIR/output
 
-mpirun -n $tasks_per_node python $PYTHONPATH/run.py learn $topic -s $samples --epsilon $epsilon --graph $CURRENT_WORKDIR/input/$graph_file --indir $CURRENT_WORKDIR/src/data --outdir output
+mpirun -n $tasks_per_node python $PYTHONPATH/run.py learn $topic -s $samples --epsilon $epsilon --graph $CURRENT_WORKDIR/input/$graph_file --indir $CURRENT_WORKDIR/src/data --outdir $CURRENT_WORKDIR/output
