@@ -1,0 +1,69 @@
+# HPC infrastructure
+hpc_base_dir: $HOME
+hpc_config:
+  country_tz: Europe/Madrid
+  workload_manager: BASH
+  
+# TRAINING INFRASTRUCTURE ACCOUNT
+hpc_credentials:
+  host: 
+  user: 
+  private_key: 
+
+hpc_job_prefix: SN_
+hpc_monitor_period: 10
+hpc_monitor_entrypoint: ""
+hpc_skip_cleanup: True
+hpc_workdir_prefix: SN_cfy
+
+
+# Job specifications
+job_skip_cleanup: True
+job_option_type: "SHELL"
+#job_max_time: "01:00:00"
+#job_num_nodes: 1
+job_tasks_per_node: 20
+#job_num_processes: 1
+#job_partition: standard
+#job_memory: 8G
+job_id: 123 #changeme
+job_command: "source src/scripts/trainingcluster/learn.sh"
+
+
+# Source code
+git_repo: "https://github.com/sarming/propagation"
+git_branch: "master"
+
+
+# Input
+topic: "neos_20200311"
+graph_url: "https://hidalgo1.man.poznan.pl/dataset/02ef431b-7fb5-4fe5-9ea2-828e2038b395/resource/17bf2d21-60ec-42b9-bcfd-c38f478a8485/download/anonymized_outer_graph_neos_20200311.adjlist"
+source_map_url: "default" #requires some value, otherwise input variables are shuffled
+stats_url: "default"
+
+# Parameter learning
+param_samples: 20
+param_epsilon: 0.1
+
+
+# Simulation
+sim_features: 50
+sim_sources: 3
+sim_samples: 4
+sim_output_dataset: "default"
+
+
+
+# CKAN
+ckan_entrypoint: "https://hidalgo1.man.poznan.pl"
+ckan_api_key: 
+#param_output_dataset: 
+output_filepath: "tmp.txt"
+filename_on_ckan: "tmp.out"
+
+
+param_output_dataset:
+  config: {entrypoint: "https://hidalgo1.man.poznan.pl",  key: }
+  dataset:
+  type: ckan
+
