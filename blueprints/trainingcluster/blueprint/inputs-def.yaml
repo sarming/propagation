@@ -46,7 +46,7 @@ inputs:
   job_option_type:
     description: Type of Job
     default: "SHELL"
-    
+
   job_command:
     description: Job name
     default: "scripts/learn.sh"
@@ -62,7 +62,7 @@ inputs:
   job_tasks_per_node:
     description: Number of Tasks per Node #todo check if it means cores
     default: 20
-    
+
   job_num_processes:
     description: Number of Processes #further division of tasks?
     default: 1
@@ -73,13 +73,11 @@ inputs:
   # job_memory:
   #   default: 32G
 
-  # Job ID - This should be changed
   job_id:
     description: ID of deployment/run. Temporary hack.
-    default: cfyid    
+    default: 001
 
   # Source code
-
   git_repo:
     description: URL of git Repository for Code
     default: https://github.com/sarming/propagation
@@ -97,21 +95,18 @@ inputs:
   ckan_api_key:
     description: CKAN API Key
     default: ""
-    
-  param_output_dataset:
+
+  learn_output_dataset:
     default:
       config: {}
       dataset: {}
       type: ckan
-    
-  output_filepath:
-    description: Path to the file for upload
-    default: ""
-    
-  filename_on_ckan:
-    description: Name of the file on CKAN
-    default: ""
 
+  sim_output_dataset:
+    default:
+      config: {}
+      dataset: {}
+      type: ckan
 
 
   # Inputs
@@ -136,16 +131,14 @@ inputs:
   param_samples:
     description: Number of Samples for Parameter Learning
     default: 10000
-    
+
   param_epsilon:
     description: Epsilon for Parameter Learning
     default: 0.001
-    
+
 #  param_sources:
 #    description: Number of Sources for Parameter Learning
 #    default: 100
-
-
 
 
   # Simulation
@@ -160,9 +153,3 @@ inputs:
   sim_samples:
     description: Number of Sources for Simulation
     default: 1
-
-  sim_output_dataset:
-    description: CKAN Dataset for Output of Simulation
-    default: ""
-    
-    

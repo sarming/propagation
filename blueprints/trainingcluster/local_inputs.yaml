@@ -3,12 +3,12 @@ hpc_base_dir: $HOME
 hpc_config:
   country_tz: Europe/Madrid
   workload_manager: BASH
-  
+
 # TRAINING INFRASTRUCTURE ACCOUNT
 hpc_credentials:
-  host: 
-  user: 
-  private_key: 
+  host:
+  user:
+  private_key:
 
 hpc_job_prefix: SN_
 hpc_monitor_period: 10
@@ -50,20 +50,18 @@ param_epsilon: 0.1
 sim_features: 50
 sim_sources: 3
 sim_samples: 4
-sim_output_dataset: "default"
-
 
 
 # CKAN
 ckan_entrypoint: "https://hidalgo1.man.poznan.pl"
-ckan_api_key: 
-#param_output_dataset: 
-output_filepath: "tmp.txt"
-filename_on_ckan: "tmp.out"
+ckan_api_key: ""
 
-
-param_output_dataset:
-  config: {entrypoint: "https://hidalgo1.man.poznan.pl",  key: }
+learn_output_dataset:
+  config: {entrypoint: "https://hidalgo1.man.poznan.pl",  key: ""}
   dataset:
   type: ckan
 
+sim_output_dataset:
+  config: {entrypoint: "https://hidalgo1.man.poznan.pl",  key: ""}
+  dataset:
+  type: ckan
