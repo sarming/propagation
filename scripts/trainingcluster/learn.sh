@@ -6,7 +6,7 @@ conda activate propagation
 source $PWD/config.txt
 
 topic="$TOPIC" #"neos_20200311"
-id="$JOB_ID" #123 #TODO dynamic numbering
+id="$JOB_ID" #123
 tasks_per_node="$TASKS_PER_NODE"
 
 #graph_file="https://hidalgo1.man.poznan.pl/dataset/02ef431b-7fb5-4fe5-9ea2-828e2038b395/resource/17bf2d21-60ec-42b9-bcfd-c38f478a8485/download/anonymized_outer_graph_neos_20200311.adjlist"
@@ -42,4 +42,4 @@ export PYTHONPATH=$CURRENT_WORKDIR"/src"
 
 #srun --mpi=pmix_v3 --nodes=1 --ntasks-per-node=20 python $PYTHONPATH/run.py learn $topic --runid $id -s $samples --epsilon $epsilon --graph $CURRENT_WORKDIR/input/$graph_file --indir $CURRENT_WORKDIR/src/data --outdir $CURRENT_WORKDIR/output
 
-mpirun -n $tasks_per_node python $PYTHONPATH/run.py learn $topic -s $samples --epsilon $epsilon --graph $CURRENT_WORKDIR/input/$graph_file --indir $CURRENT_WORKDIR/src/data --outdir $CURRENT_WORKDIR/output
+mpirun -n $tasks_per_node python $PYTHONPATH/run.py learn $topic --runid $id -s $samples --epsilon $epsilon --graph $CURRENT_WORKDIR/input/$graph_file --indir $CURRENT_WORKDIR/src/data --outdir $CURRENT_WORKDIR/output
