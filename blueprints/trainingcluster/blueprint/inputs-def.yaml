@@ -88,13 +88,6 @@ inputs:
 
 
   # CKAN
-  ckan_entrypoint:
-    description: CKAN Repository
-    default: "https://hidalgo1.man.poznan.pl"
-
-  ckan_api_key:
-    description: CKAN API Key
-    default: ""
 
   learn_output_dataset:
     default:

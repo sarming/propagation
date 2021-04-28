@@ -43,8 +43,6 @@ node_templates:
           - { get_input: sim_features }
           - { get_input: sim_sources }
           - { get_input: sim_samples }
-          - { get_input: ckan_entrypoint }
-          - { get_input: ckan_api_key }
       publish:
         - dataset: { get_input: learn_output_dataset }
           file_path: {concat: ["output/params-",{get_input: topic},"-",{get_input: job_id},".csv"]}
@@ -78,8 +76,6 @@ node_templates:
           - { get_input: sim_features }
           - { get_input: sim_sources }
           - { get_input: sim_samples }
-          - { get_input: ckan_entrypoint }
-          - { get_input: ckan_api_key }
       publish:
         - dataset: { get_input: sim_output_dataset }
           file_path:  {concat: ["output/results-",{get_input: topic},"-",{get_input: job_id},".csv"]}
