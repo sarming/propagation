@@ -59,8 +59,8 @@ echo "SIM_FEATURES=$sim_features" >> $configfile
 echo "SIM_SOURCES=$sim_sources" >> $configfile
 echo "SIM_SAMPLES=$sim_samples" >> $configfile
 
-tmpfile="tmp.txt"
-touch $tmpfile
-env >> $tmpfile
+#tmpfile="tmp.txt"
+#touch $tmpfile
+#env >> $tmpfile
 
 

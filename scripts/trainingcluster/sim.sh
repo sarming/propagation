@@ -7,6 +7,8 @@ source $PWD/config.txt
 
 topic="$TOPIC"
 id="$JOB_ID"
+tasks_per_node="$TASKS_PER_NODE"
+
 graph_file="$(basename -- $GRAPH_URL)" #TODO naming and directory
 echo "$graph_file"
 
@@ -43,3 +45,4 @@ export PYTHONPATH=$CURRENT_WORKDIR"/src"
 #TODO source_map_file and params
 
 mpirun -n $tasks_per_node python $PYTHONPATH/run.py sim $topic --runid $id -f $features -a $sources -s $samples --graph $CURRENT_WORKDIR/input/$graph_file --indir $CURRENT_WORKDIR/src/data --outdir $CURRENT_WORKDIR/output
+

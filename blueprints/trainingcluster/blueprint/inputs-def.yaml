@@ -49,7 +49,7 @@ inputs:
 
   job_command:
     description: Job name
-    default: "scripts/learn.sh"
+    default: "source src/scripts/trainingcluster/learn.sh"
 
   job_max_time:
     description: Duration of the Job
@@ -153,3 +153,5 @@ inputs:
   sim_samples:
     description: Number of Sources for Simulation
     default: 1
+
+    
