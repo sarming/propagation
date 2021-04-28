@@ -81,7 +81,7 @@ def stats(file):
                                      'tweets': 'Int64',
                                      'retweet_probability': float,
                                      'mean_retweets': float,
-                                     'max_retweets': 'Int64'}
+                                     'max_retweets': 'Int64'})
     #set default max retweets if not provided
     if 'max_retweets' not in stats.columns:
         stats['max_retweets'] = 100
