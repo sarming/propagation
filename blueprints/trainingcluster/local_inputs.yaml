@@ -6,12 +6,12 @@ hpc_config:
 
 # TRAINING INFRASTRUCTURE ACCOUNT
 hpc_credentials:
-  host:
-  user:
-  private_key:
+  host: 62.3.171.192
+  user: <insert username>
+  private_key: <insert private key>
 
 hpc_job_prefix: SN_
-hpc_monitor_period: 10
+hpc_monitor_period: 60
 hpc_monitor_entrypoint: ""
 hpc_skip_cleanup: True
 hpc_workdir_prefix: SN_cfy
@@ -53,15 +53,89 @@ sim_samples: 4
 
 
 # CKAN
-ckan_entrypoint: "https://hidalgo1.man.poznan.pl"
-ckan_api_key: ""
 
 learn_output_dataset:
-  config: {entrypoint: "https://hidalgo1.man.poznan.pl",  key: ""}
+  config: {entrypoint: "https://hidalgo1.man.poznan.pl",  key: "<insert ckan api key>"}
   dataset:
+    #application_id: ''
+    #author: ''
+    #author_email: ''
+    #creator_user_id: ''
+    ex_license: GNU Free Documentation License
+    id: <insert dataset id>
+    name: <insert dataset name>
+    isopen: false
+    #license_id: ''
+    #license_title: ''
+    num_resources: 1
+    organization:
+      approval_status: approved
+      #id: ''
+      is_organization: true
+      #name: <insert organization name>
+      state: active
+      #title: ''
+      type: organization
+    owner_org: ''
+    private: true
+    reliability_source: Simulation
+    resources:
+    - #created: ''
+      datastore_active: false
+      #description: Test file manual upload
+      format: csv
+      #id: 
+      mimetype: text/plain
+      #name: tmp.csv
+      url_type: upload
+    #source: ''
+    state: active
+    #title: Hello World Output Name
+    type: dataset
+    #url: ''
+    #version: ''
+  type: ckan
+  
+sim_output_dataset:
+  config: {entrypoint: "https://hidalgo1.man.poznan.pl",  key: "<insert ckan api key>"}
+  dataset:
+    #application_id: ''
+    #author: ''
+    #author_email: ''
+    #creator_user_id: ''
+    ex_license: GNU Free Documentation License
+    #groups: []
+    id: <insert dataset id>
+    name: <insert dataset name>
+    isopen: false
+    #license_id: ''
+    #license_title: ''
+    num_resources: 1
+    organization:
+      approval_status: approved
+      #id: ''
+      is_organization: true
+      #name: <insert organization name>
+      state: active
+      #title: ''
+      type: organization
+    owner_org: ''
+    private: true
+    reliability_source: Simulation
+    resources:
+    - #created: ''
+      datastore_active: false
+      #description: Test file manual upload
+      format: csv
+      #id: 
+      mimetype: text/plain
+      #name: tmp.csv
+      url_type: upload
+    #source: ''
+    state: active
+    #title: Hello World Output Name
+    type: dataset
+    #url: ''
+    #version: ''
   type: ckan
 
-sim_output_dataset:
-  config: {entrypoint: "https://hidalgo1.man.poznan.pl",  key: ""}
-  dataset:
-  type: ckan
