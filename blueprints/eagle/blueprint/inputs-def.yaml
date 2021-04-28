@@ -22,7 +22,7 @@ inputs:
 
   hpc_monitor_period:
     description: Monitoring period for status of the job
-    default: 2
+    default: 60
 
   hpc_monitor_entrypoint:
     default: ""
@@ -149,5 +149,3 @@ inputs:
   sim_samples:
     description: Number of Sources for Simulation
     default: 1
-
-    
