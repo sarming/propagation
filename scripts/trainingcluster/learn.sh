@@ -43,4 +43,4 @@ export PYTHONPATH=$CURRENT_WORKDIR"/src"
 
 #srun --mpi=pmix_v3 --nodes=1 --ntasks-per-node=20 python $PYTHONPATH/run.py learn $topic --runid $id -s $samples --epsilon $epsilon --graph $CURRENT_WORKDIR/input/$graph_file --indir $CURRENT_WORKDIR/src/data --outdir $CURRENT_WORKDIR/output
 
-mpirun -n $tasks_per_node python $PYTHONPATH/run.py learn $topic --runid $id -s $samples --epsilon $epsilon --graph $CURRENT_WORKDIR/input/$graph_file --indir $CURRENT_WORKDIR/src/data --outdir $CURRENT_WORKDIR/output
+mpirun -n $tasks_per_node python $PYTHONPATH/run.py learn_discount $topic --runid $id -s $samples --epsilon $epsilon --graph $CURRENT_WORKDIR/input/$graph_file --indir $CURRENT_WORKDIR/src/data --outdir $CURRENT_WORKDIR/output
