@@ -179,7 +179,7 @@ class Simulation:
     def learn(self, param, goal_stat, lb, ub, eps, sources, samples, features, params):
         def set_param(value, feature):
             p = self._default_params(params, feature)
-            p.update({param: value})
+            p[param] = value
             return p
 
         def goal(results):
