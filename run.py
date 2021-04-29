@@ -22,6 +22,7 @@ def parse_args():
     parser.add_argument('--stats', help="stats file (.csv)")
     parser.add_argument('--params', help="params file (.csv)")
     parser.add_argument('--discounts', help="discounts file (.csv)")
+    parser.add_argument('--corrs', help="corr file (.csv)")
     parser.add_argument('--source_map', help="source map file (.csv)")
     parser.add_argument('--indir', help="input directory (default: data)", default='data')
     parser.add_argument('--outdir', help="output directory (default: data)", default='data')
@@ -31,7 +32,7 @@ def parse_args():
     parser.add_argument('--epsilon', help="epsilon for parameter learning", type=float, default=0.001)
     parser.add_argument('--max_depth', help="maximum depth to simulate", type=int)
     parser.add_argument('--max_nodes', help="maximum retweet count to simulate", type=int)
-    parser.add_argument("command", choices=['learn', 'sim', 'mae'])
+    parser.add_argument("command", choices=['learn_discount','learn_corr', 'sim', 'mae'])
     parser.add_argument("topic")
     args = parser.parse_args()
 
@@ -82,7 +83,10 @@ def build_sim(args):
         sim.params.max_nodes = args.max_nodes
 
     if args.discounts:
-        sim.params.discount_factor.update(read.single_param(args.discounts))
+        sim.params['discount_factor'] = read.single_param(args.discounts)
+        
+    if args.corrs:
+        sim.params['corr'] = read.single_param(args.corrs)
 
     return sim
 
@@ -119,10 +123,16 @@ def main():
     # if True: # bypass mpi
     with mpi.futures(sim, chunksize=1) as sim:
         if sim is not None:
-            if args.command == 'learn':
+            if args.command == 'learn_discount':
                 discount = sim.discount_factor_from_mean_retweets(samples=args.samples, eps=args.epsilon)
                 discount.to_csv(f'{args.outdir}/discount-{args.topic}-{args.runid}.csv')
-                sim.params.discount_factor.update(discount)
+                sim.params['discount_factor'] = discount
+                sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
+                
+            elif args.command == 'learn_corr':
+                corr = sim.corr_from_mean_retweets(samples=args.samples, eps=args.epsilon)
+                corr.to_csv(f'{args.outdir}/corr-{args.topic}-{args.runid}.csv')
+                sim.params['corr'] = corr
                 sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
 
             elif args.command == 'mae':
@@ -141,6 +151,7 @@ def main():
                           f'{i.real_mean_retweets} vs {i.mean_retweets}, '
                           f'{i.real_retweet_probability} vs {i.retweet_probability}')
                 r.to_csv(f'{args.outdir}/results-{args.topic}-{args.runid}.csv')
+                sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
 
                 mae_retweet_probability = r.real_retweet_probability.sub(r.retweet_probability).abs().mean()
                 mae_mean_retweets = r.real_mean_retweets.sub(r.mean_retweets).abs().mean()
