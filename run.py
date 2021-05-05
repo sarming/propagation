@@ -43,7 +43,7 @@ def parse_args():
         else:
             args.runid = datetime.now().isoformat()
     if not args.graph:
-        args.graph = f'{args.indir}/anonymized_outer_graph_{args.topic}.npz'
+        args.graph = f'{args.indir}/anonymized_inner_graph_{args.topic}.adjlist'
     #if not args.tweets and not args.stats:
     if not args.tweets:
         args.tweets = f'{args.indir}/sim_features_{args.topic}.csv'
@@ -84,7 +84,7 @@ def build_sim(args):
 
     if args.discounts:
         sim.params['discount_factor'] = read.single_param(args.discounts)
-        
+
     if args.corrs:
         sim.params['corr'] = read.single_param(args.corrs)
 
@@ -128,7 +128,7 @@ def main():
                 discount.to_csv(f'{args.outdir}/discount-{args.topic}-{args.runid}.csv')
                 sim.params['discount_factor'] = discount
                 sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
-                
+
             elif args.command == 'learn_corr':
                 corr = sim.corr_from_mean_retweets(samples=args.samples, eps=args.epsilon)
                 corr.to_csv(f'{args.outdir}/corr-{args.topic}-{args.runid}.csv')
