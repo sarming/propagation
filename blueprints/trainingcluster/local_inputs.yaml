@@ -36,15 +36,14 @@ git_branch: "master"
 
 
 # Input
-topic: "neos_20200311"
-graph_url: "https://hidalgo1.man.poznan.pl/dataset/02ef431b-7fb5-4fe5-9ea2-828e2038b395/resource/17bf2d21-60ec-42b9-bcfd-c38f478a8485/download/anonymized_outer_graph_neos_20200311.adjlist"
+topic: "neos"
+graph_type: "outer"
 source_map_url: "default" #requires some value, otherwise input variables are shuffled
 stats_url: "default"
 
 # Parameter learning
 param_samples: 20
 param_epsilon: 0.1
-
 
 # Simulation
 sim_features: 50
@@ -84,7 +83,7 @@ learn_output_dataset:
       datastore_active: false
       #description: Test file manual upload
       format: csv
-      #id: 
+      #id:
       mimetype: text/plain
       #name: tmp.csv
       url_type: upload
@@ -95,7 +94,7 @@ learn_output_dataset:
     #url: ''
     #version: ''
   type: ckan
-  
+
 sim_output_dataset:
   config: {entrypoint: "https://hidalgo1.man.poznan.pl",  key: "<insert ckan api key>"}
   dataset:
@@ -127,7 +126,7 @@ sim_output_dataset:
       datastore_active: false
       #description: Test file manual upload
       format: csv
-      #id: 
+      #id:
       mimetype: text/plain
       #name: tmp.csv
       url_type: upload

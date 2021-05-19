@@ -77,6 +77,7 @@ def tweet_statistics(tweets, min_size=10):
         # sources=('source', list),
     ).dropna().astype({'tweets': 'Int64', 'max_retweets': 'Int64'})
     stats = stats[stats.tweets >= min_size]  # Remove small classes
+    #stats.to_csv('data/tmp_stats.csv')
     return stats
 
 

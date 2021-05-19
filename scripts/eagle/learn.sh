@@ -8,18 +8,18 @@ source $PWD/config.txt
 topic="$TOPIC" #"neos_20200311"
 id="$JOB_ID" #123
 
-#graph_file="https://hidalgo1.man.poznan.pl/dataset/02ef431b-7fb5-4fe5-9ea2-828e2038b395/resource/17bf2d21-60ec-42b9-bcfd-c38f478a8485/download/anonymized_outer_graph_neos_20200311.adjlist"
-graph_file="$(basename -- $GRAPH_URL)" #TODO naming and directory
+
+graph_file="$(basename -- $GRAPH_URL)"
 echo "$graph_file"
 
-if [ -z "$SOURCE_MAP_URL" ] || [ "$SOURCE_MAP_URL" = "default" ]
+if [ -z "$SOURCE_MAP_URL" ] || [ "$SOURCE_MAP_URL" == "default" ]
     then
         source_map_file=""
     else
         source_map_file="$(basename -- $SOURCE_MAP_URL)" #""
 fi
 echo "$source_map_file"
-if [ -z "$STATS_URL" ] || [ "$STATS_URL" = "default" ]
+if [ -z "$STATS_URL" ] || [ "$STATS_URL" == "default" ]
     then
         stats_file=""
     else
@@ -42,4 +42,8 @@ export PYTHONPATH=$CURRENT_WORKDIR"/src"
 
 #srun --mpi=pmix_v3 --nodes=1 --ntasks-per-node=20 python $PYTHONPATH/run.py learn $topic --runid $id -s $samples --epsilon $epsilon --graph $CURRENT_WORKDIR/input/$graph_file --indir $CURRENT_WORKDIR/src/data --outdir $CURRENT_WORKDIR/output
 
-mpirun -n $SLURM_NTASKS python $PYTHONPATH/run.py learn_discount $topic --runid $id -s $samples --epsilon $epsilon --graph $CURRENT_WORKDIR/input/$graph_file --indir $CURRENT_WORKDIR/src/data --outdir $CURRENT_WORKDIR/output
+mpirun -n $SLURM_NTASKS python $PYTHONPATH/run.py learn_discount $topic \
+--runid $id -s $samples --epsilon $epsilon \
+--graph $CURRENT_WORKDIR/input/$graph_file \
+--indir $CURRENT_WORKDIR/input \
+--outdir $CURRENT_WORKDIR/output

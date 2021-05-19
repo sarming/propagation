@@ -32,7 +32,7 @@ node_templates:
         inputs:
           - { get_input: git_repo }
           - { get_input: git_branch }
-          - { get_input: graph_url }
+          - { get_input: graph_type }
           - { get_input: source_map_url }
           - { get_input: stats_url }
           - { get_input: topic }
@@ -65,7 +65,7 @@ node_templates:
         inputs:
           - { get_input: git_repo }
           - { get_input: git_branch }
-          - { get_input: graph_url }
+          - { get_input: graph_type }
           - { get_input: source_map_url }
           - { get_input: stats_url }
           - { get_input: topic }
@@ -85,6 +85,8 @@ node_templates:
     relationships:
       - type: job_managed_by_wm
         target: hpc_interface
+      - type: job_depends_on
+        target: learn_job
 
 outputs:
   hello_world_job_name:

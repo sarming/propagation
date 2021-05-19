@@ -100,12 +100,12 @@ inputs:
 
   # Inputs
   topic:
-    description: Name of Topic
-    default: "neos_20200311"
+    description: Name of Topic [neos|fpoe|schalke|bvb|vegan]
+    default: "neos"
 
-  graph_url:
-    description: URL of Follower Graph
-    default: "https://hidalgo1.man.poznan.pl/dataset/02ef431b-7fb5-4fe5-9ea2-828e2038b395/resource/17bf2d21-60ec-42b9-bcfd-c38f478a8485/download/anonymized_outer_graph_neos_20200311.adjlist"
+  graph_type:
+    description: All Users or Active Users Only [outer|inner]
+    default: "outer"
 
   source_map_url:
     description: URL of Source Map

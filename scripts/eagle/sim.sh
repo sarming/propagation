@@ -8,10 +8,10 @@ source $PWD/config.txt
 topic="$TOPIC"
 id="$JOB_ID"
 
-graph_file="$(basename -- $GRAPH_URL)" #TODO naming and directory
+graph_file="$(basename -- $GRAPH_URL)"
 echo "$graph_file"
 
-if [ -z "$SOURCE_MAP_URL" ] || [ "$SOURCE_MAP_URL" = "default" ]
+if [ -z "$SOURCE_MAP_URL" ] || [ "$SOURCE_MAP_URL" == "default" ]
     then
         source_map_file=""
     else
@@ -19,7 +19,7 @@ if [ -z "$SOURCE_MAP_URL" ] || [ "$SOURCE_MAP_URL" = "default" ]
 fi
 echo "$source_map_file"
 
-if [ -z "$STATS_URL" ] || [ "$STATS_URL" = "default" ]
+if [ -z "$STATS_URL" ] || [ "$STATS_URL" == "default" ]
     then
         stats_file=""
     else
@@ -49,13 +49,13 @@ if [ "$stats_file" = "" ]
         mpirun -n $SLURM_NTASKS python $PYTHONPATH/run.py sim \
         $topic --runid $id -f $features -a $sources -s $samples \
         --graph $CURRENT_WORKDIR/input/$graph_file \
-        --indir $CURRENT_WORKDIR/src/data \
+        --indir $CURRENT_WORKDIR/input \
         --outdir $CURRENT_WORKDIR/output
     else
         mpirun -n $SLURM_NTASKS python $PYTHONPATH/run.py sim \
         $topic --runid $id -f $features -a $sources -s $samples \
         --graph $CURRENT_WORKDIR/input/$graph_file \
         --stats $CURRENT_WORKDIR/input/$stats_file \
-        --indir $CURRENT_WORKDIR/src/data \
+        --indir $CURRENT_WORKDIR/input \
         --outdir $CURRENT_WORKDIR/output
 fi

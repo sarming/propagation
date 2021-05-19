@@ -37,7 +37,7 @@ node_templates:
         inputs:
           - { get_input: git_repo }
           - { get_input: git_branch }
-          - { get_input: graph_url }
+          - { get_input: graph_type }
           - { get_input: source_map_url }
           - { get_input: stats_url }
           - { get_input: topic }
@@ -75,7 +75,7 @@ node_templates:
         inputs:
           - { get_input: git_repo }
           - { get_input: git_branch }
-          - { get_input: graph_url }
+          - { get_input: graph_type }
           - { get_input: source_map_url }
           - { get_input: stats_url }
           - { get_input: topic }
