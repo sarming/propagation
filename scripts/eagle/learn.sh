@@ -5,40 +5,20 @@ conda activate propagation
 
 source $PWD/config.txt
 
-topic="$TOPIC" #"neos_20200311"
+topic="$TOPIC" #"neos"
 id="$JOB_ID" #123
 
-
-graph_file="$(basename -- $GRAPH_URL)"
+graph_file="$GRAPH_FILE"
 echo "$graph_file"
-
-if [ -z "$SOURCE_MAP_URL" ] || [ "$SOURCE_MAP_URL" == "default" ]
-    then
-        source_map_file=""
-    else
-        source_map_file="$(basename -- $SOURCE_MAP_URL)" #""
-fi
-echo "$source_map_file"
-if [ -z "$STATS_URL" ] || [ "$STATS_URL" == "default" ]
-    then
-        stats_file=""
-    else
-        stats_file="$(basename -- $STATS_URL)" #""
-fi
-echo "$stats_file"
-
 samples="$PARAM_SAMPLES" #20
 echo "$samples"
 epsilon="$PARAM_EPSILON" #0.1
 echo "$epsilon"
 
-
 export PATH=$HOME/.local/bin:$PATH
-
 # DYNAMIC VARIABLES
 cd $CURRENT_WORKDIR
 export PYTHONPATH=$CURRENT_WORKDIR"/src"
-
 
 #srun --mpi=pmix_v3 --nodes=1 --ntasks-per-node=20 python $PYTHONPATH/run.py learn $topic --runid $id -s $samples --epsilon $epsilon --graph $CURRENT_WORKDIR/input/$graph_file --indir $CURRENT_WORKDIR/src/data --outdir $CURRENT_WORKDIR/output
 

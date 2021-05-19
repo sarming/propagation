@@ -48,14 +48,14 @@ else
     echo "not a valid graph_url"
 fi
 
-graph_file_out="anonymized_${graph_type}_graph_${topic}.adjlist"
+graph_file="anonymized_${graph_type}_graph_${topic}.adjlist"
 
 tweets_url="https://ckan.hidalgo-project.eu/dataset/7ca9e0d7-3ec0-4c13-8d6e-9aeb37e50c8e/resource/3a309fc4-bc99-477f-ba19-8c73b947b8ae/download/sim_features_${topic_date}.csv"
-tweets_file_out="sim_features_${topic}.csv"
+tweets_file="sim_features_${topic}.csv"
 
 #download files
-wget -O $graph_file_out -N $graph_url -P input
-wget -O $tweets_file_out -N $tweets_url -P input
+wget $graph_url -O input/$graph_file
+wget $tweets_url -O input/$tweets_file
 
 if [ -z "$source_map" ] || [ "$source_map" == "default" ]
     then
@@ -89,7 +89,7 @@ if [ -f "$configfile" ]
         echo "JOB_ID=$job_id" >> $configfile
         echo "TASKS_PER_NODE=$tasks_per_node" >> $configfile
         echo "CURRENT_WORKDIR=$CURRENT_WORKDIR" >> $configfile
-        echo "GRAPH_FILE=$graph_file_out" >> $configfile
+        echo "GRAPH_FILE=$graph_file" >> $configfile
         echo "SOURCEMAP_FILE=$source_map_file" >> $configfile
         echo "STATS_FILE=$stats_file" >> $configfile
         echo "PARAM_SAMPLES=$param_samples" >> $configfile
