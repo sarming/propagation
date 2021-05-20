@@ -2,7 +2,7 @@ from functools import wraps
 
 import numpy as np
 import pandas as pd
-from profilehooks import timecall
+#from profilehooks import timecall
 
 import propagation
 import read
@@ -273,7 +273,7 @@ if __name__ == "__main__":
         return list(s)
 
 
-    @timecall
+    #@timecall
     def run():
         for feature in most_frequent()[:10]:
             stats = sim.stats.loc[feature]
