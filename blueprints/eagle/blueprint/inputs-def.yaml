@@ -84,6 +84,9 @@ inputs:
 
 
   # CKAN
+  ckan_api_key:
+      description: api key of the user
+      default: ""
 
   learn_output_dataset:
     default:
@@ -107,7 +110,7 @@ inputs:
     description: All Users or Active Users Only [outer|inner]
     default: "outer"
 
-  source_map_url:
+  sourcemap_url:
     description: URL of Source Map
     default: ""
 

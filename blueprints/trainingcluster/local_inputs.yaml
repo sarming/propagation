@@ -13,12 +13,12 @@ hpc_credentials:
 hpc_job_prefix: SN_
 hpc_monitor_period: 60
 hpc_monitor_entrypoint: ""
-hpc_skip_cleanup: True
+hpc_skip_cleanup: False
 hpc_workdir_prefix: SN_cfy
 
 
 # Job specifications
-job_skip_cleanup: True
+job_skip_cleanup: False
 job_option_type: "SHELL"
 #job_max_time: "01:00:00"
 #job_num_nodes: 1
@@ -26,7 +26,7 @@ job_tasks_per_node: 20
 #job_num_processes: 1
 #job_partition: standard
 #job_memory: 8G
-job_id: 123 #changeme
+job_id: 123
 job_command: "source src/scripts/trainingcluster/learn.sh"
 
 
@@ -38,7 +38,7 @@ git_branch: "master"
 # Input
 topic: "neos"
 graph_type: "outer"
-source_map_url: "default" #requires some value, otherwise input variables are shuffled
+sourcemap_url: "default" #requires some value, otherwise input variables are shuffled
 stats_url: "default"
 
 # Parameter learning
@@ -52,89 +52,41 @@ sim_samples: 4
 
 
 # CKAN
+ckan_api_key: ""
 
 learn_output_dataset:
-  config: {entrypoint: "https://ckan.hidalgo-project.eu",  key: "<insert ckan api key>"}
+  config: {entrypoint: "https://ckan.hidalgo-project.eu",  key: "<insert api key>"}
   dataset:
-    #application_id: ''
     #author: ''
-    #author_email: ''
-    #creator_user_id: ''
-    ex_license: GNU Free Documentation License
-    id: <insert dataset id>
-    name: <insert dataset name>
-    isopen: false
-    #license_id: ''
-    #license_title: ''
-    num_resources: 1
-    organization:
-      approval_status: approved
-      #id: ''
-      is_organization: true
-      #name: <insert organization name>
-      state: active
-      #title: ''
-      type: organization
-    owner_org: ''
-    private: true
-    reliability_source: Simulation
-    resources:
-    - #created: ''
-      datastore_active: false
-      #description: Test file manual upload
-      format: csv
-      #id:
-      mimetype: text/plain
-      #name: tmp.csv
-      url_type: upload
-    #source: ''
-    state: active
-    #title: Hello World Output Name
+    #license: GNU Free Documentation License
+    id: <insert package id>
+    #name: 
+    #organization:
+    #  name: 
+    #resources:
+    #  format: csv
+    #private: true
+    #state: active
+    #title: 
     type: dataset
-    #url: ''
-    #version: ''
   type: ckan
 
 sim_output_dataset:
-  config: {entrypoint: "https://ckan.hidalgo-project.eu",  key: "<insert ckan api key>"}
+  config: {entrypoint: "https://ckan.hidalgo-project.eu",  key: "<insert api key>"}
   dataset:
-    #application_id: ''
     #author: ''
-    #author_email: ''
-    #creator_user_id: ''
-    ex_license: GNU Free Documentation License
-    #groups: []
-    id: <insert dataset id>
-    name: <insert dataset name>
-    isopen: false
-    #license_id: ''
-    #license_title: ''
-    num_resources: 1
-    organization:
-      approval_status: approved
-      #id: ''
-      is_organization: true
-      #name: <insert organization name>
-      state: active
-      #title: ''
-      type: organization
-    owner_org: ''
-    private: true
-    reliability_source: Simulation
-    resources:
-    - #created: ''
-      datastore_active: false
-      #description: Test file manual upload
-      format: csv
-      #id:
-      mimetype: text/plain
-      #name: tmp.csv
-      url_type: upload
-    #source: ''
-    state: active
-    #title: Hello World Output Name
+    #license: GNU Free Documentation License
+    id: <insert package id>
+    #name:
+    #organization:
+    #  name: 
+    #resources:
+    #  format: csv
+    #private: true
+    #state: active
+    #title: 
     type: dataset
-    #url: ''
-    #version: ''
   type: ckan
+  
+
 
