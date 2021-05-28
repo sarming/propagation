@@ -3,7 +3,7 @@
 git_repo=$1
 git_branch=$2
 graph_type=$3
-source_map=$4
+sourcemap_url=$4
 stats_url=$5
 topic=$6
 job_id=$7
@@ -13,6 +13,7 @@ param_epsilon=${10}
 sim_features=${11}
 sim_sources=${12}
 sim_samples=${13}
+ckan_api_key=${14}
 
 # dynamic variable
 cd $CURRENT_WORKDIR
@@ -57,13 +58,13 @@ tweets_file="sim_features_${topic}.csv"
 wget $graph_url -O input/$graph_file
 wget $tweets_url -O input/$tweets_file
 
-if [ -z "$source_map" ] || [ "$source_map" == "default" ]
+if [ -z "$sourcemap_url" ] || [ "$sourcemap_url" == "default" ]
     then
         echo "no source map as input"
-        source_map_file=""
+        sourcemap_file=""
     else
-        wget -N $source_map -P input
-        source_map_file="$(basename -- $source_map)"
+        sourcemap_file="$(basename -- $sourcemap_url)"
+        curl -H"Authorization: $ckan_api_key" $sourcemap_url --output input/$sourcemap_file
 fi
 
 if [ -z "$stats_url" ] || [ "$stats_url" == "default" ]
@@ -71,8 +72,8 @@ if [ -z "$stats_url" ] || [ "$stats_url" == "default" ]
         echo "no stats file as input"
         stats_file=""
     else
-        wget -N $stats_url -P input
         stats_file="$(basename -- $stats_url)"
+        curl -H"Authorization: $ckan_api_key" $stats_url --output input/$stats_file
 fi
 
 
@@ -90,7 +91,7 @@ if [ -f "$configfile" ]
         echo "TASKS_PER_NODE=$tasks_per_node" >> $configfile
         echo "CURRENT_WORKDIR=$CURRENT_WORKDIR" >> $configfile
         echo "GRAPH_FILE=$graph_file" >> $configfile
-        echo "SOURCEMAP_FILE=$source_map_file" >> $configfile
+        echo "SOURCEMAP_FILE=$sourcemap_file" >> $configfile
         echo "STATS_FILE=$stats_file" >> $configfile
         echo "PARAM_SAMPLES=$param_samples" >> $configfile
         echo "PARAM_EPSILON=$param_epsilon" >> $configfile
