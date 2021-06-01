@@ -171,4 +171,4 @@ if __name__ == "__main__":
     main()
     if MPI.COMM_WORLD.Get_rank() == 0:
         endTime = time.time()
-        print("Total Time Elapsed: " + (endTime - startTime))
+        print("Total Time Elapsed: " + str(endTime - startTime))
