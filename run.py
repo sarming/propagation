@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import argparse
 import os
+import time
 from datetime import datetime
 
 import pandas as pd
@@ -165,4 +166,9 @@ def main():
 
 
 if __name__ == "__main__":
+    if MPI.COMM_WORLD.Get_rank() == 0:
+        startTime = time.time()
     main()
+    if MPI.COMM_WORLD.Get_rank() == 0:
+        endTime = time.time()
+        print("Total Time Elapsed: " + (endTime - startTime))
