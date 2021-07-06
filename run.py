@@ -33,9 +33,14 @@ def parse_args():
     parser.add_argument('--epsilon', help="epsilon for parameter learning", type=float, default=0.001)
     parser.add_argument('--max_depth', help="maximum depth to simulate", type=int)
     parser.add_argument('--max_nodes', help="maximum retweet count to simulate", type=int)
-    parser.add_argument("command", choices=['learn_discount','learn_corr', 'sim', 'mae'])
+    parser.add_argument('--seed', help="seed for RNG", type=int)
+    parser.add_argument("command", choices=['learn_discount', 'learn_corr', 'sim', 'mae'])
     parser.add_argument("topic")
     args = parser.parse_args()
+
+    if args.seed:
+        import propagation
+        propagation.seed(args.seed + MPI.COMM_WORLD.Get_rank())
 
     # Defaults
     if args.runid is None:
@@ -88,6 +93,9 @@ def build_sim(args):
 
     if args.corrs:
         sim.params['corr'] = read.single_param(args.corrs)
+
+    if args.seed:
+        sim.seed(args.seed)
 
     return sim
 

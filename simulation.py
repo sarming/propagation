@@ -110,6 +110,11 @@ class Simulation:
         if params is not None:
             self.params.update(params)
 
+        self.rng = np.random.default_rng()
+
+    def seed(self, seed):
+        self.rng = np.random.default_rng(seed)
+
     @classmethod
     def from_files(cls, graph_file, tweet_file, simulator=propagation.simulate):
         """Return Simulation using for the given files."""
@@ -121,11 +126,11 @@ class Simulation:
 
     def sample_feature(self, size=None):
         """Return a sample of feature vectors (according to feature distribution)."""
-        return np.random.choice(self.features, size, p=self.params.freq)
+        return self.rng.choice(self.features, size, p=self.params.freq)
 
     def sample_source(self, author_feature, size=None):
         """Sample uniformly from sources with author_feature."""
-        return np.random.choice(self.sources[author_feature], size)
+        return self.rng.choice(self.sources[author_feature], size)
 
     def _default_sources(self, sources, feature):
         if feature is None:
