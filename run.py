@@ -126,6 +126,11 @@ def main():
     sim = None
     if MPI.COMM_WORLD.Get_rank() == 0:
         sim = build_sim(args)
+
+        sim.stats.sort_values(by=['mean_retweets', 'retweet_probability'], ascending=False, inplace=True)
+        sim.features = sim.stats.index
+        sim.params = sim.params.reindex(index=sim.features)
+
         print(f'args: {args}')
         print(f'topic: {args.topic}')
 
@@ -149,7 +154,8 @@ def main():
                 r = agg_statistics((feature, sim.simulate(feature, sources=args.sources, samples=args.samples))
                                    for feature in sim.features)
 
-                assert r.index.equals(sim.stats.index)
+                # assert r.index.equals(sim.stats.index)
+                # r = r.reindex(index=sim.features)
                 r['real_mean_retweets'] = sim.stats.mean_retweets
                 r['real_retweet_probability'] = sim.stats.retweet_probability
                 # r.rename(columns={'mean_retweets': 'simulation_mean_retweets',
