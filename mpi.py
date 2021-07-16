@@ -107,9 +107,10 @@ def futures(sim, comm=MPI.COMM_WORLD, root=0, chunksize=1):
     from mpi4py.futures import MPICommExecutor
 
     # @timecall
-    def simulate(A: None, sources, params, samples=1, return_stats=True):
+    def simulate(A: None, sources, params, samples=1, return_stats=True, seed=None):
         """Simulate tweets starting from sources, return mean retweets and retweet probability."""
-        sample_calls = [([source], params, samples, return_stats) for source in sources]
+        seeds = seed.spawn(len(sources))
+        sample_calls = [([source], params, samples, return_stats, seed.state) for source, seed in zip(sources, seeds)]
         results = executor.map(worker, sample_calls, chunksize=chunksize)
 
         if return_stats:

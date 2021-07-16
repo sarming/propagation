@@ -87,7 +87,7 @@ def tweet_sources(tweets):
 
 
 class Simulation:
-    def __init__(self, A, stats, sources, params=None, simulator=propagation.simulate):
+    def __init__(self, A, stats, sources, params=None, simulator=propagation.simulate, seed=None):
         self.A = A
         self.stats = stats
         self.sources = sources
@@ -110,10 +110,10 @@ class Simulation:
         if params is not None:
             self.params.update(params)
 
-        self.rng = np.random.default_rng()
-
-    def seed(self, seed):
-        self.rng = np.random.default_rng(seed)
+        if not isinstance(seed, np.random.SeedSequence):
+            seed = np.random.SeedSequence(seed)  # Random if seed is None
+        self.seed = seed
+        self.rng = np.random.default_rng(self.seed)
 
     @classmethod
     def from_files(cls, graph_file, tweet_file, simulator=propagation.simulate):
@@ -234,7 +234,8 @@ class Simulation:
                               sources,
                               params,
                               samples=samples,
-                              return_stats=return_stats)
+                              return_stats=return_stats,
+                              seed=self.seed.spawn(1)[0])
 
     def run(self, num_features, sources=1, params=None, samples=100):
         for feature in self.sample_feature(num_features):

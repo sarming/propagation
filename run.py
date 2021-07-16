@@ -77,9 +77,9 @@ def build_sim(args):
         source_map = read.source_map(args.source_map)
 
     if args.params:
-        sim = Simulation(A, stats, source_map, params=pd.read_csv(args.params))
+        sim = Simulation(A, stats, source_map, params=pd.read_csv(args.params), seed=args.seed)
     else:
-        sim = Simulation(A, stats, source_map)
+        sim = Simulation(A, stats, source_map, seed=args.seed)
 
     if args.max_depth:
         sim.params.max_depth = args.max_depth
@@ -129,18 +129,17 @@ def spread_seed(seed):
 
 def main():
     args = parse_args()  # Put this here to terminate all MPI procs on parse errors
-    seed = spread_seed(args.seed)
 
     sim = None
     if MPI.COMM_WORLD.Get_rank() == 0:
         sim = build_sim(args)
-        sim.seed(seed)
 
         sim.stats.sort_values(by=['mean_retweets', 'retweet_probability'], ascending=False, inplace=True)
         sim.features = sim.stats.index
         sim.params = sim.params.reindex(index=sim.features)
 
         print(f'args: {args}')
+        print(f'seed: {sim.seed.entropy}')
         print(f'topic: {args.topic}')
 
     # if True: # bypass mpi

@@ -2,12 +2,6 @@ import numpy as np
 
 rng = np.random.default_rng()
 
-
-def seed(seed):
-    global rng
-    rng = np.random.default_rng(seed)
-
-
 def edge_propagate(A, source, p, corr=0., discount=1., depth=None, max_nodes=None, at_least_one=True):
     """Propagate message in graph A and return number of nodes visited.
 
@@ -79,7 +73,7 @@ def simulation_stats(simulation_results):
 
 
 # @timecall
-def simulate(A, sources, params, samples=1, return_stats=True):
+def simulate(A, sources, params, samples=1, return_stats=True, seed=None):
     """ Propagate messages and return mean retweets and retweet probability.
 
     Args:
@@ -98,6 +92,12 @@ def simulate(A, sources, params, samples=1, return_stats=True):
     max_nodes = params['max_nodes']
     at_least_one = params['at_least_one']
     discount = params['discount_factor']
+
+    global rng
+    if isinstance(seed, dict):
+        seed = np.random.SeedSequence(**seed)
+    rng = np.random.default_rng(seed)
+
     retweets = ((edge_propagate(A, source, p=p, corr=corr, discount=discount, depth=depth, max_nodes=max_nodes,
                                 at_least_one=at_least_one)
                  for _ in range(samples)) for source in sources)
