@@ -4,10 +4,12 @@ import os
 import time
 from datetime import datetime
 
+import numpy as np
 import pandas as pd
 from mpi4py import MPI
 
 import mpi
+import propagation
 import read
 import simulation
 from simulation import Simulation
@@ -37,10 +39,6 @@ def parse_args():
     parser.add_argument("command", choices=['learn_discount', 'learn_corr', 'sim', 'mae'])
     parser.add_argument("topic")
     args = parser.parse_args()
-
-    if args.seed:
-        import propagation
-        propagation.seed(args.seed + MPI.COMM_WORLD.Get_rank())
 
     # Defaults
     if args.runid is None:
@@ -94,9 +92,6 @@ def build_sim(args):
     if args.corrs:
         sim.params['corr'] = read.single_param(args.corrs)
 
-    if args.seed:
-        sim.seed(args.seed)
-
     return sim
 
 
@@ -120,12 +115,26 @@ def agg_statistics(feature_results):
     return stats
 
 
+def spread_seed(seed):
+    if MPI.COMM_WORLD.Get_rank() == 0:
+        ss = np.random.SeedSequence(seed)  # Random if seed is None
+        print(f'seed: {ss.entropy}')
+        state = ss.generate_state(2, 'uint64')
+        seed = int(state[0]) | (int(state[1]) << 64)
+    seed = MPI.COMM_WORLD.bcast(seed, root=0)
+    bitgen = np.random.Philox(key=seed + MPI.COMM_WORLD.Get_rank())
+    propagation.seed(bitgen)
+    return seed
+
+
 def main():
     args = parse_args()  # Put this here to terminate all MPI procs on parse errors
+    seed = spread_seed(args.seed)
 
     sim = None
     if MPI.COMM_WORLD.Get_rank() == 0:
         sim = build_sim(args)
+        sim.seed(seed)
 
         sim.stats.sort_values(by=['mean_retweets', 'retweet_probability'], ascending=False, inplace=True)
         sim.features = sim.stats.index
