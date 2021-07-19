@@ -48,7 +48,7 @@ def parse_args():
             args.runid = datetime.now().isoformat()
     if not args.graph:
         args.graph = f'{args.indir}/anonymized_inner_graph_{args.topic}.adjlist'
-    #if not args.tweets and not args.stats:
+    # if not args.tweets and not args.stats: #TODO clarify behavior
     if not args.tweets:
         args.tweets = f'{args.indir}/sim_features_{args.topic}.csv'
 
@@ -132,7 +132,10 @@ def main():
 
     sim = None
     if MPI.COMM_WORLD.Get_rank() == 0:
+        t = time.time()
         sim = build_sim(args)
+        print("readtime: " + str(time.time() - t))
+        t = time.time()
 
         sim.stats.sort_values(by=['mean_retweets', 'retweet_probability'], ascending=False, inplace=True)
         sim.features = sim.stats.index
@@ -145,6 +148,9 @@ def main():
     # if True: # bypass mpi
     with mpi.futures(sim, chunksize=1) as sim:
         if sim is not None:
+            print("setuptime: " + str(time.time() - t))
+            t = time.time()
+
             if args.command == 'learn_discount':
                 discount = sim.discount_factor_from_mean_retweets(samples=args.samples, eps=args.epsilon)
                 discount.to_csv(f'{args.outdir}/discount-{args.topic}-{args.runid}.csv')
@@ -185,6 +191,7 @@ def main():
                                    for feature in sim.sample_feature(args.features))
                 r.to_csv(f'{args.outdir}/results-{args.topic}-{args.runid}.csv')
                 print(r)
+            print("runtime: " + str(time.time() - t))
 
 
 if __name__ == "__main__":
