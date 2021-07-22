@@ -48,7 +48,6 @@ def parse_args():
             args.runid = datetime.now().isoformat()
     if not args.graph:
         args.graph = f'{args.indir}/anonymized_inner_graph_{args.topic}.adjlist'
-    # if not args.tweets and not args.stats: #TODO clarify behavior
     if not args.tweets:
         args.tweets = f'{args.indir}/sim_features_{args.topic}.csv'
 
