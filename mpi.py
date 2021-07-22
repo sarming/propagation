@@ -102,6 +102,10 @@ def worker(args):
         # return [list(source) for source in r]
 
 
+def compile():
+    propagation.edge_sample(global_A, 0, 0.0)
+
+
 @contextmanager
 def futures(sim, comm=MPI.COMM_WORLD, root=0, chunksize=1):
     from mpi4py.futures import MPICommExecutor
@@ -129,6 +133,7 @@ def futures(sim, comm=MPI.COMM_WORLD, root=0, chunksize=1):
     global global_A
     assert global_A is None
     global_A = bcast_csr_matrix(A, comm)
+    compile()
     MPI.COMM_WORLD.Barrier()
 
     with MPICommExecutor(comm=comm, root=root) as executor:

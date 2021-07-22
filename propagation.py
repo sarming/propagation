@@ -1,6 +1,6 @@
 import numpy as np
+from numba import njit
 
-rng = np.random.default_rng()
 
 def edge_propagate(A, source, p, corr=0., discount=1., depth=None, max_nodes=None, at_least_one=True):
     """Propagate message in graph A and return number of nodes visited.
@@ -90,20 +90,30 @@ def edge_sample(A, node, p, corr=0., at_least_one=True):
     Note:
          This is the inner loop, rewrite in Cython might be worthwhile.
     """
-    l, r = A.indptr[node], A.indptr[node + 1]
-    # return A.indices[l:r][rng.rand(r - l) < p]
+    return edge_sample_numba(A.indptr, A.indices, node, p, corr, at_least_one)
+
+
+@njit
+def edge_sample_numba(indptr, indices, node, p, corr, at_least_one):
+    l, r = indptr[node], indptr[node + 1]
     num_follower = r - l
     if num_follower == 0:
-        return []
+        return [np.int32(x) for x in range(0)]
+        # return np.empty(1, dtype=np.int32)
     if at_least_one:
         p = 1 - (1 - p) ** (1 / num_follower)
-    num_retweeter = rng.binomial(num_follower, p)
+    num_retweeter = np.random.binomial(num_follower, p)
     if num_retweeter > 0 and corr > 0:
-        num_retweeter += rng.binomial(num_follower - num_retweeter, corr)
+        num_retweeter += np.random.binomial(num_follower - num_retweeter, corr)
 
-    # return A.indices[rng.choice(r - l, num, replace=False) + l]
-    children = A.indices[l:r]
-    return rng.choice(children, num_retweeter, replace=False)
+    children = indices[l:r]
+    return list(np.random.choice(children, num_retweeter, replace=False))
+
+
+@njit
+def set_seed(seed):
+    # print(seed)
+    np.random.seed(seed)
 
 
 def simulation_stats(simulation_results):
@@ -133,10 +143,9 @@ def simulate(A, sources, params, samples=1, return_stats=True, seed=None):
     at_least_one = params['at_least_one']
     discount = params['discount_factor']
 
-    global rng
     if isinstance(seed, dict):
         seed = np.random.SeedSequence(**seed)
-    rng = np.random.default_rng(seed)
+    set_seed(seed.generate_state(1)[0])
 
     retweets = ((edge_propagate(A, source, p=p, corr=corr, discount=discount, depth=depth, max_nodes=max_nodes,
                                 at_least_one=at_least_one)
