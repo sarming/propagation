@@ -2,7 +2,7 @@ from functools import wraps
 
 import numpy as np
 import pandas as pd
-#from profilehooks import timecall
+# from profilehooks import timecall
 
 import propagation
 import read
@@ -77,7 +77,7 @@ def tweet_statistics(tweets, min_size=10):
         # sources=('source', list),
     ).dropna().astype({'tweets': 'Int64', 'max_retweets': 'Int64'})
     stats = stats[stats.tweets >= min_size]  # Remove small classes
-    #stats.to_csv('data/tmp_stats.csv')
+    # stats.to_csv('data/tmp_stats.csv')
     return stats
 
 
@@ -159,7 +159,7 @@ class Simulation:
                                         'max_depth': 50,
                                         }, dtype=object)
         else:
-            default_params = self.params.loc[feature]
+            default_params = self.params.astype('object').loc[feature]
             try:
                 params = params.loc[feature]
             except (AttributeError, IndexError, KeyError, TypeError):
@@ -167,7 +167,7 @@ class Simulation:
 
         if not isinstance(params, pd.Series):
             params = pd.Series(params, index=default_params.index, dtype=object)
-        return params.fillna(default_params, downcast={'max_nodes': int, 'max_depth': int})
+        return params.fillna(default_params)
 
     def edge_probability_from_retweet_probability(self, sources=None, eps=1e-5, features=None):
         """Find edge probability for given feature vector (or all if none given)."""
@@ -279,7 +279,7 @@ if __name__ == "__main__":
         return list(s)
 
 
-    #@timecall
+    # @timecall
     def run():
         for feature in most_frequent()[:10]:
             stats = sim.stats.loc[feature]
