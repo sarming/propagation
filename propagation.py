@@ -44,6 +44,46 @@ def edge_propagate(A, source, p, corr=0., discount=1., depth=None, max_nodes=Non
     return len(visited) - 1
 
 
+def edge_propagate_tree(A, source, p, corr=0., discount=1., depth=None, max_nodes=None, at_least_one=True):
+    """Propagate message in graph A and return retweet tree.
+
+    Args:
+        A: Sparse adjacency matrix of graph.
+        source (int): Initial node.
+        p (float): Probability parameter.
+        corr (float): Correlation probability.
+        discount (float): Discount factor <=1.0 that is multiplied at each level.
+        depth (int): Maximum depth.
+        max_nodes (int): Maximum number of nodes.
+        at_least_one (bool): If true, p is retweet probability. If false, p is edge probability.
+
+    Returns:
+        Retweet tree as dict.
+
+    """
+    if depth is None:
+        depth = int(A.shape[0])
+    if max_nodes is None:
+        max_nodes = int(A.shape[0])
+    visited = {source}
+    leaves = {source}
+    tree = {source: -1}
+    for i in range(depth):
+        next_leaves = set()
+        for node in leaves:
+            children = set(edge_sample(A, node, p, corr, at_least_one))
+            children -= visited
+            next_leaves |= children
+            visited |= children
+            for c in children:
+                tree[c] = node
+            if len(visited) > max_nodes:
+                return tree
+        leaves = next_leaves
+        p *= discount
+    return tree
+
+
 def edge_sample(A, node, p, corr=0., at_least_one=True):
     """Return sample of node's children using probability p.
 
