@@ -68,7 +68,8 @@ def bcast_csr_matrix(A=None, comm=MPI.COMM_WORLD):
 
     node_comm = comm.Split_type(MPI.COMM_TYPE_SHARED)
     node_rank = node_comm.Get_rank()
-    head_comm = comm.Split(True if node_rank == 0 else MPI.UNDEFINED)
+    # head_comm = comm.Split(True if node_rank == 0 else MPI.UNDEFINED)
+    head_comm = comm.Split(node_rank)
 
     Ad = Ai = Ap = None
     if rank == 0:
