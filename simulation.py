@@ -239,7 +239,7 @@ class Simulation:
 
     def run(self, num_features, sources=1, params=None, samples=100):
         for feature in self.sample_feature(num_features):
-            yield self.simulate(feature, sources=sources, params=params, samples=samples, return_stats=False)
+            yield feature, self.simulate(feature, sources=sources, params=params, samples=samples, return_stats=False)
 
 
 if __name__ == "__main__":

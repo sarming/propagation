@@ -39,9 +39,11 @@ if __name__ == "__main__":
     graph = f'{datadir}/anonymized_inner_graph_vegan_20200407.npz'
     tweets = f'{datadir}/sim_features_vegan_20200407.csv'
     sim = Simulation.from_files(graph, tweets)
-    results = chain(*chain(*sim.run(10, samples=1)))  # Flatten
-    trees = list(map(from_dict, results))
-    for tree, root in trees:
-        print(', '.join(map(str, bfs_nodes(tree, root))))
+    run = sim.run(10, samples=1)
+    results = [(feature, from_dict(sample)) for feature, sources in run for source in sources for sample in source]
+    for feature, (tree, root) in results:
+        print(', '.join(map(str, list(feature) + bfs_nodes(tree, root))))
+
+    trees = list(zip(*results))[1]
     hist = pd.concat(starmap(depth_histogram, trees), axis=1).fillna(0).transpose()
     print(hist)
