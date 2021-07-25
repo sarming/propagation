@@ -24,25 +24,31 @@ def depth_histogram(tree, root):
     return pd.Series(hist, dtype='Int64')
 
 
-def bfs_nodes(tree, root):
+def bfs_nodes(tree, root, node_labels=None):
     edges = nx.bfs_edges(tree, root)
+    if node_labels:
+        return [node_labels[root]] + [node_labels[v] for u, v in edges]
     return [root] + [v for u, v in edges]
 
 
 if __name__ == "__main__":
-    from itertools import chain, starmap
+    from itertools import starmap
     from simulation import Simulation
     import propagation
+    import read
 
     propagation.edge_propagate = propagation.edge_propagate_tree
+
     datadir = 'data'
-    graph = f'{datadir}/anonymized_inner_graph_vegan_20200407.npz'
-    tweets = f'{datadir}/sim_features_vegan_20200407.csv'
-    sim = Simulation.from_files(graph, tweets)
+    graph, node_labels = read.adjlist(f'{datadir}/anonymized_inner_graph_vegan_20200407.adjlist')
+    tweets = read.tweets(f'{datadir}/sim_features_vegan_20200407.csv', node_labels)
+    sim = Simulation.from_tweets(graph, tweets)
+
     run = sim.run(10, samples=1)
     results = [(feature, from_dict(sample)) for feature, sources in run for source in sources for sample in source]
     for feature, (tree, root) in results:
-        print(', '.join(map(str, list(feature) + bfs_nodes(tree, root))))
+        print(', '.join(map(str, list(feature) + bfs_nodes(tree, root, node_labels))))
+        # print(nx.to_dict_of_dicts(tree))
 
     trees = list(zip(*results))[1]
     hist = pd.concat(starmap(depth_histogram, trees), axis=1).fillna(0).transpose()

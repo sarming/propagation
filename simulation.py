@@ -120,6 +120,11 @@ class Simulation:
         """Return Simulation using for the given files."""
         A, node_labels = read.labelled_graph(graph_file)
         tweets = read.tweets(tweet_file, node_labels)
+        return cls.from_tweets(A, tweets, simulator)
+
+    @classmethod
+    def from_tweets(cls, A, tweets, simulator=propagation.simulate):
+        """Return Simulation using for the given files."""
         stats = tweet_statistics(tweets)
         sources = tweet_sources(tweets)
         return cls(A, stats, sources, None, simulator)
