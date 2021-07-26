@@ -7,6 +7,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 from mpi4py import MPI
+from scipy.sparse import csr_matrix
 
 import mpi
 import propagation
@@ -143,6 +144,8 @@ def main():
         print(f'args: {args}')
         print(f'seed: {sim.seed.entropy}')
         print(f'topic: {args.topic}')
+    else:
+        propagation.edge_sample(csr_matrix([[1, 1], [1, 1]]), 0, 0.)
 
     # if True: # bypass mpi
     with mpi.futures(sim, chunksize=1) as sim:
