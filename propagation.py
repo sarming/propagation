@@ -116,6 +116,11 @@ def set_seed(seed):
     np.random.seed(seed)
 
 
+def compile():
+    from scipy.sparse import csr_matrix
+    edge_sample(csr_matrix([[1, 1], [1, 1]]), 0, 0.)
+
+
 def simulation_stats(simulation_results):
     """Take simulation results (list of lists) and return mean retweets and retweet probability."""
     retweets = [tweet for source in simulation_results for tweet in source]  # Flatten

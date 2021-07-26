@@ -4,10 +4,8 @@ import os
 import time
 from datetime import datetime
 
-import numpy as np
 import pandas as pd
 from mpi4py import MPI
-from scipy.sparse import csr_matrix
 
 import mpi
 import propagation
@@ -115,18 +113,6 @@ def agg_statistics(feature_results):
     return stats
 
 
-def spread_seed(seed):
-    if MPI.COMM_WORLD.Get_rank() == 0:
-        ss = np.random.SeedSequence(seed)  # Random if seed is None
-        print(f'seed: {ss.entropy}')
-        state = ss.generate_state(2, 'uint64')
-        seed = int(state[0]) | (int(state[1]) << 64)
-    seed = MPI.COMM_WORLD.bcast(seed, root=0)
-    bitgen = np.random.Philox(key=seed + MPI.COMM_WORLD.Get_rank())
-    propagation.seed(bitgen)
-    return seed
-
-
 def main():
     args = parse_args()  # Put this here to terminate all MPI procs on parse errors
 
@@ -145,7 +131,7 @@ def main():
         print(f'seed: {sim.seed.entropy}')
         print(f'topic: {args.topic}')
     else:
-        propagation.edge_sample(csr_matrix([[1, 1], [1, 1]]), 0, 0.)
+        propagation.compile()
 
     # if True: # bypass mpi
     with mpi.futures(sim, chunksize=1) as sim:
