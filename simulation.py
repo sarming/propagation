@@ -116,18 +116,18 @@ class Simulation:
         self.rng = np.random.default_rng(self.seed)
 
     @classmethod
-    def from_files(cls, graph_file, tweet_file, simulator=propagation.simulate):
+    def from_files(cls, graph_file, tweet_file, simulator=propagation.simulate, seed=None):
         """Return Simulation using for the given files."""
         A, node_labels = read.labelled_graph(graph_file)
         tweets = read.tweets(tweet_file, node_labels)
-        return cls.from_tweets(A, tweets, simulator)
+        return cls.from_tweets(A, tweets, simulator, seed)
 
     @classmethod
-    def from_tweets(cls, A, tweets, simulator=propagation.simulate):
+    def from_tweets(cls, A, tweets, simulator=propagation.simulate, seed=None):
         """Return Simulation using for the given files."""
         stats = tweet_statistics(tweets)
         sources = tweet_sources(tweets)
-        return cls(A, stats, sources, None, simulator)
+        return cls(A, stats, sources, None, simulator, seed)
 
     def sample_feature(self, size=None):
         """Return a sample of feature vectors (according to feature distribution)."""
