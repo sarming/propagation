@@ -35,7 +35,7 @@ def parse_args():
     parser.add_argument('--max_depth', help="maximum depth to simulate", type=int)
     parser.add_argument('--max_nodes', help="maximum retweet count to simulate", type=int)
     parser.add_argument('--seed', help="seed for RNG", type=int)
-    parser.add_argument("command", choices=['learn_discount', 'learn_corr', 'sim', 'mae'])
+    parser.add_argument("command", choices=['learn_discount', 'learn_corr', 'sim', 'simtweets', 'mae'])
     parser.add_argument("topic")
     args = parser.parse_args()
 
@@ -113,6 +113,21 @@ def agg_statistics(feature_results):
     return stats
 
 
+def explode_tweets(tweet_results):
+    r = pd.DataFrame(tweet_results, columns=['feature', 'results'])
+    r[['author_feature', 'tweet_feature']] = pd.DataFrame(r['feature'].tolist())
+
+    r['results'] = r['results'].apply(list)
+    r = r.explode('results', ignore_index=True)
+
+    r[['author', 'retweets']] = pd.DataFrame(r['results'].tolist())
+
+    r['retweets'] = r['retweets'].apply(list)
+    r = r.explode('retweets', ignore_index=True)
+
+    return r[['author', 'author_feature', 'tweet_feature', 'retweets']]
+
+
 def main():
     args = parse_args()  # Put this here to terminate all MPI procs on parse errors
 
@@ -179,10 +194,15 @@ def main():
                                    for feature in sim.sample_feature(args.features))
                 r.to_csv(f'{args.outdir}/results-{args.topic}-{args.runid}.csv')
                 print(r)
+            elif args.command == 'simtweets':
+                r = explode_tweets(sim.run(num_features=args.features, num_sources=args.sources, samples=args.samples))
+                r.to_csv(f'{args.outdir}/results-{args.topic}-{args.runid}.csv')
+                print(r)
             print("runtime: " + str(time.time() - t))
 
 
 if __name__ == "__main__":
+    # sim.simulate(,{edge_probability:0.1})
     if MPI.COMM_WORLD.Get_rank() == 0:
         startTime = time.time()
     main()

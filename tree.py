@@ -45,7 +45,8 @@ if __name__ == "__main__":
     sim = Simulation.from_tweets(graph, tweets)
 
     run = sim.run(10, samples=1)
-    results = [(feature, from_dict(sample)) for feature, sources in run for source in sources for sample in source]
+    results = [(feature, from_dict(sample)) for (feature, sources) in run for (source, samples) in sources for sample in
+               samples]
     for feature, (tree, root) in results:
         print(', '.join(map(str, list(feature) + bfs_nodes(tree, root, node_labels))))
         # print(nx.to_dict_of_dicts(tree))

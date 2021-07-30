@@ -116,7 +116,7 @@ def futures(sim, comm=MPI.COMM_WORLD, root=0, chunksize=1):
 
         if return_stats:
             return stats_from_futures(results)
-        return results
+        return (r for r in results)
 
     rank = comm.Get_rank()
     A = None

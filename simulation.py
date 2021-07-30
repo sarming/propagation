@@ -209,8 +209,8 @@ class Simulation:
 
     def discount_factor_from_mean_retweets(self, sources=None, params=None, samples=1000, eps=0.1, features=None):
         """Find discount factor for given feature vector (or all if none given)."""
-        return self.learn('discount_factor', 'mean_retweets', 0., 1., sources=sources, params=params, samples=samples, eps=eps,
-                          features=features)
+        return self.learn('discount_factor', 'mean_retweets', 0., 1., sources=sources, params=params, samples=samples,
+                          eps=eps, features=features)
 
     def corr_from_mean_retweets(self, sources=None, params=None, samples=1000, eps=0.1, features=None):
         """Find corr for given feature vector (or all if none given)."""
@@ -242,9 +242,11 @@ class Simulation:
                               return_stats=return_stats,
                               seed=self.seed.spawn(1)[0])
 
-    def run(self, num_features, sources=1, params=None, samples=100):
+    def run(self, num_features, num_sources=1, params=None, samples=100):
         for feature in self.sample_feature(num_features):
-            yield feature, self.simulate(feature, sources=sources, params=params, samples=samples, return_stats=False)
+            sources = self._default_sources(num_sources, feature)
+            yield feature, zip(sources, self.simulate(feature, sources=sources, params=params, samples=samples,
+                                                      return_stats=False))
 
 
 if __name__ == "__main__":
