@@ -34,6 +34,8 @@ def parse_args():
     parser.add_argument('--epsilon', help="epsilon for parameter learning", type=float, default=0.001)
     parser.add_argument('--max_depth', help="maximum depth to simulate", type=int)
     parser.add_argument('--max_nodes', help="maximum retweet count to simulate", type=int)
+    parser.add_argument('--sample_split', help="split tasks (default: 1, has to divide 'samples', changes RNG)",
+                        type=int, default=1)
     parser.add_argument('--seed', help="seed for RNG", type=int)
     parser.add_argument("command", choices=['learn_discount', 'learn_corr', 'sim', 'simtweets', 'mae'])
     parser.add_argument("topic")
@@ -49,6 +51,9 @@ def parse_args():
         args.graph = f'{args.indir}/anonymized_inner_graph_{args.topic}.adjlist'
     if not args.tweets:
         args.tweets = f'{args.indir}/sim_features_{args.topic}.csv'
+
+    if args.samples % args.sample_split != 0:
+        raise ValueError(f'sample_split has to evenly divide samples!')
 
     return args
 
@@ -149,7 +154,7 @@ def main():
         propagation.compile()
 
     # if True: # bypass mpi
-    with mpi.futures(sim, chunksize=1) as sim:
+    with mpi.futures(sim, chunksize=1, sample_split=args.sample_split) as sim:
         if sim is not None:
             print("setuptime: " + str(time.time() - t))
             t = time.time()
@@ -194,6 +199,7 @@ def main():
                                    for feature in sim.sample_feature(args.features))
                 r.to_csv(f'{args.outdir}/results-{args.topic}-{args.runid}.csv')
                 print(r)
+
             elif args.command == 'simtweets':
                 r = explode_tweets(sim.run(num_features=args.features, num_sources=args.sources, samples=args.samples))
                 r.to_csv(f'{args.outdir}/results-{args.topic}-{args.runid}.csv')
@@ -203,6 +209,11 @@ def main():
 
 if __name__ == "__main__":
     # sim.simulate(,{edge_probability:0.1})
+    pd.set_option('display.max_columns', None)
+    pd.set_option('display.max_rows', None)
+    pd.set_option('display.max_colwidth', None)
+    pd.set_option('display.width', 1000)
+
     if MPI.COMM_WORLD.Get_rank() == 0:
         startTime = time.time()
     main()

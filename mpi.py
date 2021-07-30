@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from itertools import islice, chain
 
 import numpy as np
 from mpi4py import MPI
@@ -93,7 +94,7 @@ global_A = None
 
 def worker(args):
     """Worker function for futures implentation below."""
-    # print(params)
+    # print(args)
     r = propagation.simulate(global_A, *args)
 
     if args[3]:  # return_stats
@@ -104,19 +105,20 @@ def worker(args):
 
 
 @contextmanager
-def futures(sim, comm=MPI.COMM_WORLD, root=0, chunksize=1):
+def futures(sim, comm=MPI.COMM_WORLD, root=0, chunksize=1, sample_split: int = 1):
     from mpi4py.futures import MPICommExecutor
 
     # @timecall
     def simulate(A: None, sources, params, samples=1, return_stats=True, seed=None):
         """Simulate tweets starting from sources, return mean retweets and retweet probability."""
-        seeds = seed.spawn(len(sources))
-        sample_calls = [([source], params, samples, return_stats, seed.state) for source, seed in zip(sources, seeds)]
+        seeds = seed.spawn(len(sources) * sample_split)
+        sample_calls = [([source], params, samples // sample_split, return_stats, seed.state) for source, seed in
+                        zip(np.repeat(sources, sample_split), seeds)]
         results = executor.map(worker, sample_calls, chunksize=chunksize)
 
         if return_stats:
             return stats_from_futures(results)
-        return (r for r in results)
+        return (chain.from_iterable(islice(results, sample_split)) for _ in sources)
 
     rank = comm.Get_rank()
     A = None
