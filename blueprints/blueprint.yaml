@@ -30,8 +30,8 @@ node_templates:
         max_time: { get_input: job_max_time }
         memory: { get_input: job_memory }
         pre:
-          - "module load openmpi/4.0.0_gcc620"
-        command: "src/scripts/eagle/learn.sh"
+          - { get_input: hpc_mpi_load_command }
+        command: "src/scripts/learn.sh"
       deployment:
         bootstrap: "scripts/install.sh"
         inputs:
@@ -69,8 +69,8 @@ node_templates:
         max_time: { get_input: job_max_time }
         memory: { get_input: job_memory }
         pre:
-          - "module load openmpi/4.0.0_gcc620"
-        command: "src/scripts/eagle/sim.sh"
+          - { get_input: hpc_mpi_load_command }
+        command: "src/scripts/sim.sh"
       deployment:
         bootstrap: "scripts/install.sh"
         inputs:

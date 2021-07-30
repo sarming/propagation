@@ -35,6 +35,10 @@ inputs:
     description: Working directory for submitting the jobs
     default: SN_cfy
 
+  hpc_mpi_load_command:
+    description: (Module) load command for MPI
+    default: "module load openmpi/4.0.0_gcc620"
+
 
 
   ## Job Options

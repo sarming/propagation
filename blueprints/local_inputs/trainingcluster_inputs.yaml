@@ -4,30 +4,30 @@ hpc_config:
   country_tz: Europe/Madrid
   workload_manager: SLURM
 
-# EAGLE ACCOUNT
+# TRAINING INFRASTRUCTURE ACCOUNT
 hpc_credentials:
-  host: eagle.man.poznan.pl
+  host: 62.3.171.192
   user: <insert username>
-  password: <insert password>
-  #private_key: <insert private key>
-
+  private_key: <insert private key>
 
 hpc_job_prefix: SN_
 hpc_monitor_period: 60
 hpc_monitor_entrypoint: ""
 hpc_skip_cleanup: False
 hpc_workdir_prefix: SN_cfy
+hpc_mpi_load_command: ""
+
 
 
 # Job specifications
 job_skip_cleanup: False
 job_option_type: "SBATCH"
-job_max_time: "01:00:00"
-job_num_nodes: 1
+#job_max_time: "01:00:00"
+#job_num_nodes: 1
 job_tasks_per_node: 20
 #job_num_processes: 1
-job_partition: standard
-job_memory: 32G
+#job_partition: standard
+#job_memory: 8G
 job_id: 123
 
 
