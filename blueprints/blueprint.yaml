@@ -31,6 +31,7 @@ node_templates:
         memory: { get_input: job_memory }
         pre:
           - { get_input: hpc_mpi_load_command }
+          - { get_input: hpc_conda_activate_command }
         command: "src/scripts/learn.sh"
       deployment:
         bootstrap: "scripts/install.sh"
@@ -70,6 +71,7 @@ node_templates:
         memory: { get_input: job_memory }
         pre:
           - { get_input: hpc_mpi_load_command }
+          - { get_input: hpc_conda_activate_command }
         command: "src/scripts/sim.sh"
       deployment:
         bootstrap: "scripts/install.sh"

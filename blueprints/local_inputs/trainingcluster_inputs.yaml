@@ -15,19 +15,18 @@ hpc_monitor_period: 60
 hpc_monitor_entrypoint: ""
 hpc_skip_cleanup: False
 hpc_workdir_prefix: SN_cfy
-hpc_mpi_load_command: ""
-
+hpc_mpi_load_command: "false"
+hpc_conda_activate_command: "source /work/miniconda3/bin/activate prop_mpi"
 
 
 # Job specifications
-job_skip_cleanup: False
+job_skip_cleanup: True
 job_option_type: "SBATCH"
 #job_max_time: "01:00:00"
 #job_num_nodes: 1
 job_tasks_per_node: 20
-#job_num_processes: 1
-#job_partition: standard
-#job_memory: 8G
+job_partition: hidalgo
+job_memory: 8G
 job_id: 123
 
 
@@ -38,7 +37,7 @@ git_branch: "master"
 
 # Input
 topic: "neos"
-graph_type: "outer"
+graph_type: inner
 sourcemap_url: "default" #requires some value, otherwise input variables are shuffled
 stats_url: "default"
 

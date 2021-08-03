@@ -14,7 +14,7 @@ inputs:
 
   hpc_credentials:
     description: HPC credentials
-    default: {}
+    default: { }
 
   hpc_job_prefix:
     description: Job prefix
@@ -38,6 +38,10 @@ inputs:
   hpc_mpi_load_command:
     description: (Module) load command for MPI
     default: "module load openmpi/4.0.0_gcc620"
+
+  hpc_conda_activate_command:
+    description: Command to activate Conda environment
+    default: "source /work/miniconda3/bin/activate propagation"
 
 
 
@@ -63,10 +67,6 @@ inputs:
     description: Number of Tasks per Node #todo check if it means cores
     default: 20
 
-  job_num_processes:
-    description: Number of Processes #further division of tasks?
-    default: 1
-
   job_partition:
     default: standard
 
@@ -89,19 +89,19 @@ inputs:
 
   # CKAN
   ckan_api_key:
-      description: api key of the user
-      default: ""
+    description: api key of the user
+    default: ""
 
   learn_output_dataset:
     default:
-      config: {}
-      dataset: {}
+      config: { }
+      dataset: { }
       type: ckan
 
   sim_output_dataset:
     default:
-      config: {}
-      dataset: {}
+      config: { }
+      dataset: { }
       type: ckan
 
 
@@ -132,9 +132,9 @@ inputs:
     description: Epsilon for Parameter Learning
     default: 0.001
 
-#  param_sources:
-#    description: Number of Sources for Parameter Learning
-#    default: 100
+  #  param_sources:
+  #    description: Number of Sources for Parameter Learning
+  #    default: 100
 
 
   # Simulation
