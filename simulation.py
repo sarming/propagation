@@ -202,7 +202,8 @@ class Simulation:
             invert_monotone(lambda x: goal(self.simulator(A=self.A,
                                                           sources=self._default_sources(sources, f),
                                                           params=set_param(x, f),
-                                                          samples=samples)),
+                                                          samples=samples,
+                                                          seed=self.seed.spawn(1)[0])),
                             self.stats.loc[f, goal_stat],
                             lb, ub,
                             eps=eps, logging=True) for f in features), index=features)
