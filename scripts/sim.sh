@@ -43,5 +43,5 @@ if [ "$stats_file" == "" ]
         --stats $CURRENT_WORKDIR/input/$stats_file \
         --indir $CURRENT_WORKDIR/input \
         --outdir $CURRENT_WORKDIR/output \
-        --params $CURRENT_WORKDIR/output/params-${topic}-${runid}.csv
+        --params $CURRENT_WORKDIR/output/params-${topic}-${id}.csv
 fi
