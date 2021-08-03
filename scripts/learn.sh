@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -l
 
 source $HOME/miniconda3/etc/profile.d/conda.sh
 conda activate propagation
@@ -22,7 +22,7 @@ export PYTHONPATH=$CURRENT_WORKDIR"/src"
 
 #srun --mpi=pmix_v3 --nodes=1 --ntasks-per-node=20 python $PYTHONPATH/run.py learn $topic --runid $id -s $samples --epsilon $epsilon --graph $CURRENT_WORKDIR/input/$graph_file --indir $CURRENT_WORKDIR/src/data --outdir $CURRENT_WORKDIR/output
 
-mpirun -n $SLURM_NTASKS python $PYTHONPATH/run.py learn_discount $topic \
+mpirun -n $TASKS_PER_NODE python $PYTHONPATH/run.py learn_discount $topic \
 --runid $id -s $samples --epsilon $epsilon \
 --graph $CURRENT_WORKDIR/input/$graph_file \
 --indir $CURRENT_WORKDIR/input \

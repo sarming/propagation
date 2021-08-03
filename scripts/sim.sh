@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -l
 
 source $HOME/miniconda3/etc/profile.d/conda.sh
 conda activate propagation
@@ -31,13 +31,13 @@ export PYTHONPATH=$CURRENT_WORKDIR"/src"
 
 if [ "$stats_file" == "" ]
     then
-        mpirun -n $SLURM_NTASKS python $PYTHONPATH/run.py sim \
+        mpirun -n $TASKS_PER_NODE python $PYTHONPATH/run.py sim \
         $topic --runid $id -f $features -a $sources -s $samples \
         --graph $CURRENT_WORKDIR/input/$graph_file \
         --indir $CURRENT_WORKDIR/input \
         --outdir $CURRENT_WORKDIR/output
     else
-        mpirun -n $SLURM_NTASKS python $PYTHONPATH/run.py sim \
+        mpirun -n $TASKS_PER_NODE python $PYTHONPATH/run.py sim \
         $topic --runid $id -f $features -a $sources -s $samples \
         --graph $CURRENT_WORKDIR/input/$graph_file \
         --stats $CURRENT_WORKDIR/input/$stats_file \
