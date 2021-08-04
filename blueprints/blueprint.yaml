@@ -26,7 +26,6 @@ node_templates:
         type: { get_input: job_option_type }
         nodes: { get_input: job_num_nodes }
         tasks_per_node: { get_input: job_tasks_per_node }
-        partition: { get_input: job_partition }
         max_time: { get_input: job_max_time }
         memory: { get_input: job_memory }
         pre:
@@ -65,7 +64,6 @@ node_templates:
         type: { get_input: job_option_type }
         nodes: { get_input: job_num_nodes }
         tasks_per_node: { get_input: job_tasks_per_node }
-        partition: { get_input: job_partition }
         max_time: { get_input: job_max_time }
         memory: { get_input: job_memory }
         pre:
