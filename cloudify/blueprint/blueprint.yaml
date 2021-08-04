@@ -50,11 +50,11 @@ node_templates:
           - { get_input: sim_sources }
           - { get_input: sim_samples }
           - { get_input: ckan_api_key }
-      publish:
-        - dataset: { get_input: learn_output_dataset }
-          file_path: {concat: ["output/params-",{get_input: topic},"-",{get_input: job_id},".csv"]}
-          name: {concat: ["params-",{get_input: topic},"-",{get_input: job_id},".csv"]}
-          description: "Resulting Parameters from Parameter Learning."
+      #      publish:
+      #        - dataset: { get_input: learn_output_dataset }
+      #          file_path: {concat: ["output/params-",{get_input: topic},"-",{get_input: job_id},".csv"]}
+      #          name: {concat: ["params-",{get_input: topic},"-",{get_input: job_id},".csv"]}
+      #          description: "Resulting Parameters from Parameter Learning."
       skip_cleanup: { get_input: job_skip_cleanup }
     relationships:
       - type: job_managed_by_wm
@@ -90,11 +90,11 @@ node_templates:
           - { get_input: sim_sources }
           - { get_input: sim_samples }
           - { get_input: ckan_api_key }
-      publish:
-        - dataset: { get_input: sim_output_dataset }
-          file_path:  {concat: ["output/results-",{get_input: topic},"-",{get_input: job_id},".csv"]}
-          name: {concat: ["results-",{get_input: topic},"-",{get_input: job_id},".csv"]}
-          description: "Resulting Simulation."
+      #      publish:
+      #        - dataset: { get_input: sim_output_dataset }
+      #          file_path:  {concat: ["output/results-",{get_input: topic},"-",{get_input: job_id},".csv"]}
+      #          name: {concat: ["results-",{get_input: topic},"-",{get_input: job_id},".csv"]}
+      #          description: "Resulting Simulation."
       skip_cleanup: { get_input: job_skip_cleanup }
     relationships:
       - type: job_managed_by_wm

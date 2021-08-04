@@ -15,7 +15,7 @@ hpc_monitor_period: 60
 hpc_monitor_entrypoint: ""
 hpc_skip_cleanup: False
 hpc_workdir_prefix: SN_cfy
-hpc_mpi_load_command: "false"
+hpc_mpi_load_command: ":" # shell no-op
 hpc_conda_activate_command: "source /work/miniconda3/bin/activate prop_mpi"
 
 
@@ -32,7 +32,7 @@ job_id: 123
 
 # Source code
 git_repo: "https://github.com/sarming/propagation"
-git_branch: "master"
+git_branch: master
 
 
 # Input
