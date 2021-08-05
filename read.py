@@ -41,12 +41,12 @@ def save_labelled_graph(filename, A, node_labels, compressed=True):
 def labelled_graph(filename):
     loader = np.load(filename)
     A = csr_matrix((loader['data'], loader['indices'], loader['indptr']),
-                             shape=loader['shape'])
+                   shape=loader['shape'])
     node_labels = loader['node_labels']
     return A, node_labels
 
 
-def metis(filename, zero_based=False):
+def metis(filename, zero_based=False, save_as=None):
     with open(filename) as f:
         (n, m) = f.readline().split()
         n = int(n)
@@ -55,10 +55,13 @@ def metis(filename, zero_based=False):
             neighbors = [int(v) - (1 if not zero_based else 0) for v in neighbors.split()]
             mtx[node, neighbors] = 1.
         node_labels = range(n) if zero_based else range(1, n + 1)
-        return mtx.tocsr(), node_labels
+        mtx = mtx.tocsr()
+        if save_as:
+            save_labelled_graph(save_as, mtx, node_labels)
+        return mtx, node_labels
 
 
-def tweets(file, node_labels):
+def tweets(file, node_labels, id_type='_metis'):
     def str_cat_series(*series):
         # return list(map(str,zip(*series))) # to support nonbinary features
         series = list(map(lambda x: x.apply(str), series))
@@ -70,7 +73,7 @@ def tweets(file, node_labels):
     csv['tweet_feature'] = str_cat_series(csv['hashtag'], csv['tweeturl'], csv['mentions'], csv['media'])
 
     reverse = {node: idx for idx, node in enumerate(node_labels)}
-    csv['source'] = pd.Series((reverse.get(author, None) for author in csv['author']), dtype='Int64')
+    csv['source'] = pd.Series((reverse.get(author, None) for author in csv[f'author_{id_type}']), dtype='Int64')
 
     return csv[['source', 'author_feature', 'tweet_feature', 'retweets']]
 
@@ -82,7 +85,7 @@ def stats(file):
                                      'retweet_probability': float,
                                      'mean_retweets': float,
                                      'max_retweets': 'Int64'})
-    #set default max retweets if not provided
+    # set default max retweets if not provided
     if 'max_retweets' not in stats.columns:
         stats['max_retweets'] = 100
     stats.set_index(['author_feature', 'tweet_feature'], inplace=True)

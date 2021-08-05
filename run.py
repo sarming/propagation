@@ -48,7 +48,7 @@ def parse_args():
         else:
             args.runid = datetime.now().isoformat()
     if not args.graph:
-        args.graph = f'{args.indir}/anonymized_inner_graph_{args.topic}.adjlist'
+        args.graph = f'{args.indir}/anon_graph_inner_{args.topic}.metis'
     if not args.tweets:
         args.tweets = f'{args.indir}/sim_features_{args.topic}.csv'
 
@@ -63,7 +63,8 @@ def build_sim(args):
     if args.graph.endswith('.adjlist'):
         A, node_labels = read.adjlist(args.graph, save_as=args.graph.replace('.adjlist', '.npz'))
     elif args.graph.endswith('.metis'):
-        A, node_labels = read.metis(args.graph, zero_based=args.metis_zero_based)
+        A, node_labels = read.metis(args.graph, zero_based=args.metis_zero_based,
+                                    save_as=args.graph.replace('.metis', '.npz'))
     elif args.graph.endswith('.npz'):
         A, node_labels = read.labelled_graph(args.graph)
     else:
@@ -71,7 +72,8 @@ def build_sim(args):
 
     # Input files
     if args.tweets:
-        tweets = read.tweets(args.tweets, node_labels)
+        id_type = 'adjlist' if args.graph.endswith('.adjlist') else 'metis'
+        tweets = read.tweets(args.tweets, node_labels, id_type)
         stats = simulation.tweet_statistics(tweets)
         source_map = simulation.tweet_sources(tweets)
     if args.stats:
