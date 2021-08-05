@@ -1,6 +1,7 @@
 # Created by .ignore support plugin (hsz.mobi)
 *.npz
 *.adjlist
+*.metis
 *.csv
 *.gz
 # IntelliJ project files

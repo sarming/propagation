@@ -53,7 +53,8 @@ def metis(filename, zero_based=False, save_as=None):
         mtx = lil_matrix((n, n))
         for (node, neighbors) in enumerate(f.readlines()):
             neighbors = [int(v) - (1 if not zero_based else 0) for v in neighbors.split()]
-            mtx[node, neighbors] = 1.
+            if neighbors:
+                mtx[node, sorted(neighbors)] = 1.
         node_labels = range(n) if zero_based else range(1, n + 1)
         mtx = mtx.tocsr()
         if save_as:
