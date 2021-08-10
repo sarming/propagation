@@ -62,7 +62,7 @@ def metis(filename, zero_based=False, save_as=None):
         return mtx, node_labels
 
 
-def tweets(file, node_labels, id_type='_metis'):
+def tweets(file, node_labels, id_type='metis'):
     def str_cat_series(*series):
         # return list(map(str,zip(*series))) # to support nonbinary features
         series = list(map(lambda x: x.apply(str), series))
@@ -109,6 +109,35 @@ def single_param(file):
 
 
 if __name__ == "__main__":
-    for g in ['fpoe_20200311', 'neos_20200311', 'bvb_20200409', 'schalke_20200409', 'vegan_20200407']:
-        print(g)
-        adjlist(f'data/anonymized_outer_graph_{g}.adjlist', save_as=f'outer_{g}.npz')
+    import networkx as nx
+    import scipy.sparse.linalg
+    import ast
+
+    a, labels_a = adjlist('data/anonymized_inner_graph_neos_20200311.adjlist')
+    b, labels_b = metis(f'data/anon_graph_inner_neos_20201110.metis')
+    a = nx.from_scipy_sparse_matrix(a, create_using=nx.DiGraph)
+    b = nx.from_scipy_sparse_matrix(b, create_using=nx.DiGraph)
+    conv = pd.read_csv('data/sim_features_neos_20210729.csv', converters={'retweeter_adjlist': ast.literal_eval,
+                                                                          'retweeter_metis': ast.literal_eval})
+    r = l = t = 0
+    for _, c in conv.iterrows():
+        if not int(c['author_adjlist']) in labels_a:
+            continue
+        x = labels_a.index(c['author_adjlist'])
+        y = labels_b.index(c['author_metis'])
+        ra = c['retweeter_adjlist']
+        assert a.out_degree(x) == b.out_degree(y)
+
+        if not (ra and ra[0] in labels_a):
+            continue
+        t += 1
+        ra = labels_a.index(ra[0])
+        rb = labels_b.index(c['retweeter_metis'][0])
+        print(f'{x} {a.out_degree(x)} {a.has_edge(x, ra)}, {y} {b.out_degree(y)} {b.has_edge(y, rb)} {rb}')
+        assert a.has_edge(x, ra) == b.has_edge(y, rb)
+        if a.has_edge(x, ra):
+            r += 1
+        if a.has_edge(ra, x):
+            l += 1
+    print(f'{t} {r} {l}')
+    print(nx.is_isomorphic(a, b))
