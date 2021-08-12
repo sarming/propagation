@@ -23,11 +23,6 @@ def adjlist(filename, save_as=None):
             mtx[nodes[0], sorted(nodes[1:])] = 1.
     mtx = mtx.tocsr()
 
-    # graph = nx.read_adjlist(filename, nodetype=int, create_using=nx.DiGraph)
-    # A = nx.to_scipy_sparse_matrix(graph)
-    # assert node_labels == list(graph.nodes())
-    # assert (mtx != A).nnz == 0
-
     if save_as:
         save_labelled_graph(save_as, mtx, node_labels)
     return mtx, node_labels
@@ -66,7 +61,7 @@ def tweets(file, node_labels, id_type='metis'):
     def str_cat_series(*series):
         # return list(map(str,zip(*series))) # to support nonbinary features
         series = list(map(lambda x: x.apply(str), series))
-        return series[0].str.cat(series[1:]).astype("category")
+        return series[0].str.cat(series[1:]).astype('category')
 
     csv = pd.read_csv(file)
 
@@ -108,36 +103,8 @@ def single_param(file):
     return discount.squeeze()
 
 
-if __name__ == "__main__":
-    import networkx as nx
-    import scipy.sparse.linalg
-    import ast
+if __name__ == '__main__':
+    from glob import glob
 
-    a, labels_a = adjlist('data/anonymized_inner_graph_neos_20200311.adjlist')
-    b, labels_b = metis(f'data/anon_graph_inner_neos_20201110.metis')
-    a = nx.from_scipy_sparse_matrix(a, create_using=nx.DiGraph)
-    b = nx.from_scipy_sparse_matrix(b, create_using=nx.DiGraph)
-    conv = pd.read_csv('data/sim_features_neos_20210729.csv', converters={'retweeter_adjlist': ast.literal_eval,
-                                                                          'retweeter_metis': ast.literal_eval})
-    r = l = t = 0
-    for _, c in conv.iterrows():
-        if not int(c['author_adjlist']) in labels_a:
-            continue
-        x = labels_a.index(c['author_adjlist'])
-        y = labels_b.index(c['author_metis'])
-        ra = c['retweeter_adjlist']
-        assert a.out_degree(x) == b.out_degree(y)
-
-        if not (ra and ra[0] in labels_a):
-            continue
-        t += 1
-        ra = labels_a.index(ra[0])
-        rb = labels_b.index(c['retweeter_metis'][0])
-        print(f'{x} {a.out_degree(x)} {a.has_edge(x, ra)}, {y} {b.out_degree(y)} {b.has_edge(y, rb)} {rb}')
-        assert a.has_edge(x, ra) == b.has_edge(y, rb)
-        if a.has_edge(x, ra):
-            r += 1
-        if a.has_edge(ra, x):
-            l += 1
-    print(f'{t} {r} {l}')
-    print(nx.is_isomorphic(a, b))
+    for f in glob('data/*.metis'):
+        metis(f, save_as=f.replace('metis', 'npz'))

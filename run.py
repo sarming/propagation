@@ -48,12 +48,16 @@ def parse_args():
         else:
             args.runid = datetime.now().isoformat()
     if not args.graph:
-        args.graph = f'{args.indir}/anon_graph_inner_{args.topic}.metis'
+        args.graph = f'{args.indir}/anon_graph_inner_{args.topic}.npz'
+        if not os.path.isfile(args.graph):
+            args.graph = args.graph.replace('npz', 'metis')
+    # if not args.tweets and not args.stats: TODO
     if not args.tweets:
         args.tweets = f'{args.indir}/sim_features_{args.topic}.csv'
-
+    if not args.tweets and not args.source_map:
+        raise ValueError("Either --tweets or --source_map has to be provided!")
     if args.samples % args.sample_split != 0:
-        raise ValueError(f'sample_split has to evenly divide samples!')
+        raise ValueError("sample_split has to evenly divide samples!")
 
     return args
 
@@ -61,14 +65,16 @@ def parse_args():
 def build_sim(args):
     """ Construct simulation object. """
     if args.graph.endswith('.adjlist'):
-        A, node_labels = read.adjlist(args.graph, save_as=args.graph.replace('.adjlist', '.npz'))
+        A, node_labels = read.adjlist(args.graph, save_as=args.graph.replace('.adjlist', '.adjlist.npz'))
     elif args.graph.endswith('.metis'):
         A, node_labels = read.metis(args.graph, zero_based=args.metis_zero_based,
                                     save_as=args.graph.replace('.metis', '.npz'))
     elif args.graph.endswith('.npz'):
         A, node_labels = read.labelled_graph(args.graph)
+        if args.tweets:
+            print('Assuming METIS style ids.')
     else:
-        raise ValueError(f'Unknown graph file format {args.graph}.\nPress Ctrl-C to terminate MPI procs.')
+        raise ValueError(f"Unknown graph file format {args.graph}.\nPress Ctrl-C to terminate MPI procs.")
 
     # Input files
     if args.tweets:
@@ -140,25 +146,27 @@ def main():
 
     sim = None
     if MPI.COMM_WORLD.Get_rank() == 0:
+        print(f"mpi_size: {MPI.COMM_WORLD.Get_size()}")
+
         t = time.time()
         sim = build_sim(args)
-        print("readtime: " + str(time.time() - t))
+        print(f"readtime: {time.time() - t}")
         t = time.time()
 
         sim.stats.sort_values(by=['mean_retweets', 'retweet_probability'], ascending=False, inplace=True)
         sim.features = sim.stats.index
         sim.params = sim.params.reindex(index=sim.features)
 
-        print(f'args: {args}')
-        print(f'seed: {sim.seed.entropy}')
-        print(f'topic: {args.topic}')
+        print(f"args: {args}")
+        print(f"seed: {sim.seed.entropy}")
+        print(f"topic: {args.topic}")
     else:
         propagation.compile()
 
     # if True: # bypass mpi
     with mpi.futures(sim, chunksize=1, sample_split=args.sample_split) as sim:
         if sim is not None:
-            print("setuptime: " + str(time.time() - t))
+            print(f"setuptime: {time.time() - t}")
             t = time.time()
 
             if args.command == 'learn_discount':
@@ -194,7 +202,7 @@ def main():
 
                 mae_retweet_probability = r.real_retweet_probability.sub(r.retweet_probability).abs().mean()
                 mae_mean_retweets = r.real_mean_retweets.sub(r.mean_retweets).abs().mean()
-                print(f'MAE: retweet_probability: {mae_retweet_probability} mean_retweets: {mae_mean_retweets}')
+                print(f"MAE: retweet_probability: {mae_retweet_probability} mean_retweets: {mae_mean_retweets}")
 
             elif args.command == 'sim':
                 r = agg_statistics((feature, sim.simulate(feature, sources=args.sources, samples=args.samples))
@@ -206,7 +214,7 @@ def main():
                 r = explode_tweets(sim.run(num_features=args.features, num_sources=args.sources, samples=args.samples))
                 r.to_csv(f'{args.outdir}/results-{args.topic}-{args.runid}.csv')
                 print(r)
-            print("runtime: " + str(time.time() - t))
+            print(f"runtime: {time.time() - t}")
 
 
 if __name__ == "__main__":
