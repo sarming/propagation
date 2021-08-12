@@ -34,6 +34,6 @@ else:
 with mpi.futures(sim, chunksize=1) as sim:
     if sim is not None:
         t = time.time()
-        r = list(sim.simulate(sources=sources, params=params, samples=samples))
+        r = list(sim.simulate(params=params, sources=sources, samples=samples))
         print(time.time() - t)
         print(r)

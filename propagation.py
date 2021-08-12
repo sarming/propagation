@@ -128,7 +128,7 @@ def simulation_stats(simulation_results):
 
 
 # @timecall
-def simulate(A, sources, params, samples=1, return_stats=True, seed=None):
+def simulate(A, params, sources, samples=1, return_stats=True, seed=None):
     """ Propagate messages and return mean retweets and retweet probability.
 
     Args:

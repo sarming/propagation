@@ -189,7 +189,7 @@ class Simulation:
                             eps) for f in features), index=features)
 
     # @timecall
-    def learn(self, param, goal_stat, lb, ub, eps, sources, samples, features, params):
+    def learn(self, param, goal_stat, lb, ub, eps, params, sources, samples, features):
         def set_param(value, feature):
             p = self._default_params(params, feature)
             p[param] = value
@@ -202,26 +202,26 @@ class Simulation:
             features = self.features
         return pd.Series((
             invert_monotone(lambda x: goal(self.simulator(A=self.A,
-                                                          sources=self._default_sources(sources, f),
                                                           params=set_param(x, f),
+                                                          sources=self._default_sources(sources, f),
                                                           samples=samples,
                                                           seed=self.seed.spawn(1)[0])),
                             self.stats.loc[f, goal_stat],
                             lb, ub,
                             eps=eps, logging=True) for f in features), index=features)
 
-    def discount_factor_from_mean_retweets(self, sources=None, params=None, samples=1000, eps=0.1, features=None):
+    def discount_factor_from_mean_retweets(self, params=None, sources=None, samples=1000, eps=0.1, features=None):
         """Find discount factor for given feature vector (or all if none given)."""
-        return self.learn('discount_factor', 'mean_retweets', 0., 1., sources=sources, params=params, samples=samples,
-                          eps=eps, features=features)
+        return self.learn('discount_factor', 'mean_retweets', 0., 1., eps=eps, params=params, sources=sources,
+                          samples=samples, features=features)
 
-    def corr_from_mean_retweets(self, sources=None, params=None, samples=1000, eps=0.1, features=None):
+    def corr_from_mean_retweets(self, params=None, sources=None, samples=1000, eps=0.1, features=None):
         """Find corr for given feature vector (or all if none given)."""
-        return self.learn('corr', 'mean_retweets', 0., .01, sources=sources, params=params, samples=samples, eps=eps,
+        return self.learn('corr', 'mean_retweets', 0., .01, eps=eps, params=params, sources=sources, samples=samples,
                           features=features)
 
     # @timecall
-    def simulate(self, feature=None, sources=None, params=None, samples=1, return_stats=True):
+    def simulate(self, feature=None, params=None, sources=None, samples=1, return_stats=True):
         """Simulate message with given feature vector.
 
         Args:
@@ -239,8 +239,8 @@ class Simulation:
         # print(params)
 
         return self.simulator(self.A,
-                              sources,
-                              params,
+                              params=params,
+                              sources=sources,
                               samples=samples,
                               return_stats=return_stats,
                               seed=self.seed.spawn(1)[0])
@@ -248,7 +248,7 @@ class Simulation:
     def run(self, num_features, num_sources=1, params=None, samples=100):
         for feature in self.sample_feature(num_features):
             sources = self._default_sources(num_sources, feature)
-            yield feature, zip(sources, self.simulate(feature, sources=sources, params=params, samples=samples,
+            yield feature, zip(sources, self.simulate(feature, params=params, sources=sources, samples=samples,
                                                       return_stats=False))
 
 
