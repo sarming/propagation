@@ -8,7 +8,7 @@ import propagation
 import read
 
 
-def calculate_retweet_probability(A, sources, p):
+def calculate_retweet_probability(A, sources, p, at_least_one):
     """Return average number of retweeted messages when starting from sources using edge probability p.
 
     Args:
@@ -20,8 +20,9 @@ def calculate_retweet_probability(A, sources, p):
         mean_{x in sources} 1-(1-p)^{deg-(x)}
         This is the expected value of simulate(A, sources, p, depth=1)[1].
     """
-    return p
-    # return sum(1 - (1 - p) ** float(A.indptr[x + 1] - A.indptr[x]) for x in sources) / len(sources)
+    if at_least_one:
+        return p
+    return sum(1 - (1 - p) ** float(A.indptr[x + 1] - A.indptr[x]) for x in sources) / len(sources)
 
 
 def invert_monotone(fun, goal, lb, ub, eps, logging=False):
@@ -181,7 +182,8 @@ class Simulation:
         return pd.Series((
             invert_monotone(lambda p: calculate_retweet_probability(self.A,
                                                                     self._default_sources(sources, f),
-                                                                    p),
+                                                                    p,
+                                                                    self.params.at[f, 'at_least_one']),
                             self.stats.loc[f, 'retweet_probability'],
                             0, 1,
                             eps) for f in features), index=features)
