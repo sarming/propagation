@@ -103,9 +103,6 @@ class Simulation:
         self.features = self.stats.index
 
         self.simulator = simulator
-        # self.simulator = parallel.ray_simulator()
-        # self.simulator = parallel.pool_simulator(self.A)
-        # self.simulator = logging(self.simulator)
 
         self.params['edge_probability'] = self.edge_probability_from_retweet_probability()
         if params is not None:
@@ -167,13 +164,13 @@ class Simulation:
         else:
             default_params = self.params.astype('object').loc[feature]
             try:
-                params = params.loc[feature]
+                params = params.astype('object').loc[feature]
             except (AttributeError, IndexError, KeyError, TypeError):
                 pass
 
         if not isinstance(params, pd.Series):
             params = pd.Series(params, index=default_params.index, dtype=object)
-        return params.fillna(default_params)
+        return params.fillna(default_params, downcast={'at_least_one': bool, 'max_nodes': int, 'max_depth': int})
 
     def edge_probability_from_retweet_probability(self, sources=None, eps=1e-5, features=None):
         """Find edge probability for given feature vector (or all if none given)."""
@@ -184,7 +181,7 @@ class Simulation:
                                                                     self._default_sources(sources, f),
                                                                     p,
                                                                     self.params.at[f, 'at_least_one']),
-                            self.stats.loc[f, 'retweet_probability'],
+                            self.stats.at[f, 'retweet_probability'],
                             0, 1,
                             eps) for f in features), index=features)
 
@@ -206,7 +203,7 @@ class Simulation:
                                                           sources=self._default_sources(sources, f),
                                                           samples=samples,
                                                           seed=self.seed.spawn(1)[0])),
-                            self.stats.loc[f, goal_stat],
+                            self.stats.at[f, goal_stat],
                             lb, ub,
                             eps=eps, logging=True) for f in features), index=features)
 
