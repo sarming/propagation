@@ -1,11 +1,9 @@
-from functools import wraps
-
 import numpy as np
 import pandas as pd
-# from profilehooks import timecall
 
 import propagation
 import read
+from optimize import invert_monotone
 
 
 def calculate_retweet_probability(A, sources, p, at_least_one):
@@ -23,48 +21,6 @@ def calculate_retweet_probability(A, sources, p, at_least_one):
     if at_least_one:
         return p
     return sum(1 - (1 - p) ** float(A.indptr[x + 1] - A.indptr[x]) for x in sources) / len(sources)
-
-
-def invert_monotone(fun, goal, lb, ub, eps, logging=False):
-    """Find fun^-1( goal ) by binary search.
-
-    Note:
-        For correctness fun has to be monotone up to eps, viz. fun(x) <= fun(x+eps) for all x
-        This is an issue with stochastic functions.
-
-    Args:
-        fun: Monotone Function.
-        goal: Goal value.
-        lb: Initial lower bound.
-        ub: Initial upper bound.
-        eps: Precision at which to stop.
-        logging: Print function calls and results.
-
-    Returns: x s.t. lb<x<ub and there is y with |x-y|<=eps and fun(y)=goal
-    """
-    mid = (ub + lb) / 2
-    if ub - lb < eps:
-        return mid
-    if logging:
-        print(f'f({mid})=', end='')
-    f = fun(mid)
-    if logging:
-        print(f"{f}{'<' if f < goal else '>'}{goal} [{lb},{ub}]")
-    if f < goal:
-        return invert_monotone(fun, goal, mid, ub, eps, logging)
-    else:
-        return invert_monotone(fun, goal, lb, mid, eps, logging)
-
-
-def logging(fun):
-    """Simple function decorator that prints every function invocation."""
-
-    @wraps(fun)
-    def wrapper(*args, **kwargs):
-        print(f'calling {fun.__name__}({args},{kwargs})')
-        return fun(*args, **kwargs)
-
-    return wrapper
 
 
 def tweet_statistics(tweets, min_size=10):
@@ -216,6 +172,17 @@ class Simulation:
         """Find corr for given feature vector (or all if none given)."""
         return self.learn('corr', 'mean_retweets', 0., .01, eps=eps, params=params, sources=sources, samples=samples,
                           features=features)
+
+    def objective(self, feature, statistic='mean_retweets', absolute=True, params=None, sources=None, samples=1):
+        assert statistic in {'mean_retweets', 'retweet_probability'}
+
+        mean_retweets, retweet_probability = self.simulate(feature, params, sources, samples, True)
+
+        goal = self.stats.at[feature, statistic]
+        result = mean_retweets if statistic == 'mean_retweets' else retweet_probability
+        if absolute:
+            return abs(result - goal)
+        return result - goal
 
     # @timecall
     def simulate(self, feature=None, params=None, sources=None, samples=1, return_stats=True):
