@@ -1,8 +1,15 @@
+from math import floor
 import numpy as np
 import pandas as pd
 from functools import wraps
 from itertools import product
 from heapq import heappush, nsmallest
+
+
+def discretize(value, bound):
+    lb, ub, width = bound
+    k = floor((value - lb) / width)
+    return lb + k * width
 
 
 class hashabledict(dict):  # https://stackoverflow.com/a/1151686/153408
@@ -62,19 +69,19 @@ class Hillclimb:
     def __init__(self, sim, feature, statistic='mean_retweets', bounds=None, sources=None, samples=1,
                  seed=None):
         if bounds is None:
-            bounds = {'edge_probability': (0., 0.3),
+            bounds = {'edge_probability': (0., 0.3, .001),
                       'at_least_one': [True, False],
-                      'discount_factor': (0., 1.),
-                      'corr': (0., 1.),
-                      'max_nodes': (860, 860),
-                      # 'max_depth': (1,100),
+                      'discount_factor': (0., 1., .1),
+                      'corr': (0., 1., .001),
+                      'max_nodes': (100, 860, 20),
+                      # 'max_depth': (1,100, 1),
                       }
         self.sim = sim
         self.feature = feature
         self.statistic = statistic
         self.bounds = bounds
         self.dims = bounds.keys()
-        self.dirs = list(product(self.dims, [True, False]))
+        self.dirs = list(product(self.dims, [False, True]))
         self.sources = sources
         self.samples = samples
         self.seed = seed
@@ -139,50 +146,51 @@ class Hillclimb:
             return False
         return point in self.points
 
-    def take_step(self, point, dim, step, neg=False):
-        if isinstance(step, dict):
-            step = step[dim]
+    def take_step(self, point, dim, steps, neg=False):
+        if isinstance(steps, dict):
+            steps = steps[dim]
         if neg:
-            step = -step
-        point = hashabledict(point)
-        if isinstance(point[dim], bool):
-            point[dim] ^= bool(step)
+            steps = -steps
+        point = hashabledict(point)  # Copy point
+        bound = self.bounds[dim]
+        if isinstance(bound, list):
+            point[dim] = bound[(bound.index(point[dim]) + steps) % len(bound)]
         else:
-            step = type(point[dim])(step)
-            point[dim] += step
+            stepwidth = bound[2]
+            point[dim] += steps * stepwidth
         return self.add_point(point)
 
-    def take_all_dirs(self, point, step):
+    def take_all_dirs(self, point, steps):
         for dim in self.dims:
-            self.take_step(point, dim, step)
-            self.take_step(point, dim, step, neg=True)
+            self.take_step(point, dim, steps)
+            self.take_step(point, dim, steps, neg=True)
 
-    def take_random_dir(self, point, step):
-        for _ in range(5):
+    def take_random_dir(self, point, steps):
+        for _ in range(100):
             dim, neg = self.rng.choice(self.dirs)
-            if self.take_step(point, dim, step, neg):
+            if self.take_step(point, dim, steps, neg):
                 return
-        print('Isolated point {point}.')
+        print(f'Isolated point? {point}')
 
-    def iterate_stochastic(self, step, k_best=1, n_dirs=1):
+    def iterate_stochastic(self, steps, k_best=1, n_dirs=1):
         self.evaluate()
         for point in self.best_points(k_best):
             for i in range(n_dirs):
-                self.take_random_dir(point, step)
+                self.take_random_dir(point, steps)
 
-    def iterate_steep(self, step, k_best=1):
+    def iterate_steep(self, steps, k_best=1):
         self.evaluate()
         for point in self.best_points(k_best):
-            self.take_all_dirs(point, step)
+            self.take_all_dirs(point, steps)
 
     def random_points(self, n=1):
         def rnd(bound):
             if isinstance(bound, tuple):
-                lb, ub = bound
+                lb, ub, _ = bound
                 if isinstance(lb, int):
-                    return self.rng.integers(lb, ub, endpoint=True)
+                    return discretize(self.rng.integers(lb, ub, endpoint=True), bound)
                 if isinstance(lb, float):
-                    return self.rng.uniform(lb, ub)
+                    return discretize(self.rng.uniform(lb, ub), bound)
                 assert False
             if isinstance(bound, list):
                 return self.rng.choice(bound)
@@ -216,7 +224,7 @@ class Hillclimb:
     def best(self):
         return self.solutions[0][1]
 
-    def fix_best(self):
+    def choose_best(self):
         for dim, value in self.solutions[0][1]:
             sim.params.at[self.feature, dim] = value
 
@@ -225,15 +233,19 @@ if __name__ == "__main__":
     from simulation import Simulation
     import mpi
 
-    sim = Simulation.from_files('data/anon_graph_inner_neos_20201110.npz', 'data/sim_features_neos_20201110.csv')
+    sim = Simulation.from_files('data/anon_graph_inner_neos_20201110.npz', 'data/sim_features_neos_20201110.csv',
+                                seed=2)
     with mpi.futures(sim) as sim:
         if sim is not None:
-            climb = Hillclimb(sim, sim.features[0], sources=100, samples=100)
+            climb = Hillclimb(sim, sim.features[0], sources=100, samples=100, seed=1)
             old = climb.random_restart(10)
-            print(f'old: {old}')
+            # print(f'old: {old}')
+            for _ in range(20):
+                climb.iterate_stochastic(2, 5)
             for _ in range(10):
-                climb.iterate_steep(0.01)
-            climb.add_solutions(old)
-            climb.iterate_stochastic(0.001)
+                climb.iterate_steep(1, 2)
+            # climb.iterate_steep(1, 5)
+            # climb.add_solutions(old)
+            # climb.iterate_stochastic(1)
             climb.evaluate()
             # print(climb.random_restart())
