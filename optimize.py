@@ -1,3 +1,4 @@
+from collections import defaultdict
 from math import floor
 import numpy as np
 import pandas as pd
@@ -88,10 +89,9 @@ class Optimization:
 
         self.dims = bounds.keys()
         self.dirs = list(product(self.dims, [False, True]))
-        self.redo_probability = 0.0
 
+        self.points = defaultdict(list)
         self.solutions = []
-        self.points = set()
         self.current_results = []
 
     @classmethod
@@ -117,7 +117,7 @@ class Optimization:
             # print(f'add point {point}')
             result = self.f(point)
             self.current_results.append((result, point))
-            self.points.add(point)
+            self.points[point]  # Access to add key to dict
             return True
         return False
 
@@ -125,6 +125,7 @@ class Optimization:
         for result, point in self.current_results:
             value = self.objective(result)
             heappush(self.solutions, (value, point))
+            self.points[point].append(value)
         if self.solutions:
             print(f'current best:{self.solutions[0]}')
         self.current_results = []
@@ -143,9 +144,6 @@ class Optimization:
         return True
 
     def visited(self, point):
-        if self.rng.random() <= self.redo_probability:
-            print(f'Redoing {point}')
-            return False
         return point in self.points
 
     def take_step(self, point, dim, steps, neg=False):
@@ -185,7 +183,7 @@ class Optimization:
         for point in self.best(k_best):
             self.take_all_dirs(point, steps)
 
-    def random_points(self, n=1):
+    def random_point(self, n=None):
         def rnd(bound):
             if isinstance(bound, tuple):
                 lb, ub, _ = bound
@@ -198,8 +196,12 @@ class Optimization:
                 return self.rng.choice(bound)
             assert False
 
-        points = [hashabledict({dim: rnd(self.bounds[dim]) for dim in self.dims}) for _ in range(n)]
-        return points
+        def rnd_point():
+            return hashabledict({dim: rnd(self.bounds[dim]) for dim in self.dims})
+
+        if n is None:
+            return rnd_point()
+        return [rnd_point() for _ in range(n)]
 
     def best(self, n=None):
         if n is None:
@@ -215,14 +217,15 @@ class Optimization:
         self.evaluate()
         old_solutions = self._best_solutions(keep)
         self.solutions = []
-        self.points = set()
-        for point in self.random_points(n):
+        self.points = defaultdict(list)
+        for point in self.random_point(n):
             self.add_point(point)
         return old_solutions
 
     def add_solutions(self, solutions):
         for s in solutions:
-            self.points.add(s[1])
+            value, point = s
+            self.points[point].append(value)
             heappush(self.solutions, s)
 
     def set_best(self, sim, feature):
