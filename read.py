@@ -28,16 +28,24 @@ def adjlist(filename, save_as=None):
     return mtx, node_labels
 
 
-def save_labelled_graph(filename, A, node_labels, compressed=True):
+def save_labelled_graph(filename, A, node_labels, compressed=False):
     savez = np.savez_compressed if compressed else np.savez
-    savez(filename, data=A.data, indices=A.indices, indptr=A.indptr, shape=A.shape, node_labels=node_labels)
+    if isinstance(node_labels, range):  # Store just starting index for ranges
+        node_labels = node_labels.start
+    savez(filename, data=False, indices=A.indices, indptr=A.indptr, shape=A.shape, node_labels=node_labels)
 
 
 def labelled_graph(filename):
     loader = np.load(filename)
-    A = csr_matrix((loader['data'], loader['indices'], loader['indptr']),
+    data = loader['data']
+    if not data.shape:
+        data = np.full(loader['indices'].shape, 1.)
+    A = csr_matrix((data, loader['indices'], loader['indptr']),
                    shape=loader['shape'])
+
     node_labels = loader['node_labels']
+    if not node_labels.shape and loader['shape'][0]:  # Restore saved range
+        node_labels = range(node_labels, loader['shape'][0] + node_labels)
     return A, node_labels
 
 
@@ -68,8 +76,14 @@ def tweets(file, node_labels, id_type='metis'):
     csv['author_feature'] = str_cat_series(csv['verified'], csv['activity'], csv['defaultprofile'], csv['userurl'])
     csv['tweet_feature'] = str_cat_series(csv['hashtag'], csv['tweeturl'], csv['mentions'], csv['media'])
 
-    reverse = {node: idx for idx, node in enumerate(node_labels)}
-    csv['source'] = pd.Series((reverse.get(author, None) for author in csv[f'author_{id_type}']), dtype='Int64')
+    if isinstance(node_labels, range):
+        a, b = node_labels.start, node_labels.stop
+        reverse = lambda x: x - a if a <= x < b else None
+    else:
+        r = {node: idx for idx, node in enumerate(node_labels)}
+        reverse = lambda x: r.get(x, None)
+
+    csv['source'] = pd.Series((reverse(author) for author in csv[f'author_{id_type}']), dtype='Int64')
 
     return csv[['source', 'author_feature', 'tweet_feature', 'retweets']]
 
@@ -107,4 +121,5 @@ if __name__ == '__main__':
     from glob import glob
 
     for f in glob('data/*.metis'):
+        print(f)
         metis(f, save_as=f.replace('metis', 'npz'))
