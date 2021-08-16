@@ -92,7 +92,7 @@ class Optimization:
 
         self.points = defaultdict(list)
         self.solutions = []
-        self.current_results = []
+        self.raw_results = []
 
     @classmethod
     def for_sim(cls, sim, feature, bounds=None, statistic='mean_retweets', sources=None, samples=500):
@@ -113,22 +113,26 @@ class Optimization:
     def add_point(self, point):
         if not isinstance(point, hashabledict):
             point = hashabledict({dim: point[dim] for dim in self.dims})  # Use only keys from self.dims
-        if not self.visited(point) and self.in_bounds(point):
-            # print(f'add point {point}')
-            result = self.f(point)
-            self.current_results.append((result, point))
-            self.points[point]  # Access to add key to dict
-            return True
-        return False
+        if not self.in_bounds(point) or self.visited(point):
+            return False
+        result = self.f(point)
+        self.raw_results.append((result, point))
+        self.points[point]  # Access to add key to dict
+        # print(f'add point {point}')
+        return True
 
     def evaluate(self):
-        for result, point in self.current_results:
-            value = self.objective(result)
-            heappush(self.solutions, (value, point))
-            self.points[point].append(value)
+        new_solutions = [(self.objective(result), point) for result, point in self.raw_results]
+        self.add_solutions(new_solutions)
         if self.solutions:
             print(f'current best:{self.solutions[0]}')
-        self.current_results = []
+        self.raw_results = []
+
+    def add_solutions(self, solutions):
+        for s in solutions:
+            value, point = s
+            self.points[point].append(value)
+            heappush(self.solutions, s)
 
     def in_bounds(self, point):
         def check(bound, value):
@@ -146,29 +150,31 @@ class Optimization:
     def visited(self, point):
         return point in self.points
 
-    def take_step(self, point, dim, steps, neg=False):
+    def step(self, point, dim, steps, neg=False):
         if isinstance(steps, dict):
             steps = steps[dim]
         if neg:
             steps = -steps
         point = hashabledict(point)  # Copy point
         bound = self.bounds[dim]
+        old = point[dim]
         if isinstance(bound, list):
-            point[dim] = bound[(bound.index(point[dim]) + steps) % len(bound)]
+            point[dim] = bound[(bound.index(old) + steps) % len(bound)]
         else:
             stepwidth = bound[2]
-            point[dim] += steps * stepwidth
-        return self.add_point(point)
+            point[dim] = discretize(old, bound) + steps * stepwidth
+        return point
 
     def take_all_dirs(self, point, steps):
         for dim in self.dims:
-            self.take_step(point, dim, steps)
-            self.take_step(point, dim, steps, neg=True)
+            self.add_point(self.step(point, dim, steps))
+            self.add_point(self.step(point, dim, steps, neg=True))
 
     def take_random_dir(self, point, steps):
         for _ in range(100):
             dim, neg = self.rng.choice(self.dirs)
-            if self.take_step(point, dim, steps, neg):
+            point = self.step(point, dim, steps, neg)
+            if self.add_point(point):
                 return
         print(f'Isolated point? {point}')
 
@@ -222,12 +228,6 @@ class Optimization:
             self.add_point(point)
         return old_solutions
 
-    def add_solutions(self, solutions):
-        for s in solutions:
-            value, point = s
-            self.points[point].append(value)
-            heappush(self.solutions, s)
-
     def set_best(self, sim, feature):
         for dim, value in self.solutions[0][1]:
             sim.params.at[feature, dim] = value
@@ -238,7 +238,7 @@ if __name__ == "__main__":
     import mpi
 
     sim = Simulation.from_files('data/anon_graph_inner_neos_20201110.npz', 'data/sim_features_neos_20201110.csv',
-                                seed=2)
+                                seed=3)
     with mpi.futures(sim) as sim:
         if sim is not None:
             climb = Optimization.for_sim(sim, sim.features[0], sources=100, samples=100)
