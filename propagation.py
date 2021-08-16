@@ -40,6 +40,8 @@ def edge_propagate(A, source, p, corr=0., discount=1., depth=None, max_nodes=Non
                 return max_nodes
         leaves = next_leaves
         p *= discount
+        if not leaves:
+            break
     # print(f"done {len(visited)}")
     return len(visited) - 1
 
