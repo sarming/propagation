@@ -65,9 +65,37 @@ def logging(fun):
     return wrapper
 
 
-class Hillclimb:
-    def __init__(self, sim, feature, statistic='mean_retweets', bounds=None, sources=None, samples=1,
-                 seed=None):
+def single_objective(sim, feature, statistic, absolute=True):
+    assert statistic in {'mean_retweets', 'retweet_probability'}
+    goal = sim.stats.at[feature, statistic]
+
+    def obj(result):
+        mean_retweets, retweet_probability = result  # list(result)
+        result = mean_retweets if statistic == 'mean_retweets' else retweet_probability
+        if absolute:
+            return abs(result - goal)
+        return result - goal
+
+    return obj
+
+
+class Optimization:
+    def __init__(self, f, bounds, objective, seed=None):
+        self.f = f
+        self.bounds = bounds
+        self.objective = objective
+        self.rng = np.random.default_rng(seed)
+
+        self.dims = bounds.keys()
+        self.dirs = list(product(self.dims, [False, True]))
+        self.redo_probability = 0.0
+
+        self.solutions = []
+        self.points = set()
+        self.current_results = []
+
+    @classmethod
+    def for_sim(cls, sim, feature, bounds=None, statistic='mean_retweets', sources=None, samples=500):
         if bounds is None:
             bounds = {'edge_probability': (0., 0.3, .001),
                       'at_least_one': [True, False],
@@ -76,44 +104,18 @@ class Hillclimb:
                       'max_nodes': (100, 860, 20),
                       # 'max_depth': (1,100, 1),
                       }
-        self.sim = sim
-        self.feature = feature
-        self.statistic = statistic
-        self.bounds = bounds
-        self.dims = bounds.keys()
-        self.dirs = list(product(self.dims, [False, True]))
-        self.sources = sources
-        self.samples = samples
-        self.seed = seed
-        self.rng = np.random.default_rng(self.seed)
-        self.redo_probability = 0.0
-
-        assert statistic in {'mean_retweets', 'retweet_probability'}
-        self.goal = self.sim.stats.at[self.feature, self.statistic]
-
-        self.solutions = []
-        self.points = set()
-
-        self.current_results = []
-
-        self.add_point(sim.params.astype('object').loc[feature])
-
-    def simulate(self, point):
-        return self.sim.simulate(self.feature, point, self.sources, self.samples, True)
-
-    def objective(self, result, absolute=True):
-        mean_retweets, retweet_probability = result  # list(result)
-        result = mean_retweets if self.statistic == 'mean_retweets' else retweet_probability
-        if absolute:
-            return abs(result - self.goal)
-        return result - self.goal
+        objective = single_objective(sim, feature, statistic)
+        f = lambda point: sim.simulate(feature, point, sources, samples, True)
+        this = cls(f, bounds, objective, sim.seed.spawn(1)[0])
+        this.add_point(sim.params.astype('object').loc[feature])
+        return this
 
     def add_point(self, point):
         if not isinstance(point, hashabledict):
             point = hashabledict({dim: point[dim] for dim in self.dims})  # Use only keys from self.dims
         if not self.visited(point) and self.in_bounds(point):
             # print(f'add point {point}')
-            result = self.simulate(point)
+            result = self.f(point)
             self.current_results.append((result, point))
             self.points.add(point)
             return True
@@ -174,13 +176,13 @@ class Hillclimb:
 
     def iterate_stochastic(self, steps, k_best=1, n_dirs=1):
         self.evaluate()
-        for point in self.best_points(k_best):
+        for point in self.best(k_best):
             for i in range(n_dirs):
                 self.take_random_dir(point, steps)
 
     def iterate_steep(self, steps, k_best=1):
         self.evaluate()
-        for point in self.best_points(k_best):
+        for point in self.best(k_best):
             self.take_all_dirs(point, steps)
 
     def random_points(self, n=1):
@@ -199,7 +201,9 @@ class Hillclimb:
         points = [hashabledict({dim: rnd(self.bounds[dim]) for dim in self.dims}) for _ in range(n)]
         return points
 
-    def best_points(self, n=1):
+    def best(self, n=None):
+        if n is None:
+            return self.solutions[0][1]
         return [x[1] for x in self._best_solutions(n)]
 
     def _best_solutions(self, n=1):
@@ -221,12 +225,9 @@ class Hillclimb:
             self.points.add(s[1])
             heappush(self.solutions, s)
 
-    def best(self):
-        return self.solutions[0][1]
-
-    def choose_best(self):
+    def set_best(self, sim, feature):
         for dim, value in self.solutions[0][1]:
-            sim.params.at[self.feature, dim] = value
+            sim.params.at[feature, dim] = value
 
 
 if __name__ == "__main__":
@@ -237,7 +238,7 @@ if __name__ == "__main__":
                                 seed=2)
     with mpi.futures(sim) as sim:
         if sim is not None:
-            climb = Hillclimb(sim, sim.features[0], sources=100, samples=100, seed=1)
+            climb = Optimization.for_sim(sim, sim.features[0], sources=100, samples=100)
             old = climb.random_restart(10)
             # print(f'old: {old}')
             for _ in range(20):
