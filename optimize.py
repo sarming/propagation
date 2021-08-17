@@ -1,27 +1,10 @@
 from collections import defaultdict
-from math import floor
+from math import floor, prod
 import numpy as np
 import pandas as pd
 from functools import wraps
 from itertools import product
 from heapq import heappush, nsmallest
-
-
-def discretize(value, bound):
-    lb, ub, width = bound
-    k = floor((value - lb) / width)
-    return lb + k * width
-
-
-class hashabledict(dict):  # https://stackoverflow.com/a/1151686/153408
-    def __key(self):
-        return tuple((k, self[k]) for k in sorted(self))
-
-    def __hash__(self):
-        return hash(self.__key())
-
-    def __eq__(self, other):
-        return self.__key() == other.__key()
 
 
 def invert_monotone(fun, goal, lb, ub, eps, logging=False):
@@ -80,40 +63,140 @@ def single_objective(sim, feature, statistic, absolute=True):
     return obj
 
 
-class Optimization:
-    def __init__(self, f, bounds, objective, seed=None):
-        self.f = f
+def in_bound(value, bound):
+    if isinstance(bound, tuple):
+        return bound[0] <= value <= bound[1]
+    return value in bound
+
+
+def discretize(value, bound):
+    if not isinstance(bound, tuple):  # only continuous bounds need to be discretized
+        return value
+    lb, ub, width = bound
+    k = floor((value - lb) / width)
+    return lb + k * width
+
+
+def bound_size(bound):
+    if not isinstance(bound, tuple):  # only continuous bounds need to be discretized
+        return len(bound)
+    lb, ub, width = bound
+    return floor((ub - lb) / width)
+
+
+def all_values(bound):
+    if isinstance(bound, tuple):
+        lb, ub, width = bound
+        while lb < ub:
+            yield lb
+            lb += width
+    else:
+        yield from bound
+
+
+def random_value(bound, rng=np.random.default_rng()):
+    if isinstance(bound, tuple):
+        lb, ub, _ = bound
+        if isinstance(lb, int):
+            return discretize(rng.integers(lb, ub, endpoint=True), bound)
+        if isinstance(lb, float):
+            return discretize(rng.uniform(lb, ub), bound)
+        assert False
+    return rng.choice(bound)
+
+
+class Domain:
+    def __init__(self, bounds):
         self.bounds = bounds
+        self.dims = bounds.keys()
+
+    class Point(dict):  # https://stackoverflow.com/a/1151686/153408
+        def __key(self):
+            return tuple((k, self[k]) for k in sorted(self))
+
+        def __hash__(self):
+            return hash(self.__key())
+
+        def __eq__(self, other):
+            return self.__key() == other.__key()
+
+    def to_point(self, dictlike):
+        return Domain.Point({dim: dictlike[dim] for dim in self.dims})  # Use only keys from self.dims
+
+    def in_bounds(self, point):
+        for dim in self.dims:
+            if not in_bound(point[dim], self.bounds[dim]):
+                return False
+        return True
+
+    def step(self, point, dim, steps, neg=False):
+        if isinstance(steps, dict):
+            steps = steps[dim]
+        if neg:
+            steps = -steps
+        point = Domain.Point(point)  # Copy point
+        bound = self.bounds[dim]
+        old = point[dim]
+        if isinstance(bound, list):
+            point[dim] = bound[(bound.index(old) + steps) % len(bound)]
+        else:
+            stepwidth = bound[2]
+            point[dim] = discretize(old, bound) + steps * stepwidth
+        return point
+
+    def random_point(self, n=None, rng=np.random.default_rng()):
+        def rnd_point():
+            return Domain.Point({dim: random_value(self.bounds[dim], rng) for dim in self.dims})
+
+        if n is None:
+            return rnd_point()
+        return [rnd_point() for _ in range(n)]
+
+    def all_points(self):
+        values = product(*[all_values(bound) for bound in self.bounds.values()])
+        for v in values:
+            yield dict(zip(self.bounds.keys(), v))
+
+    def size(self):
+        return prod(bound_size(bound) for bound in self.bounds.values())
+
+
+class Optimization:
+    def __init__(self, f, domain, objective, seed=None):
+        self.f = f
+        self.dom = domain
         self.objective = objective
         self.rng = np.random.default_rng(seed)
 
-        self.dims = bounds.keys()
-        self.dirs = list(product(self.dims, [False, True]))
+        self.dirs = list(product(self.dom.dims, [False, True]))
 
         self.points = defaultdict(list)
         self.solutions = []
         self.raw_results = []
 
     @classmethod
-    def for_sim(cls, sim, feature, bounds=None, statistic='mean_retweets', sources=None, samples=500):
-        if bounds is None:
+    def for_sim(cls, sim, feature, domain=None, statistic='mean_retweets', sources=None, samples=500,
+                add_current_params=True):
+        if domain is None:
             bounds = {'edge_probability': (0., 0.3, .001),
-                      'at_least_one': [True, False],
-                      'discount_factor': (0., 1., .1),
+                      # 'at_least_one': [True, False],
+                      # 'discount_factor': (0., 1., .1),
                       'corr': (0., 1., .001),
-                      'max_nodes': (100, 860, 20),
+                      # 'max_nodes': (100, 860, 20),
                       # 'max_depth': (1,100, 1),
                       }
+            domain = Domain(bounds)
         objective = single_objective(sim, feature, statistic)
         f = lambda point: sim.simulate(feature, point, sources, samples, True)
-        this = cls(f, bounds, objective, sim.seed.spawn(1)[0])
-        this.add_point(sim.params.astype('object').loc[feature])
+        this = cls(f, domain, objective, sim.seed.spawn(1)[0])
+        if add_current_params:
+            this.add_point(sim.params.astype('object').loc[feature])
         return this
 
     def add_point(self, point):
-        if not isinstance(point, hashabledict):
-            point = hashabledict({dim: point[dim] for dim in self.dims})  # Use only keys from self.dims
-        if not self.in_bounds(point) or self.visited(point):
+        if not isinstance(point, Domain.Point):
+            point = self.dom.to_point(point)
+        if not self.dom.in_bounds(point) or self.visited(point):
             return False
         result = self.f(point)
         self.raw_results.append((result, point))
@@ -134,46 +217,17 @@ class Optimization:
             self.points[point].append(value)
             heappush(self.solutions, s)
 
-    def in_bounds(self, point):
-        def check(bound, value):
-            if isinstance(bound, tuple):
-                return bound[0] <= value <= bound[1]
-            if isinstance(bound, list):
-                return value in bound
-            assert False
-
-        for dim in self.dims:
-            if not check(self.bounds[dim], point[dim]):
-                return False
-        return True
-
     def visited(self, point):
         return point in self.points
 
-    def step(self, point, dim, steps, neg=False):
-        if isinstance(steps, dict):
-            steps = steps[dim]
-        if neg:
-            steps = -steps
-        point = hashabledict(point)  # Copy point
-        bound = self.bounds[dim]
-        old = point[dim]
-        if isinstance(bound, list):
-            point[dim] = bound[(bound.index(old) + steps) % len(bound)]
-        else:
-            stepwidth = bound[2]
-            point[dim] = discretize(old, bound) + steps * stepwidth
-        return point
-
     def take_all_dirs(self, point, steps):
-        for dim in self.dims:
-            self.add_point(self.step(point, dim, steps))
-            self.add_point(self.step(point, dim, steps, neg=True))
+        for dim, neg in self.dirs:
+            self.add_point(self.dom.step(point, dim, steps, neg))
 
     def take_random_dir(self, point, steps):
         for _ in range(100):
             dim, neg = self.rng.choice(self.dirs)
-            point = self.step(point, dim, steps, neg)
+            point = self.dom.step(point, dim, steps, neg)
             if self.add_point(point):
                 return
         print(f'Isolated point? {point}')
@@ -189,25 +243,10 @@ class Optimization:
         for point in self.best(k_best):
             self.take_all_dirs(point, steps)
 
-    def random_point(self, n=None):
-        def rnd(bound):
-            if isinstance(bound, tuple):
-                lb, ub, _ = bound
-                if isinstance(lb, int):
-                    return discretize(self.rng.integers(lb, ub, endpoint=True), bound)
-                if isinstance(lb, float):
-                    return discretize(self.rng.uniform(lb, ub), bound)
-                assert False
-            if isinstance(bound, list):
-                return self.rng.choice(bound)
-            assert False
-
-        def rnd_point():
-            return hashabledict({dim: rnd(self.bounds[dim]) for dim in self.dims})
-
-        if n is None:
-            return rnd_point()
-        return [rnd_point() for _ in range(n)]
+    def full_grid(self):
+        self.evaluate()
+        for point in self.dom.all_points():
+            self.add_point(point)
 
     def best(self, n=None):
         if n is None:
@@ -224,7 +263,7 @@ class Optimization:
         old_solutions = self._best_solutions(keep)
         self.solutions = []
         self.points = defaultdict(list)
-        for point in self.random_point(n):
+        for point in self.dom.random_point(n, self.rng):
             self.add_point(point)
         return old_solutions
 
@@ -242,6 +281,9 @@ if __name__ == "__main__":
     with mpi.futures(sim) as sim:
         if sim is not None:
             climb = Optimization.for_sim(sim, sim.features[0], sources=100, samples=100)
+            print(climb.dom.size())
+            # for i in climb.dom.all_points():
+            #     print(i)
             old = climb.random_restart(10)
             # print(f'old: {old}')
             for _ in range(20):
