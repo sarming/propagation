@@ -1,10 +1,10 @@
 from collections import defaultdict
-from math import floor, prod
-import numpy as np
-import pandas as pd
 from functools import wraps
-from itertools import product
 from heapq import heappush, nsmallest
+from itertools import product
+from math import floor, prod
+
+import numpy as np
 
 
 def invert_monotone(fun, goal, lb, ub, eps, logging=False):
@@ -120,6 +120,9 @@ class Domain:
         def __eq__(self, other):
             return self.__key() == other.__key()
 
+        def __lt__(self, other):
+            return self.__key() < other.__key()
+
     def to_point(self, dictlike):
         return Domain.Point({dim: dictlike[dim] for dim in self.dims})  # Use only keys from self.dims
 
@@ -137,11 +140,15 @@ class Domain:
         point = Domain.Point(point)  # Copy point
         bound = self.bounds[dim]
         old = point[dim]
-        if isinstance(bound, list):
-            point[dim] = bound[(bound.index(old) + steps) % len(bound)]
-        else:
-            stepwidth = bound[2]
+        if isinstance(bound, tuple):
+            lb, ub, stepwidth = bound
             point[dim] = discretize(old, bound) + steps * stepwidth
+            if point[dim] < lb:
+                point[dim] = lb
+            if point[dim] > ub:
+                point[dim] = ub
+        else:
+            point[dim] = bound[(bound.index(old) + steps) % len(bound)]
         return point
 
     def random_point(self, n=None, rng=np.random.default_rng()):
@@ -161,7 +168,7 @@ class Domain:
         return prod(bound_size(bound) for bound in self.bounds.values())
 
 
-class Optimization:
+class Optimize:
     def __init__(self, f, domain, objective, seed=None):
         self.f = f
         self.dom = domain
@@ -175,23 +182,31 @@ class Optimization:
         self.raw_results = []
 
     @classmethod
-    def for_sim(cls, sim, feature, domain=None, statistic='mean_retweets', sources=None, samples=500,
+    def all_features(cls, sim, domain=None, statistic='mean_retweets', sources=None, samples=500,
+                     add_current_params=True):
+        return {feature: cls.feature(sim, feature, domain=domain, statistic=statistic, sources=sources, samples=samples,
+                                     add_current_params=add_current_params)
+                for feature in sim.features}
+
+    @classmethod
+    def feature(cls, sim, feature, domain=None, statistic='mean_retweets', sources=None, samples=500,
                 add_current_params=True):
         if domain is None:
-            bounds = {'edge_probability': (0., 0.3, .001),
-                      # 'at_least_one': [True, False],
-                      # 'discount_factor': (0., 1., .1),
+            domain = {'edge_probability': (0., 0.3, .001),
+                      'at_least_one': [True, False],
+                      'discount_factor': (0., 1., .1),
                       'corr': (0., 1., .001),
-                      # 'max_nodes': (100, 860, 20),
-                      # 'max_depth': (1,100, 1),
+                      'max_nodes': range(100, 860, 20),
+                      'max_depth': [100],
                       }
-            domain = Domain(bounds)
+        if not isinstance(domain, Domain):
+            domain = Domain(domain)
         objective = single_objective(sim, feature, statistic)
         f = lambda point: sim.simulate(feature, point, sources, samples, True)
-        this = cls(f, domain, objective, sim.seed.spawn(1)[0])
+        self = cls(f, domain, objective, sim.seed.spawn(1)[0])
         if add_current_params:
-            this.add_point(sim.params.astype('object').loc[feature])
-        return this
+            self.add_point(sim.params.astype('object').loc[feature])
+        return self
 
     def add_point(self, point):
         if not isinstance(point, Domain.Point):
@@ -220,31 +235,31 @@ class Optimization:
     def visited(self, point):
         return point in self.points
 
-    def take_all_dirs(self, point, steps):
+    def take_all_dirs(self, point, steps=1):
         for dim, neg in self.dirs:
             self.add_point(self.dom.step(point, dim, steps, neg))
 
-    def take_random_dir(self, point, steps):
-        for _ in range(100):
-            dim, neg = self.rng.choice(self.dirs)
-            point = self.dom.step(point, dim, steps, neg)
-            if self.add_point(point):
+    def take_random_dir(self, point, steps=1):
+        dirs = self.rng.permutation(self.dirs)
+        for dim, neg in dirs:
+            p = self.dom.step(point, dim, steps, neg)
+            if self.add_point(p):
                 return
         print(f'Isolated point? {point}')
 
-    def iterate_stochastic(self, steps, k_best=1, n_dirs=1):
+    def iterate_stochastic(self, steps=1, k_best=1, n_dirs=1):
         self.evaluate()
         for point in self.best(k_best):
             for i in range(n_dirs):
                 self.take_random_dir(point, steps)
 
-    def iterate_steep(self, steps, k_best=1):
+    def iterate_steep(self, steps=1, k_best=1):
         self.evaluate()
         for point in self.best(k_best):
             self.take_all_dirs(point, steps)
 
     def full_grid(self):
-        self.evaluate()
+        # self.evaluate() # Can ignore old results
         for point in self.dom.all_points():
             self.add_point(point)
 
@@ -258,40 +273,64 @@ class Optimization:
             return [self.solutions[0]]
         return list(nsmallest(n, self.solutions))
 
+    def add_random_point(self, n=1):
+        for point in self.dom.random_point(n, self.rng):
+            self.add_point(point)
+
     def random_restart(self, n=1, keep=1):
         self.evaluate()
         old_solutions = self._best_solutions(keep)
         self.solutions = []
         self.points = defaultdict(list)
-        for point in self.dom.random_point(n, self.rng):
-            self.add_point(point)
+        self.add_random_point(n)
         return old_solutions
 
     def set_best(self, sim, feature):
-        for dim, value in self.solutions[0][1]:
+        for dim, value in self.solutions[0][1].items():
             sim.params.at[feature, dim] = value
+
+
+def optimize(sim, sources=None, samples=500):
+    grid = Optimize.all_features(sim, sources=sources, samples=samples, domain={
+        'edge_probability': (0., 0.3, .1),
+        'discount_factor': (0., 1., 0.1),
+        'corr': (0., 1., .1)
+    })
+
+    dom = {
+        'edge_probability': (0., 0.3, .001),
+        'discount_factor': (0., 1., 0.01),
+        'corr': (0., 1., .01)
+    }
+    opts = Optimize.all_features(sim, domain=dom, sources=sources, samples=samples, add_current_params=False)
+
+    for o in grid.values():
+        o.full_grid()
+
+    for o in opts.values():
+        o.add_random_point(1)
+
+    for feature, o in opts.items():
+        grid[feature].evaluate
+        o.add_solutions(grid[feature].solutions)
+
+    for o in opts.values():
+        for _ in range(20):
+            o.iterate_stochastic(steps=5, k_best=10)
+    for o in opts.values():
+        for _ in range(20):
+            o.iterate_steep(k_best=5)
+    for feature, o in opts.items():
+        o.set_best(sim, feature)
 
 
 if __name__ == "__main__":
     from simulation import Simulation
-    import mpi
 
     sim = Simulation.from_files('data/anon_graph_inner_neos_20201110.npz', 'data/sim_features_neos_20201110.csv',
                                 seed=3)
-    with mpi.futures(sim) as sim:
+    # with mpi.futures(sim) as sim:
+    if True:
         if sim is not None:
-            climb = Optimization.for_sim(sim, sim.features[0], sources=100, samples=100)
-            print(climb.dom.size())
-            # for i in climb.dom.all_points():
-            #     print(i)
-            old = climb.random_restart(10)
-            # print(f'old: {old}')
-            for _ in range(20):
-                climb.iterate_stochastic(2, 5)
-            for _ in range(10):
-                climb.iterate_steep(1, 2)
-            # climb.iterate_steep(1, 5)
-            # climb.add_solutions(old)
-            # climb.iterate_stochastic(1)
-            climb.evaluate()
-            # print(climb.random_restart())
+            optimize(sim, 1, 1)
+            print(sim.params.to_csv())

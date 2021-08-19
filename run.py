@@ -8,10 +8,10 @@ import pandas as pd
 from mpi4py import MPI
 
 import mpi
+import optimize
 import propagation
 import read
 import simulation
-from simulation import Simulation
 
 
 def parse_args():
@@ -37,7 +37,7 @@ def parse_args():
     parser.add_argument('--sample_split', help="split tasks (default: 1, has to divide 'samples', changes RNG)",
                         type=int, default=1)
     parser.add_argument('--seed', help="seed for RNG", type=int)
-    parser.add_argument("command", choices=['learn_discount', 'learn_corr', 'sim', 'simtweets', 'mae'])
+    parser.add_argument("command", choices=['learn_discount', 'learn_corr', 'optimize', 'sim', 'simtweets', 'mae'])
     parser.add_argument("topic")
     args = parser.parse_args()
 
@@ -88,9 +88,9 @@ def build_sim(args):
         source_map = read.source_map(args.source_map)
 
     if args.params:
-        sim = Simulation(A, stats, source_map, params=pd.read_csv(args.params), seed=args.seed)
+        sim = simulation.Simulation(A, stats, source_map, params=pd.read_csv(args.params), seed=args.seed)
     else:
-        sim = Simulation(A, stats, source_map, seed=args.seed)
+        sim = simulation.Simulation(A, stats, source_map, seed=args.seed)
 
     if args.max_depth:
         sim.params.max_depth = args.max_depth
@@ -147,6 +147,7 @@ def main():
     sim = None
     if MPI.COMM_WORLD.Get_rank() == 0:
         print(f"mpi_size: {MPI.COMM_WORLD.Get_size()}")
+        print(f"mpi_vendor: {MPI.get_vendor()}")
 
         t = time.time()
         sim = build_sim(args)
@@ -179,6 +180,10 @@ def main():
                 corr = sim.corr_from_mean_retweets(samples=args.samples, eps=args.epsilon)
                 corr.to_csv(f'{args.outdir}/corr-{args.topic}-{args.runid}.csv')
                 sim.params['corr'] = corr
+                sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
+
+            elif args.command == 'optimize':
+                optimize.optimize(sim, sources=None if args.sources < 1 else args.sources, samples=args.samples)
                 sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
 
             elif args.command == 'mae':
