@@ -28,7 +28,7 @@ def parse_args():
     parser.add_argument('--corrs', help="corr file (.csv)")
     parser.add_argument('--source_map', help="source map file (.csv)")
     parser.add_argument('--indir', help="input directory (default: data)", default='data')
-    parser.add_argument('--outdir', help="output directory (default: data)", default='data')
+    parser.add_argument('--outdir', help="output directory (default: out)", default='out')
     parser.add_argument('-f', '--features', help="number of features to simulate", type=int, default=1)
     parser.add_argument('-a', '--sources', help="number of authors per feature class", type=int, default=1)
     parser.add_argument('-s', '--samples', help="number of samples per tweet", type=int, default=1)
