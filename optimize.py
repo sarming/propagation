@@ -244,8 +244,8 @@ class Optimize:
         for dim, neg in dirs:
             p = self.dom.step(point, dim, steps, neg)
             if self.add_point(p):
-                return
-        print(f'Isolated point? {point}')
+                return True
+        return False
 
     def iterate_stochastic(self, steps=1, k_best=1, n_dirs=1):
         self.evaluate()
@@ -291,17 +291,19 @@ class Optimize:
 
 
 def optimize(sim, sources=None, samples=500):
-    grid = Optimize.all_features(sim, sources=sources, samples=samples, domain={
-        'edge_probability': (0., 0.3, .1),
-        'discount_factor': (0., 1., 0.1),
-        'corr': (0., 1., .1)
-    })
-
     dom = {
-        'edge_probability': (0., 0.3, .001),
-        'discount_factor': (0., 1., 0.01),
-        'corr': (0., 1., .01)
+        # 'edge_probability': (0., 0.3, .1),
+        'discount_factor': (0., 1., .1),
+        'corr': (0., 1., .1)
     }
+    print(f'grid: {dom}')
+    grid = Optimize.all_features(sim, sources=sources, samples=samples, domain=dom)
+    dom = {
+        # 'edge_probability': (0., 0.3, .001),
+        'discount_factor': (0., 1., .01),
+        'corr': (0., .005, .0001)
+    }
+    print(f'opt: {dom}')
     opts = Optimize.all_features(sim, domain=dom, sources=sources, samples=samples, add_current_params=False)
 
     for o in grid.values():
@@ -313,10 +315,13 @@ def optimize(sim, sources=None, samples=500):
     for feature, o in opts.items():
         grid[feature].evaluate
         o.add_solutions(grid[feature].solutions)
+    print('grid done')
 
     for o in opts.values():
         for _ in range(20):
             o.iterate_stochastic(steps=5, k_best=10)
+    print('stochastic done')
+
     for o in opts.values():
         for _ in range(20):
             o.iterate_steep(k_best=5)
