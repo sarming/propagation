@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import argparse
 import os
+import subprocess
 import time
 from datetime import datetime
 
@@ -148,6 +149,8 @@ def main():
     if MPI.COMM_WORLD.Get_rank() == 0:
         print(f"mpi_size: {MPI.COMM_WORLD.Get_size()}")
         print(f"mpi_vendor: {MPI.get_vendor()}")
+        code_version = subprocess.run(['git', 'describe', '--tags', '--dirty'], capture_output=True, text=True).stdout
+        print(f'code_version: {code_version.rstrip()}')
 
         t = time.time()
         sim = build_sim(args)
