@@ -2,7 +2,7 @@ import subprocess
 
 
 def qsub(jobname='propagation', nodes=1, procs=128, walltime='01:00:00', mpiargs='', args='sim neos_20201110',
-         keep_files=False, queue=None, template='mpi.pbs'):
+         keep_files=True, queue=None, template='mpi.pbs'):
     with open(template, 'r') as f:
         batch = f.read().format(jobname=jobname,
                                 nodes=nodes,
@@ -28,5 +28,5 @@ def dataset(topic, outer=True):
 
 if __name__ == '__main__':
     for topic in ['neos']:
-        args = f'optimize {topic} --sources=64 --samples=100 {dataset(topic)}'
-        qsub(args=args, walltime='02:00:00')
+        args = f'optimize {topic} --sources=64 --samples=500 {dataset(topic)}'
+        qsub(args=args, walltime='24:00:00')

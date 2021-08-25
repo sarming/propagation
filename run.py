@@ -38,7 +38,7 @@ def parse_args():
     parser.add_argument('--sample_split', help="split tasks (default: 1, has to divide 'samples', changes RNG)",
                         type=int, default=1)
     parser.add_argument('--seed', help="seed for RNG", type=int)
-    parser.add_argument("command", choices=['learn_discount', 'learn_corr', 'optimize', 'sim', 'simtweets', 'mae'])
+    parser.add_argument("command", choices=['learn_discount', 'learn_corr', 'optimize', 'sim', 'simtweets', 'val'])
     parser.add_argument("topic")
     args = parser.parse_args()
 
@@ -142,6 +142,18 @@ def explode_tweets(tweet_results):
     return r[['author', 'author_feature', 'tweet_feature', 'retweets']]
 
 
+def mae(real, sim):
+    return real.sub(sim).abs().mean()
+
+
+def mape(real, sim):
+    return real.sub(sim).divide(real).abs().mean()
+
+
+def wmape(real, sim):
+    return real.sub(sim).divide(real.sum()).abs().sum()
+
+
 def main():
     args = parse_args()  # Put this here to terminate all MPI procs on parse errors
 
@@ -189,38 +201,40 @@ def main():
                 optimize.optimize(sim, sources=None if args.sources < 1 else args.sources, samples=args.samples)
                 sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
 
-            elif args.command == 'mae':
+            elif args.command == 'val':
                 print(f'{len(sim.features)} features, {args.sources} sources, {args.samples} samples')
                 r = agg_statistics((feature, sim.simulate(feature, sources=args.sources, samples=args.samples))
                                    for feature in sim.features)
 
                 # assert r.index.equals(sim.stats.index)
                 # r = r.reindex(index=sim.features)
-                r['real_mean_retweets'] = sim.stats.mean_retweets
-                r['real_retweet_probability'] = sim.stats.retweet_probability
-                # r.rename(columns={'mean_retweets': 'simulation_mean_retweets',
-                #                   'retweet_probability': 'simulation_retweet_probability'}, inplace=True)
+                r.columns = pd.MultiIndex.from_product([['sim'], r.columns])
+                r[('real', 'mean_retweets')] = sim.stats.mean_retweets
+                r[('real', 'retweet_probability')] = sim.stats.retweet_probability
 
-                for feature, i in r.iterrows():
-                    print(f'{feature}: '
-                          f'{i.real_mean_retweets} vs {i.mean_retweets}, '
-                          f'{i.real_retweet_probability} vs {i.retweet_probability}')
-                r.to_csv(f'{args.outdir}/results-{args.topic}-{args.runid}.csv')
-                sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
+                r.to_csv(f'{args.outdir}/results-val-{args.topic}-{args.runid}.csv')
+                # r = pd.read_csv(..., header=[0,1], index_col=[0,1])
 
-                mae_retweet_probability = r.real_retweet_probability.sub(r.retweet_probability).abs().mean()
-                mae_mean_retweets = r.real_mean_retweets.sub(r.mean_retweets).abs().mean()
-                print(f"MAE: retweet_probability: {mae_retweet_probability} mean_retweets: {mae_mean_retweets}")
+                pretty = r.swaplevel(axis=1).sort_index(axis=1).drop(columns='tweets')
+                pretty.index = r.index.to_flat_index()
+                print(pretty)
+
+                print(f"mae_retweet_probability: {mae(r.real.retweet_probability, r.sim.retweet_probability)}")
+                print(f"mae_mean_retweets: {mae(r.real.mean_retweets, r.sim.mean_retweets)}")
+                print(f"mape_retweet_probability: {mape(r.real.retweet_probability, r.sim.retweet_probability)}")
+                print(f"mape_mean_retweets: {mape(r.real.mean_retweets, r.sim.mean_retweets)}")
+                print(f"wmape_retweet_probability: {wmape(r.real.retweet_probability, r.sim.retweet_probability)}")
+                print(f"wmape_mean_retweets: {wmape(r.real.mean_retweets, r.sim.mean_retweets)}")
 
             elif args.command == 'sim':
                 r = agg_statistics((feature, sim.simulate(feature, sources=args.sources, samples=args.samples))
                                    for feature in sim.sample_feature(args.features))
-                r.to_csv(f'{args.outdir}/results-{args.topic}-{args.runid}.csv')
+                r.to_csv(f'{args.outdir}/results-sim-{args.topic}-{args.runid}.csv')
                 print(r)
 
             elif args.command == 'simtweets':
                 r = explode_tweets(sim.run(num_features=args.features, num_sources=args.sources, samples=args.samples))
-                r.to_csv(f'{args.outdir}/results-{args.topic}-{args.runid}.csv')
+                r.to_csv(f'{args.outdir}/results-simtweets-{args.topic}-{args.runid}.csv')
                 print(r)
             print(f"runtime: {time.time() - t}")
 
