@@ -318,13 +318,13 @@ def optimize(sim, sources=None, samples=500):
         o.add_solutions(grid[feature].solutions)
     print('grid done', flush=True)
 
-    for o in opts.values():
-        for _ in range(20):
+    for _ in range(20):
+        for o in opts.values():
             o.iterate_stochastic(steps=5, k_best=10)
     print('stochastic done', flush=True)
 
-    for o in opts.values():
-        for _ in range(20):
+    for _ in range(20):
+        for o in opts.values():
             o.iterate_steep(k_best=5)
     print('hillclimb done', flush=True)
 
