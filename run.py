@@ -142,16 +142,16 @@ def explode_tweets(tweet_results):
     return r[['author', 'author_feature', 'tweet_feature', 'retweets']]
 
 
-def mae(real, sim):
-    return real.sub(sim).abs().mean()
+def mae(sim, real=0.):
+    return (sim - real).abs().mean()
 
 
-def mape(real, sim):
-    return real.sub(sim).divide(real).abs().mean()
+def mape(sim, real):
+    return ((sim - real) / real).abs().mean()
 
 
-def wmape(real, sim):
-    return real.sub(sim).divide(real.sum()).abs().sum()
+def wmape(sim, real):
+    return ((sim - real) / real.mean()).abs().mean()
 
 
 def main():
@@ -203,6 +203,13 @@ def main():
                 with open(f'{args.outdir}/solutions-{args.topic}-{args.runid}.pyon', 'w') as f:
                     f.write(repr(opts))
 
+                objective = pd.Series({k: o[0][0] for k, o in opts.items()})
+                real = sim.stats.mean_retweets
+                sim = real + objective
+                print(f'mae: {mae(sim, real)}')
+                print(f'mape: {mape(sim, real)}')
+                print(f'wmape: {wmape(sim, real)}')
+
             elif args.command == 'val':
                 print(f'{len(sim.features)} features, {args.sources} sources, {args.samples} samples')
                 r = agg_statistics((feature, sim.simulate(feature, sources=args.sources, samples=args.samples))
@@ -221,12 +228,12 @@ def main():
                 pretty.index = r.index.to_flat_index()
                 print(pretty)
 
-                print(f"mae_retweet_probability: {mae(r.real.retweet_probability, r.sim.retweet_probability)}")
-                print(f"mae_mean_retweets: {mae(r.real.mean_retweets, r.sim.mean_retweets)}")
-                print(f"mape_retweet_probability: {mape(r.real.retweet_probability, r.sim.retweet_probability)}")
-                print(f"mape_mean_retweets: {mape(r.real.mean_retweets, r.sim.mean_retweets)}")
-                print(f"wmape_retweet_probability: {wmape(r.real.retweet_probability, r.sim.retweet_probability)}")
-                print(f"wmape_mean_retweets: {wmape(r.real.mean_retweets, r.sim.mean_retweets)}")
+                print(f"mae_retweet_probability: {mae(r.sim.retweet_probability, r.real.retweet_probability)}")
+                print(f"mae_mean_retweets: {mae(r.sim.mean_retweets, r.real.mean_retweets)}")
+                print(f"mape_retweet_probability: {mape(r.sim.retweet_probability, r.real.retweet_probability)}")
+                print(f"mape_mean_retweets: {mape(r.sim.mean_retweets, r.real.mean_retweets)}")
+                print(f"wmape_retweet_probability: {wmape(r.sim.retweet_probability, r.real.retweet_probability)}")
+                print(f"wmape_mean_retweets: {wmape(r.sim.mean_retweets, r.real.mean_retweets)}")
 
             elif args.command == 'sim':
                 r = agg_statistics((feature, sim.simulate(feature, sources=args.sources, samples=args.samples))
