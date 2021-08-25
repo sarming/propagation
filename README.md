@@ -1,5 +1,6 @@
 # propagation
-Simulate Twitter message propagation 
+
+Simulate Twitter message propagation
 
 See [setup.txt](setup.txt) for installation instructions, and [simulation.ipynb](simulation.ipynb) for general
 information about the library.

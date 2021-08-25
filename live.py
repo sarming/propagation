@@ -1,7 +1,8 @@
 import numpy as np
-import scipy.sparse
-import scipy as sp
 import pandas as pd
+import scipy as sp
+import scipy.sparse
+
 from propagation import edge_sample
 
 
@@ -77,8 +78,7 @@ if __name__ == "__main__":
                         'max_depth': 100,
                         }, dtype=object)
 
-    tweet_stream = uniform_tweet_stream(n, params, 2) #
+    tweet_stream = uniform_tweet_stream(n, params, 2)  #
 
     for updates in live_propagate(A, tweet_stream):
         print(updates)
-

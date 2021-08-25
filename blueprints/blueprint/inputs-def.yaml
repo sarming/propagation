@@ -14,7 +14,7 @@ inputs:
 
   hpc_credentials:
     description: HPC credentials
-    default: {}
+    default: { }
 
   hpc_job_prefix:
     description: Job prefix
@@ -87,19 +87,19 @@ inputs:
 
   # CKAN
   ckan_api_key:
-      description: api key of the user
-      default: ""
+    description: api key of the user
+    default: ""
 
   learn_output_dataset:
     default:
-      config: {}
-      dataset: {}
+      config: { }
+      dataset: { }
       type: ckan
 
   sim_output_dataset:
     default:
-      config: {}
-      dataset: {}
+      config: { }
+      dataset: { }
       type: ckan
 
 
@@ -130,9 +130,9 @@ inputs:
     description: Epsilon for Parameter Learning
     default: 0.001
 
-#  param_sources:
-#    description: Number of Sources for Parameter Learning
-#    default: 100
+  #  param_sources:
+  #    description: Number of Sources for Parameter Learning
+  #    default: 100
 
 
   # Simulation

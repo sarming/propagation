@@ -1,6 +1,7 @@
+from collections import defaultdict
+
 import networkx as nx
 import pandas as pd
-from collections import defaultdict
 
 
 def from_dict(d: dict):

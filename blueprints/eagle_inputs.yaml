@@ -56,7 +56,7 @@ sim_samples: 4
 ckan_api_key: ""
 
 learn_output_dataset:
-  config: {entrypoint: "https://ckan.hidalgo-project.eu",  key: "<insert api key>"}
+  config: { entrypoint: "https://ckan.hidalgo-project.eu",  key: "<insert api key>" }
   dataset:
     #author: ''
     #license: GNU Free Documentation License
@@ -73,7 +73,7 @@ learn_output_dataset:
   type: ckan
 
 sim_output_dataset:
-  config: {entrypoint: "https://ckan.hidalgo-project.eu",  key: "<insert api key>"}
+  config: { entrypoint: "https://ckan.hidalgo-project.eu",  key: "<insert api key>" }
   dataset:
     #author: ''
     #license: GNU Free Documentation License

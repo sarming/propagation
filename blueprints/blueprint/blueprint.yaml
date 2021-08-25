@@ -16,8 +16,8 @@ node_templates:
       base_dir: { get_input: hpc_base_dir }
       monitor_period: { get_input: hpc_monitor_period }
       external_monitor_entrypoint: { get_input: hpc_monitor_entrypoint }
-      skip_cleanup: {get_input: hpc_skip_cleanup}
-      workdir_prefix: {get_input: hpc_workdir_prefix}
+      skip_cleanup: { get_input: hpc_skip_cleanup }
+      workdir_prefix: { get_input: hpc_workdir_prefix }
 
   learn_job:
     type: croupier.nodes.Job
@@ -50,8 +50,8 @@ node_templates:
           - { get_input: ckan_api_key }
       publish:
         - dataset: { get_input: learn_output_dataset }
-          file_path: {concat: ["output/params-",{get_input: topic},"-",{get_input: job_id},".csv"]}
-          name: {concat: ["params-",{get_input: topic},"-",{get_input: job_id},".csv"]}
+          file_path: { concat: [ "output/params-",{ get_input: topic },"-",{ get_input: job_id },".csv" ] }
+          name: { concat: [ "params-",{ get_input: topic },"-",{ get_input: job_id },".csv" ] }
           description: "Resulting Parameters from Parameter Learning."
       skip_cleanup: { get_input: job_skip_cleanup }
     relationships:
@@ -88,8 +88,8 @@ node_templates:
           - { get_input: ckan_api_key }
       publish:
         - dataset: { get_input: sim_output_dataset }
-          file_path:  {concat: ["output/results-",{get_input: topic},"-",{get_input: job_id},".csv"]}
-          name: {concat: ["results-",{get_input: topic},"-",{get_input: job_id},".csv"]}
+          file_path: { concat: [ "output/results-",{ get_input: topic },"-",{ get_input: job_id },".csv" ] }
+          name: { concat: [ "results-",{ get_input: topic },"-",{ get_input: job_id },".csv" ] }
           description: "Resulting Simulation."
       skip_cleanup: { get_input: job_skip_cleanup }
     relationships:
@@ -101,4 +101,4 @@ node_templates:
 outputs:
   hello_world_job_name:
     description: hello_world_job job name in the HPC
-    value: { get_attribute: [learn_job, job_name] }
+    value: { get_attribute: [ learn_job, job_name ] }
