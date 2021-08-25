@@ -1,6 +1,6 @@
 from collections import defaultdict
 from functools import wraps
-from heapq import heappush, nsmallest
+from heapq import heapify, nsmallest
 from itertools import product
 from math import floor, prod
 
@@ -183,14 +183,14 @@ class Optimize:
 
     @classmethod
     def all_features(cls, sim, domain=None, statistic='mean_retweets', sources=None, samples=500,
-                     add_current_params=True):
+                     explore_current_points=True):
         return {feature: cls.feature(sim, feature, domain=domain, statistic=statistic, sources=sources, samples=samples,
-                                     add_current_params=add_current_params)
+                                     explore_current_point=explore_current_points)
                 for feature in sim.features}
 
     @classmethod
     def feature(cls, sim, feature, domain=None, statistic='mean_retweets', sources=None, samples=500,
-                add_current_params=True):
+                explore_current_point=True):
         if domain is None:
             domain = {'edge_probability': (0., 0.3, .001),
                       'at_least_one': [True, False],
@@ -204,18 +204,18 @@ class Optimize:
         objective = single_objective(sim, feature, statistic)
         f = lambda point: sim.simulate(feature, point, sources, samples, True)
         self = cls(f, domain, objective, sim.seed.spawn(1)[0])
-        if add_current_params:
-            self.add_point(sim.params.astype('object').loc[feature])
+        if explore_current_point:
+            self.explore_point(sim.params.astype('object').loc[feature])
         return self
 
-    def add_point(self, point):
+    def explore_point(self, point, force=False):
         if not isinstance(point, Domain.Point):
             point = self.dom.to_point(point)
-        if not self.dom.in_bounds(point) or self.visited(point):
+        if (not self.dom.in_bounds(point) or self.visited(point)) and not force:
             return False
         result = self.f(point)
         self.raw_results.append((result, point))
-        self.points[point]  # Access to add key to dict
+        self.points.get(point)  # Access to add key to dict
         # print(f'add point {point}')
         return True
 
@@ -231,20 +231,21 @@ class Optimize:
         for s in solutions:
             value, point = s
             self.points[point].append(value)
-            heappush(self.solutions, s)
+        self.solutions = [(np.mean(values), point) for point, values in self.points.items() if values]
+        heapify(self.solutions)
 
     def visited(self, point):
         return point in self.points
 
     def take_all_dirs(self, point, steps=1):
         for dim, neg in self.dirs:
-            self.add_point(self.dom.step(point, dim, steps, neg))
+            self.explore_point(self.dom.step(point, dim, steps, neg))
 
     def take_random_dir(self, point, steps=1):
         dirs = self.rng.permutation(self.dirs)
         for dim, neg in dirs:
             p = self.dom.step(point, dim, steps, neg)
-            if self.add_point(p):
+            if self.explore_point(p):
                 return True
         return False
 
@@ -259,10 +260,10 @@ class Optimize:
         for point in self.best(k_best):
             self.take_all_dirs(point, steps)
 
-    def full_grid(self):
+    def full_grid(self, force=False):
         # self.evaluate() # Can ignore old results
         for point in self.dom.all_points():
-            self.add_point(point)
+            self.explore_point(point, force)
 
     def best(self, n=None):
         if n is None:
@@ -274,16 +275,20 @@ class Optimize:
             return [self.solutions[0]]
         return list(nsmallest(n, self.solutions))
 
-    def add_random_point(self, n=1):
+    def explore_random_point(self, n=1):
         for point in self.dom.random_point(n, self.rng):
-            self.add_point(point)
+            self.explore_point(point)
+
+    def reexplore_best(self, n=1):
+        for point in self.best(n):
+            self.explore_point(point, force=True)
 
     def random_restart(self, n=1, keep=1):
         self.evaluate()
         old_solutions = self._best_solutions(keep)
         self.solutions = []
         self.points = defaultdict(list)
-        self.add_random_point(n)
+        self.explore_random_point(n)
         return old_solutions
 
     def set_best(self, sim, feature):
@@ -298,20 +303,21 @@ def optimize(sim, sources=None, samples=500):
         'corr': (0., 1., .1)
     }
     print(f'grid: {dom}')
-    grid = Optimize.all_features(sim, sources=sources, samples=samples, domain=dom)
+    grid = Optimize.all_features(sim, domain=dom, sources=sources, samples=samples)
     dom = {
         # 'edge_probability': (0., 0.3, .001),
         'discount_factor': (0., 1., .01),
         'corr': (0., .005, .0001)
     }
     print(f'opt: {dom}')
-    opts = Optimize.all_features(sim, domain=dom, sources=sources, samples=samples, add_current_params=False)
+    opts = Optimize.all_features(sim, domain=dom, sources=sources, samples=samples, explore_current_points=False)
 
     for o in grid.values():
         o.full_grid()
+        o.full_grid(force=True)
 
     for o in opts.values():
-        o.add_random_point(1)
+        o.explore_random_point(100)
 
     for feature, o in opts.items():
         grid[feature].evaluate()
@@ -321,11 +327,13 @@ def optimize(sim, sources=None, samples=500):
     for _ in range(20):
         for o in opts.values():
             o.iterate_stochastic(steps=5, k_best=10)
+            o.reexplore_best(10)
     print('stochastic done', flush=True)
 
     for _ in range(20):
         for o in opts.values():
             o.iterate_steep(k_best=5)
+            o.reexplore_best(5)
     print('hillclimb done', flush=True)
 
     for feature, o in opts.items():
