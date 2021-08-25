@@ -24,8 +24,8 @@ def parse_args():
     parser.add_argument('--tweets', help="tweet file (.csv)")
     parser.add_argument('--stats', help="stats file (.csv)")
     parser.add_argument('--params', help="params file (.csv)")
-    parser.add_argument('--discounts', help="discounts file (.csv)")
-    parser.add_argument('--corrs', help="corr file (.csv)")
+    parser.add_argument('--discount', help="discount file (.csv)")
+    parser.add_argument('--corr', help="corr file (.csv)")
     parser.add_argument('--source_map', help="source map file (.csv)")
     parser.add_argument('--indir', help="input directory (default: data)", default='data')
     parser.add_argument('--outdir', help="output directory (default: out)", default='out')
@@ -98,11 +98,11 @@ def build_sim(args):
     if args.max_nodes:
         sim.params.max_nodes = args.max_nodes
 
-    if args.discounts:
-        sim.params['discount_factor'] = read.single_param(args.discounts)
+    if args.discount:
+        sim.params['discount_factor'] = read.single_param(args.discount)
 
-    if args.corrs:
-        sim.params['corr'] = read.single_param(args.corrs)
+    if args.corr:
+        sim.params['corr'] = read.single_param(args.corr)
 
     return sim
 
