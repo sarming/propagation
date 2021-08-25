@@ -222,8 +222,9 @@ class Optimize:
     def evaluate(self):
         new_solutions = [(self.objective(result), point) for result, point in self.raw_results]
         self.add_solutions(new_solutions)
-        if self.solutions:
-            print(f'current best:{self.solutions[0]}')
+        if new_solutions:
+            # print(f'current best:{self.solutions[0]}')
+            print('.', flush=True, end='')
         self.raw_results = []
 
     def add_solutions(self, solutions):
@@ -313,20 +314,24 @@ def optimize(sim, sources=None, samples=500):
         o.add_random_point(1)
 
     for feature, o in opts.items():
-        grid[feature].evaluate
+        grid[feature].evaluate()
         o.add_solutions(grid[feature].solutions)
-    print('grid done')
+    print('grid done', flush=True)
 
     for o in opts.values():
         for _ in range(20):
             o.iterate_stochastic(steps=5, k_best=10)
-    print('stochastic done')
+    print('stochastic done', flush=True)
 
     for o in opts.values():
         for _ in range(20):
             o.iterate_steep(k_best=5)
+    print('hillclimb done', flush=True)
+
     for feature, o in opts.items():
         o.set_best(sim, feature)
+
+    return {feature: o.solutions for feature, o in opts.items()}
 
 
 if __name__ == "__main__":

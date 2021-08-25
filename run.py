@@ -182,7 +182,7 @@ def main():
     # if True: # bypass mpi
     with mpi.futures(sim, chunksize=1, sample_split=args.sample_split) as sim:
         if sim is not None:
-            print(f"setuptime: {time.time() - t}")
+            print(f"setuptime: {time.time() - t}", flush=True)
             t = time.time()
 
             if args.command == 'learn_discount':
@@ -198,8 +198,10 @@ def main():
                 sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
 
             elif args.command == 'optimize':
-                optimize.optimize(sim, sources=None if args.sources < 1 else args.sources, samples=args.samples)
+                opts = optimize.optimize(sim, sources=None if args.sources < 1 else args.sources, samples=args.samples)
                 sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
+                with open(f'{args.outdir}/solutions-{args.topic}-{args.runid}.pyon', 'w') as f:
+                    f.write(repr(opts))
 
             elif args.command == 'val':
                 print(f'{len(sim.features)} features, {args.sources} sources, {args.samples} samples')
