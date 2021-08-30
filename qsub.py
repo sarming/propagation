@@ -1,8 +1,11 @@
+#!/usr/bin/env python
+import argparse
 import subprocess
+import sys
 
 
 def qsub(args='sim neos_20201110', jobname='propagation', nodes=1, procs=128, walltime='01:00:00', mpiargs='',
-         after=None, keep_files=True, queue=None, template='mpi.pbs'):
+         after=None, keep_files=False, queue=None, template='mpi.pbs'):
     with open(template, 'r') as f:
         batch = f.read().format(jobname=jobname,
                                 nodes=nodes,
@@ -68,7 +71,21 @@ def optimize_val(topic):
          nodes=16, walltime='00:10:00', jobname=f'val-opt-{topic}', after=jobid)
 
 
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--jobname', help="jobname", default="iprop")
+    parser.add_argument('-t', '--walltime', help="walltime", default="01:00:00")
+    parser.add_argument('-n', '--nodes', help="number of nodes", type=int, default=1)
+    parser.add_argument('-q', '--queue', help="queue")
+    args, run_args = parser.parse_known_args()
+    _, j = qsub(' '.join(run_args), jobname=args.jobname, nodes=args.nodes, walltime=args.walltime, queue=args.queue)
+    print(f'outdir: out/{j}')
+
+
 if __name__ == '__main__':
-    for topic in ['neos', 'fpoe']:
-        # learn_val(topic)
-        optimize_val(topic)
+    if sys.argv:
+        main()
+    else:
+        for topic in ['neos', 'fpoe']:
+            # learn_val(topic)
+            optimize_val(topic)
