@@ -205,7 +205,7 @@ class Optimize:
         f = lambda point: sim.simulate(feature, point, sources, samples, True)
         self = cls(f, domain, objective, sim.seed.spawn(1)[0])
         if explore_current_point:
-            self.explore_point(sim.params.astype('object').loc[feature])
+            self.explore_point(sim.params.astype('object').loc[feature], force=True)
         return self
 
     def explore_point(self, point, force=False):
@@ -303,18 +303,18 @@ def optimize(sim, sources=None, samples=500):
         'corr': (0., 1., .1)
     }
     print(f'grid: {dom}')
-    grid = Optimize.all_features(sim, domain=dom, sources=sources, samples=samples)
+    grid = Optimize.all_features(sim, domain=dom, sources=sources, samples=samples, explore_current_points=False)
     dom = {
         # 'edge_probability': (0., 0.3, .001),
         'discount_factor': (0., 1., .01),
         'corr': (0., .005, .0001)
     }
     print(f'opt: {dom}')
-    opts = Optimize.all_features(sim, domain=dom, sources=sources, samples=samples, explore_current_points=False)
+    opts = Optimize.all_features(sim, domain=dom, sources=sources, samples=samples)
 
     for o in grid.values():
         o.full_grid()
-        o.full_grid(force=True)
+        # o.full_grid(force=True) # Repeat
 
     for o in opts.values():
         o.explore_random_point(100)
