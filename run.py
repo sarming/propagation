@@ -89,7 +89,7 @@ def build_sim(args):
         source_map = read.source_map(args.source_map)
 
     if args.params:
-        sim = simulation.Simulation(A, stats, source_map, params=pd.read_csv(args.params), seed=args.seed)
+        sim = simulation.Simulation(A, stats, source_map, params=read.params(args.params), seed=args.seed)
     else:
         sim = simulation.Simulation(A, stats, source_map, seed=args.seed)
 
@@ -214,6 +214,7 @@ def main():
                 print(f'{len(sim.features)} features, {args.sources} sources, {args.samples} samples')
                 r = agg_statistics((feature, sim.simulate(feature, sources=args.sources, samples=args.samples))
                                    for feature in sim.features)
+                # for feature in [('0000', '0000')])
 
                 # assert r.index.equals(sim.stats.index)
                 # r = r.reindex(index=sim.features)
