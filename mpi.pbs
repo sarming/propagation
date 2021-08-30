@@ -11,8 +11,10 @@ cd $PBS_O_WORKDIR
 module load python/3.8
 module load mpi4py
 
-OUTFILE=out/out-{jobname}-$PBS_JOBID-$(date +"%Y%m%dT%H%M")
+export RUNID={jobname}_$PBS_JOBID
+mkdir out/$RUNID
+OUTFILE=out/$RUNID/out-$RUNID-$(date +"%Y%m%dT%H%M")
 uniq $PBS_NODEFILE|wc -l > $OUTFILE
 cat $PBS_NODEFILE|wc -l >>$OUTFILE
 
-mpirun {mpiargs} python run.py {args} >$OUTFILE 2>&1
+mpirun {mpiargs} python run.py {args} --outdir=out/$RUNID >$OUTFILE 2>&1

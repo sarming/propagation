@@ -44,7 +44,9 @@ def parse_args():
 
     # Defaults
     if args.runid is None:
-        if 'PBS_JOBID' in os.environ:
+        if 'RUNID' in os.environ:
+            args.runid = os.environ.get('RUNID')
+        elif 'PBS_JOBID' in os.environ:
             args.runid = os.environ.get('PBS_JOBID')
         else:
             args.runid = datetime.now().isoformat()
@@ -163,19 +165,17 @@ def main():
         print(f"mpi_vendor: {MPI.get_vendor()}")
         code_version = subprocess.run(['git', 'describe', '--tags', '--dirty'], capture_output=True, text=True).stdout
         print(f'code_version: {code_version.rstrip()}')
+        print(f"args: {args}")
 
         t = time.time()
         sim = build_sim(args)
         print(f"readtime: {time.time() - t}")
+        print(f"seed: {sim.seed.entropy}")
         t = time.time()
 
         sim.stats.sort_values(by=['mean_retweets', 'retweet_probability'], ascending=False, inplace=True)
         sim.features = sim.stats.index
         sim.params = sim.params.reindex(index=sim.features)
-
-        print(f"args: {args}")
-        print(f"seed: {sim.seed.entropy}")
-        print(f"topic: {args.topic}")
     else:
         propagation.compile()
 
