@@ -345,7 +345,7 @@ def optimize(sim, sources=None, samples=500):
 if __name__ == "__main__":
     from simulation import Simulation
 
-    sim = Simulation.from_files('data/anon_graph_inner_neos_20201110.npz', 'data/sim_features_neos_20201110.csv',
+    sim = Simulation.from_files('../data/anon_graph_inner_neos_20201110.npz', 'data/sim_features_neos_20201110.csv',
                                 seed=3)
     # with mpi.futures(sim) as sim:
     if True:

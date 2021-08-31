@@ -40,7 +40,7 @@ if __name__ == "__main__":
 
     propagation.edge_propagate = propagation.edge_propagate_tree
 
-    datadir = 'data'
+    datadir = '../data'
     graph, node_labels = read.adjlist(f'{datadir}/anonymized_inner_graph_vegan_20200407.adjlist')
     tweets = read.tweets(f'{datadir}/sim_features_vegan_20200407.csv', node_labels)
     sim = Simulation.from_tweets(graph, tweets)

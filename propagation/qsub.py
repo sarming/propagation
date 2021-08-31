@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 import argparse
+import os
 import subprocess
 import sys
 
+default_template = os.path.dirname(__file__) + '/mpi.pbs'
+
 
 def qsub(args='sim neos_20201110', jobname='propagation', nodes=1, procs=128, walltime='01:00:00', mpiargs='',
-         after=None, keep_files=False, queue=None, template='mpi.pbs'):
+         after=None, keep_files=False, queue=None, template=default_template):
     with open(template, 'r') as f:
         batch = f.read().format(jobname=jobname,
                                 nodes=nodes,

@@ -18,7 +18,7 @@ echo "$epsilon"
 export PATH=$HOME/.local/bin:$PATH
 # DYNAMIC VARIABLES
 cd $CURRENT_WORKDIR
-export PYTHONPATH=$CURRENT_WORKDIR"/src"
+export PYTHONPATH=$CURRENT_WORKDIR"/src/propagation"
 
 #srun --mpi=pmix_v3 --nodes=1 --ntasks-per-node=20 python $PYTHONPATH/run.py learn $topic --runid $id -s $samples --epsilon $epsilon --graph $CURRENT_WORKDIR/input/$graph_file --indir $CURRENT_WORKDIR/src/data --outdir $CURRENT_WORKDIR/output
 

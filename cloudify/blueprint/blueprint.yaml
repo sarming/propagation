@@ -30,7 +30,7 @@ node_templates:
         memory: { get_input: job_memory }
         pre:
           - { get_input: hpc_mpi_load_command }
-        command: "src/scripts/learn.sh"
+        command: "src/bin/learn.sh"
       deployment:
         bootstrap: "scripts/install.sh"
         inputs:
@@ -68,7 +68,7 @@ node_templates:
         memory: { get_input: job_memory }
         pre:
           - { get_input: hpc_mpi_load_command }
-        command: "src/scripts/sim.sh"
+        command: "src/bin/sim.sh"
       deployment:
         bootstrap: "scripts/install.sh"
         inputs:
