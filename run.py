@@ -2,6 +2,7 @@
 import argparse
 import os
 import subprocess
+import sys
 import time
 from datetime import datetime
 
@@ -77,7 +78,7 @@ def build_sim(args):
         if args.tweets:
             print('Assuming METIS style ids.')
     else:
-        raise ValueError(f"Unknown graph file format {args.graph}.\nPress Ctrl-C to terminate MPI procs.")
+        raise ValueError(f"Unknown graph file format {args.graph} (use .metis, .npz or .adjlist).")
 
     # Input files
     if args.tweets:
@@ -105,6 +106,11 @@ def build_sim(args):
 
     if args.corr:
         sim.params['corr'] = read.single_param(args.corr)
+
+    # Sort features by decreasing expected runtime
+    sim.stats.sort_values(by=['mean_retweets', 'retweet_probability'], ascending=False, inplace=True)
+    sim.features = sim.stats.index  # TODO check if necessary
+    sim.params = sim.params.reindex(index=sim.features)
 
     return sim
 
@@ -157,27 +163,34 @@ def wmape(sim, real):
 
 
 def main():
-    args = parse_args()  # Put this here to terminate all MPI procs on parse errors
-
-    sim = None
+    start_time = time.time()
+    args = parse_args()
     if MPI.COMM_WORLD.Get_rank() == 0:
-        print(f"mpi_size: {MPI.COMM_WORLD.Get_size()}")
-        print(f"mpi_vendor: {MPI.get_vendor()}")
-        code_version = subprocess.run(['git', 'describe', '--tags', '--dirty'], capture_output=True, text=True).stdout
-        print(f'code_version: {code_version.rstrip()}')
-        print(f"args: {args}")
+        try:
+            pd_setup()
+            print(f"mpi_size: {MPI.COMM_WORLD.Get_size()}")
+            print(f"mpi_vendor: {MPI.get_vendor()}")
+            print("code_version: " + subprocess.run(['git', 'describe', '--tags', '--dirty'],
+                                                    capture_output=True, text=True).stdout.rstrip())
+            print(f"args: {args}")
 
-        t = time.time()
-        sim = build_sim(args)
-        print(f"readtime: {time.time() - t}")
-        print(f"seed: {sim.seed.entropy}")
-        t = time.time()
+            t = time.time()
+            sim = build_sim(args)
+            print(f"readtime: {time.time() - t}")
+            t = time.time()
 
-        sim.stats.sort_values(by=['mean_retweets', 'retweet_probability'], ascending=False, inplace=True)
-        sim.features = sim.stats.index
-        sim.params = sim.params.reindex(index=sim.features)
+            print(f"seed: {sim.seed.entropy}")
+        # except SystemExit as e:
+        #     sys.stderr.flush()
+        #     MPI.COMM_WORLD.Abort(e.code)
+        #     return e.code
+        except Exception as e:
+            print(e, flush=True, file=sys.stderr)
+            MPI.COMM_WORLD.Abort(1)
+            return
     else:
         propagation.compile()
+        sim = None
 
     # if True: # bypass mpi
     with mpi.futures(sim, chunksize=1, sample_split=args.sample_split) as sim:
@@ -246,19 +259,17 @@ def main():
                 r = explode_tweets(sim.run(num_features=args.features, num_sources=args.sources, samples=args.samples))
                 r.to_csv(f'{args.outdir}/results-simtweets-{args.topic}-{args.runid}.csv')
                 print(r)
+
             print(f"runtime: {time.time() - t}")
+            print(f"totaltime: {time.time() - start_time}")
 
 
-if __name__ == "__main__":
-    # sim.simulate(,{edge_probability:0.1})
+def pd_setup():
     pd.set_option('display.max_columns', None)
     pd.set_option('display.max_rows', None)
     pd.set_option('display.max_colwidth', None)
     pd.set_option('display.width', 1000)
 
-    if MPI.COMM_WORLD.Get_rank() == 0:
-        startTime = time.time()
+
+if __name__ == "__main__":
     main()
-    if MPI.COMM_WORLD.Get_rank() == 0:
-        endTime = time.time()
-        print("Total Time Elapsed: " + str(endTime - startTime))
