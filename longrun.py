@@ -23,8 +23,10 @@ if MPI.COMM_WORLD.Get_rank() == 0:
 
     # Play around with these parameters
     sources = np.repeat(top_k_users(graph, 30), 10)  # Repeat top 30 vertices 10 times
-    params = {'edge_probability': 0.6,  # Will influence runtime edge_propagate
-              'max_nodes': graph.shape[0]  # Disable early cutoff by setting to maximum
+    params = {'edge_probability': 0.999999,  # Will influence runtime edge_propagate
+              'max_nodes': graph.shape[0],  # Disable early cutoff by setting to maximum
+              'max_depth': graph.shape[0],
+              # 'at_least_one': False,
               }
     samples = 100  # Will influence task size
 else:
@@ -34,6 +36,7 @@ else:
 with mpi.futures(sim, chunksize=1) as sim:
     if sim is not None:
         t = time.time()
+        # r = list(list(x) for x in sim.simulate(params=params, sources=sources, samples=samples, return_stats=False))
         r = list(sim.simulate(params=params, sources=sources, samples=samples))
         print(time.time() - t)
         print(r)
