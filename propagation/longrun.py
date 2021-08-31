@@ -1,13 +1,19 @@
+#!/usr/bin/env python
 import time
 
 import numpy as np
 import scipy.sparse as sp
 from mpi4py import MPI
 
-import mpi
-import propagation
-import read
-from simulation import Simulation
+# https://stackoverflow.com/a/28154841/153408
+if __name__ == "__main__" and __package__ is None:
+    import os, sys
+
+    __package__ = "propagation"
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.path.pardir))
+
+from . import mpi, propagation, read
+from .simulation import Simulation
 
 
 def top_k_users(graph, k):
@@ -17,8 +23,8 @@ def top_k_users(graph, k):
 
 
 if MPI.COMM_WORLD.Get_rank() == 0:
-    graph, node_labels = read.adjlist(f'data/anonymized_inner_graph_neos_20200311.adjlist')
-    tweets = read.tweets(f'data/sim_features_neos_20200311.csv', node_labels)
+    graph, node_labels = read.metis(f'data/anon_graph_inner_neos_20201110.metis')
+    tweets = read.tweets(f'data/sim_features_neos_20201110.csv', node_labels)
     sim = Simulation.from_tweets(graph, tweets, seed=None)  # Put seed here
 
     # Play around with these parameters

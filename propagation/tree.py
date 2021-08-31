@@ -34,15 +34,14 @@ def bfs_nodes(tree, root, node_labels=None):
 
 if __name__ == "__main__":
     from itertools import starmap
-    from simulation import Simulation
-    import propagation
-    import read
+    from .simulation import Simulation
+    from . import propagation, read
 
     propagation.edge_propagate = propagation.edge_propagate_tree
 
-    datadir = '../data'
-    graph, node_labels = read.adjlist(f'{datadir}/anonymized_inner_graph_vegan_20200407.adjlist')
-    tweets = read.tweets(f'{datadir}/sim_features_vegan_20200407.csv', node_labels)
+    datadir = 'data'
+    graph, node_labels = read.metis(f'{datadir}/anon_graph_inner_neos_20201110.metis')
+    tweets = read.tweets(f'{datadir}/sim_features_neos_20201110.csv', node_labels)
     sim = Simulation.from_tweets(graph, tweets)
 
     run = sim.run(10, samples=1)

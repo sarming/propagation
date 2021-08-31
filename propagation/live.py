@@ -1,9 +1,17 @@
+#!/usr/bin/env python
 import numpy as np
 import pandas as pd
 import scipy as sp
 import scipy.sparse
 
-from propagation import edge_sample
+# https://stackoverflow.com/a/28154841/153408
+if __name__ == "__main__" and __package__ is None:
+    import os, sys
+
+    __package__ = "propagation"
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.path.pardir))
+
+from .propagation import edge_sample
 
 
 def live_propagate(A, tweet_stream):

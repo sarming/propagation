@@ -1,9 +1,8 @@
 import numpy as np
 import pandas as pd
 
-import propagation
-import read
-from optimize import invert_monotone
+from . import read, propagation
+from .optimize import invert_monotone
 
 
 def calculate_retweet_probability(A, sources, p, at_least_one):

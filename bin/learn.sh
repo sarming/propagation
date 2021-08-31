@@ -18,12 +18,12 @@ echo "$epsilon"
 export PATH=$HOME/.local/bin:$PATH
 # DYNAMIC VARIABLES
 cd $CURRENT_WORKDIR
-export PYTHONPATH=$CURRENT_WORKDIR"/src/propagation"
+executable=$CURRENT_WORKDIR/bin/run
 
-#srun --mpi=pmix_v3 --nodes=1 --ntasks-per-node=20 python $PYTHONPATH/run.py learn $topic --runid $id -s $samples --epsilon $epsilon --graph $CURRENT_WORKDIR/input/$graph_file --indir $CURRENT_WORKDIR/src/data --outdir $CURRENT_WORKDIR/output
+#srun --mpi=pmix_v3 --nodes=1 --ntasks-per-node=20 $executable learn_discount $topic --runid $id -s $samples --epsilon $epsilon --graph input/$graph_file --indir input --outdir output
 
-mpirun -n $TASKS_PER_NODE python $PYTHONPATH/run.py learn_discount $topic \
+mpirun -n $TASKS_PER_NODE $executable learn_discount $topic \
   --runid $id -s $samples --epsilon $epsilon \
-  --graph $CURRENT_WORKDIR/input/$graph_file \
-  --indir $CURRENT_WORKDIR/input \
-  --outdir $CURRENT_WORKDIR/output
+  --graph input/$graph_file \
+  --indir input \
+  --outdir output

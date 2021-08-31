@@ -5,7 +5,7 @@ import numpy as np
 from mpi4py import MPI
 from scipy.sparse import csr_matrix
 
-import propagation
+from . import propagation
 
 
 def bcast_array(arr=None, comm=MPI.COMM_WORLD, root=0):

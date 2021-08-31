@@ -17,4 +17,4 @@ OUTFILE=out/$RUNID/out-$RUNID-$(date +"%Y%m%dT%H%M").txt
 uniq $PBS_NODEFILE|wc -l > $OUTFILE
 cat $PBS_NODEFILE|wc -l >>$OUTFILE
 
-mpirun {mpiargs} python run.py {args} --outdir=out/$RUNID >$OUTFILE 2>&1
+mpirun {mpiargs} bin/run {args} --outdir=out/$RUNID >$OUTFILE 2>&1

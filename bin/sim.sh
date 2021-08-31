@@ -24,23 +24,23 @@ echo "$samples"
 export PATH=$HOME/.local/bin:$PATH
 # DYNAMIC VARIABLES
 cd $CURRENT_WORKDIR
-export PYTHONPATH=$CURRENT_WORKDIR"/src/propagation"
+executable=$CURRENT_WORKDIR/bin/executable
 
-#srun --mpi=pmix_v3 --nodes=1 --ntasks-per-node=20 python $PYTHONPATH/run.py sim $topic --runid $id -f $features -a $sources -s $samples --graph $CURRENT_WORKDIR/input/$graph_file --source_map $CURRENT_WORKDIR/input/$source_map_file --params $CURRENT_WORKDIR/output/params-$topic-$id.csv --indir $CURRENT_WORKDIR/input --outdir $CURRENT_WORKDIR/output
+#srun --mpi=pmix_v3 --nodes=1 --ntasks-per-node=20 python $executable sim $topic --runid $id -f $features -a $sources -s $samples --graph input/$graph_file --source_map input/$source_map_file --params output/params-$topic-$id.csv --indir input --outdir output
 #TODO source_map_file and params
 
 if [ "$stats_file" == "" ]; then
-  mpirun -n $TASKS_PER_NODE python $PYTHONPATH/run.py sim \
+  mpirun -n $TASKS_PER_NODE $executable sim \
     $topic --runid $id -f $features -a $sources -s $samples \
-    --graph $CURRENT_WORKDIR/input/$graph_file \
-    --indir $CURRENT_WORKDIR/input \
-    --outdir $CURRENT_WORKDIR/output
+    --graph input/$graph_file \
+    --indir input \
+    --outdir output
 else
-  mpirun -n $TASKS_PER_NODE python $PYTHONPATH/run.py sim \
+  mpirun -n $TASKS_PER_NODE python $executable/executable sim \
     $topic --runid $id -f $features -a $sources -s $samples \
-    --graph $CURRENT_WORKDIR/input/$graph_file \
-    --stats $CURRENT_WORKDIR/input/$stats_file \
-    --indir $CURRENT_WORKDIR/input \
-    --outdir $CURRENT_WORKDIR/output \
-    --params $CURRENT_WORKDIR/output/params-${topic}-${id}.csv
+    --graph input/$graph_file \
+    --stats input/$stats_file \
+    --indir input \
+    --outdir output \
+    --params output/params-${topic}-${id}.csv
 fi

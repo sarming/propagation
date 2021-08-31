@@ -9,11 +9,12 @@ from datetime import datetime
 import pandas as pd
 from mpi4py import MPI
 
-import mpi
-import optimize
-import propagation
-import read
-import simulation
+# https://stackoverflow.com/a/28154841/153408
+if __name__ == "__main__" and __package__ is None:
+    __package__ = "propagation"
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.path.pardir))
+
+from . import mpi, optimize, read, simulation, propagation
 
 
 def parse_args():
