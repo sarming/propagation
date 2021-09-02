@@ -59,11 +59,11 @@ def learn(param, topic, sources, samples, epsilon=0.001):
 
 def learn_val(topic):
     djob, discount = qsub(args=learn('discount', topic, sources=50, samples=100, epsilon=0.01),
-                          nodes=16, walltime='10:00:00', jobname=f'discount-{topic}')
+                          nodes=8, walltime='10:00:00', jobname=f'discount-{topic}')
     cjob, corr = qsub(learn('corr', topic, sources=50, samples=100, epsilon=0.0001),
-                      nodes=16, walltime='10:00:00', jobname=f'corr-{topic}')
+                      nodes=8, walltime='10:00:00', jobname=f'corr-{topic}')
     qsub(val(topic, sources=256, samples=1000, discount=discount, corr=corr),
-         nodes=16, walltime='00:10:00', jobname=f'val-learn-{topic}', after=[djob, cjob])
+         nodes=8, walltime='00:10:00', jobname=f'val-learn-{discount}', after=[djob, cjob])
 
 
 def optimize_val(topic):

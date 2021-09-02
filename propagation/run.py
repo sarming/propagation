@@ -173,7 +173,7 @@ def main():
             print(f"mpi_vendor: {MPI.get_vendor()}")
             print("code_version: " + subprocess.run(['git', 'describe', '--tags', '--dirty'],
                                                     capture_output=True, text=True).stdout.rstrip())
-            print(f"args: {args}")
+            print(f"args: {vars(args)}")
 
             t = time.time()
             sim = build_sim(args)
