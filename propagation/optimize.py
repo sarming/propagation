@@ -2,7 +2,7 @@ from collections import defaultdict
 from functools import wraps
 from heapq import heapify, nsmallest
 from itertools import product
-from math import floor, prod
+from math import floor
 
 import numpy as np
 
@@ -165,7 +165,7 @@ class Domain:
             yield dict(zip(self.bounds.keys(), v))
 
     def size(self):
-        return prod(bound_size(bound) for bound in self.bounds.values())
+        return np.prod([bound_size(bound) for bound in self.bounds.values()])
 
 
 class Optimize:
@@ -343,9 +343,9 @@ def optimize(sim, sources=None, samples=500):
 
 
 if __name__ == "__main__":
-    from simulation import Simulation
+    from .simulation import Simulation
 
-    sim = Simulation.from_files('../data/anon_graph_inner_neos_20201110.npz', 'data/sim_features_neos_20201110.csv',
+    sim = Simulation.from_files('data/anon_graph_inner_neos_20201110.npz', 'data/sim_features_neos_20201110.csv',
                                 seed=3)
     # with mpi.futures(sim) as sim:
     if True:
