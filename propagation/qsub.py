@@ -57,21 +57,31 @@ def learn(param, topic, sources, samples, epsilon=0.001):
     return f'learn_{param} {dataset(topic)} --sources {sources} --samples {samples} --epsilon {epsilon}'
 
 
-def learn_val(topic):
+def learn_val(topic, repetitions=1):
     djob, discount = qsub(args=learn('discount', topic, sources=50, samples=100, epsilon=0.01),
                           nodes=8, walltime='10:00:00', jobname=f'discount-{topic}')
     cjob, corr = qsub(learn('corr', topic, sources=50, samples=100, epsilon=0.0001),
                       nodes=8, walltime='10:00:00', jobname=f'corr-{topic}')
-    qsub(val(topic, sources=256, samples=1000, discount=discount, corr=corr),
-         nodes=8, walltime='00:10:00', jobname=f'val-learn-{discount}', after=[djob, cjob])
+    for _ in range(repetitions):
+        qsub(val(topic, sources=64, samples=100, discount=discount, corr=corr),
+             nodes=1, walltime='00:30:00', jobname=f'val-learn-{discount}', after=[djob, cjob])
+        qsub(val(topic, sources=256, samples=1000, discount=discount, corr=corr),
+             nodes=1, walltime='00:30:00', jobname=f'val-learn-{discount}', after=[djob, cjob])
 
 
-def optimize_val(topic):
+def optimize_val(topic, repetitions=1):
     # jobid, runid = qsub(optimize(topic, sources=64, samples=1000)+' --corr out/corr-neos-1336746.hawk-pbs5.csv --discount out/discount-neos-1336745.hawk-pbs5.csv',
     jobid, runid = qsub(optimize(topic, sources=64, samples=1000),
-                        nodes=16, walltime='0:06:00', jobname=f'opt-{topic}')
-    qsub(val(topic, sources=256, samples=1000, params=runid),
-         nodes=8, walltime='00:10:00', jobname=f'val-{runid}', after=jobid)
+                        nodes=8, walltime='10:00:00', jobname=f'opt-{topic}')
+    for _ in range(repetitions):
+        qsub(val(topic, sources=64, samples=100, params=runid),
+             nodes=1, walltime='00:30:00', jobname=f'val-{runid}', after=jobid)
+        qsub(val(topic, sources=256, samples=1000, params=runid),
+             nodes=1, walltime='00:30:00', jobname=f'val-{runid}', after=jobid)
+        qsub(val(topic, sources=64, samples=100, params=runid),
+             nodes=2, walltime='00:30:00', jobname=f'val-{runid}', after=jobid)
+        qsub(val(topic, sources=256, samples=1000, params=runid),
+             nodes=2, walltime='00:30:00', jobname=f'val-{runid}', after=jobid)
 
 
 def main():
@@ -90,5 +100,8 @@ if __name__ == '__main__':
         main()
     else:
         for topic in ['neos', 'fpoe']:
-            # learn_val(topic)
-            optimize_val(topic)
+            learn_val(topic, 10)
+            optimize_val(topic, 10)
+            optimize_val(topic, 10)
+            optimize_val(topic, 10)
+            optimize_val(topic, 10)

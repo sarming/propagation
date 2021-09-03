@@ -327,13 +327,13 @@ def optimize(sim, sources=None, samples=500):
     for _ in range(20):
         for o in opts.values():
             o.iterate_stochastic(steps=5, k_best=10)
-            o.reexplore_best(10)
+            # o.reexplore_best(10)
     print('stochastic done', flush=True)
 
     for _ in range(20):
         for o in opts.values():
             o.iterate_steep(k_best=5)
-            o.reexplore_best(5)
+            # o.reexplore_best(5)
     print('hillclimb done', flush=True)
 
     for feature, o in opts.items():
