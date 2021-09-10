@@ -214,7 +214,7 @@ def main():
             elif args.command == 'optimize':
                 opts = optimize.optimize(sim, sources=None if args.sources < 1 else args.sources, samples=args.samples)
                 sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
-                with open(f'{args.outdir}/solutions-{args.topic}-{args.runid}.pyon', 'w') as f:
+                with open(f'{args.outdir}/optimize-{args.topic}-{args.runid}.pyon', 'w') as f:
                     f.write(repr(opts))
 
                 objective = pd.Series({k: o[0][0] for k, o in opts.items()})

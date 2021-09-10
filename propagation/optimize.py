@@ -1,3 +1,4 @@
+import time
 from collections import defaultdict
 from functools import wraps
 from heapq import heapify, nsmallest
@@ -242,7 +243,8 @@ class Optimize:
         self.solutions = [(self.objective(combine_results(r)), point)
                           for point, r in self.points.items() if r]
         heapify(self.solutions)
-        self.history.append(self.solutions[0])
+        if self.solutions:
+            self.history.append(self.solutions[0])
 
     def combine(self, other, k_best=None):
         if k_best is None:  # take all points
@@ -254,6 +256,13 @@ class Optimize:
 
     def visited(self, point):
         return point in self.points
+
+    def stuck(self, steps=1, k_best=1):
+        return self.points and all(
+            self.dom.step(p, dim, steps, neg) in self.points for p in self.best(k_best) for dim, neg in self.dirs)
+
+    def state(self):
+        return self.points, self.history
 
     def take_all_dirs(self, point, steps=1):
         for dim, neg in self.dirs:
@@ -307,18 +316,55 @@ class Optimize:
         self.solutions = []
         self.points = defaultdict(list)
         self.explore_random_point(n)
+        self.history.append(float('nan'))
         return old_solutions
 
-    def set_best(self, sim, feature):
-        for dim, value in self.solutions[0][1].items():
-            sim.params.at[feature, dim] = value
+
+def stochastic_hillclimb(sim, num=1, timeout=60, sources=None, samples=1000):
+    dom = {
+        # 'edge_probability': (0., 0.3, .001),
+        'discount_factor': (0., 1., .01),
+        'corr': (0., .005, .0001)
+    }
+    print(f'opt: {dom}')
+
+    random_starts = {feature: [
+        Optimize.feature(sim, feature, domain=dom, sources=sources, samples=samples, explore_current_point=False)
+        for _ in range(num)]
+        for feature in sim.features}
+
+    best = optimize_all_features(sim, domain=dom, sources=sources, samples=samples, explore_current_points=True)
+    print('timein')
+    t = time.time()
+    while True:
+        for feature, os in random_starts.items():
+            for o in os:
+                o.evaluate()
+                if o.stuck(steps=1, k_best=2):
+                    best[feature].combine(o, k_best=2)
+                    o.random_restart(n=1, keep=0)
+                o.iterate_stochastic(steps=1, k_best=2)
+
+        if time.time() - t > timeout:
+            print('timeout')
+            break
+
+    for feature, os in random_starts.items():
+        for o in os:
+            best[feature].combine(o, k_best=2)
+            best[feature].evaluate()
+
+    for feature, o in best.items():
+        set_params(o.best(), sim, feature)
+
+    return {feature: [b.state()] + [o.state() for o in random_starts[feature]] for feature, b in best.items()}
 
 
 def optimize(sim, sources=None, samples=500):
     dom = {
         # 'edge_probability': (0., 0.3, .1),
-        'discount_factor': (0., 1., .1),
-        'corr': (0., 1., .1)
+        'discount_factor': (0., .1, .1),
+        'corr': (0., .1, .1)
     }
     print(f'grid: {dom}')
     grid = optimize_all_features(sim, domain=dom, sources=sources, samples=samples, explore_current_points=False)
@@ -335,7 +381,7 @@ def optimize(sim, sources=None, samples=500):
         # o.full_grid(force=True) # Repeat
 
     for o in opts.values():
-        o.explore_random_point(100)
+        o.explore_random_point(10)
 
     for feature, o in opts.items():
         grid[feature].evaluate()
@@ -357,7 +403,7 @@ def optimize(sim, sources=None, samples=500):
     for feature, o in opts.items():
         set_params(o.best(), sim, feature)
 
-    return {feature: o.solutions for feature, o in opts.items()}
+    return {feature: o.state() for feature, o in opts.items()}
 
 
 if __name__ == "__main__":
