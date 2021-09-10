@@ -168,6 +168,23 @@ class Domain:
         return np.prod([bound_size(bound) for bound in self.bounds.values()])
 
 
+def set_params(point, sim, feature):
+    for dim, value in point.items():
+        sim.params.at[feature, dim] = value
+
+
+def optimize_all_features(sim, domain=None, statistic='mean_retweets', sources=None, samples=500,
+                          explore_current_points=True):
+    return {feature: Optimize.feature(sim, feature, domain=domain, statistic=statistic, sources=sources,
+                                      samples=samples, explore_current_point=explore_current_points)
+            for feature in sim.features}
+
+
+def combine_results(results):
+    mean_retweets, retweet_probability = zip(*results)
+    return np.mean(mean_retweets), np.mean(retweet_probability)
+
+
 class Optimize:
     def __init__(self, f, domain, objective, seed=None):
         self.f = f
@@ -180,13 +197,7 @@ class Optimize:
         self.points = defaultdict(list)
         self.solutions = []
         self.raw_results = []
-
-    @classmethod
-    def all_features(cls, sim, domain=None, statistic='mean_retweets', sources=None, samples=500,
-                     explore_current_points=True):
-        return {feature: cls.feature(sim, feature, domain=domain, statistic=statistic, sources=sources, samples=samples,
-                                     explore_current_point=explore_current_points)
-                for feature in sim.features}
+        self.history = []
 
     @classmethod
     def feature(cls, sim, feature, domain=None, statistic='mean_retweets', sources=None, samples=500,
@@ -220,19 +231,26 @@ class Optimize:
         return True
 
     def evaluate(self):
-        new_solutions = [(self.objective(result), point) for result, point in self.raw_results]
-        self.add_solutions(new_solutions)
-        if new_solutions:
-            # print(f'current best:{self.solutions[0]}')
+        self.register(self.raw_results)
+        if self.raw_results:
             print('.', flush=True, end='')
         self.raw_results = []
 
-    def add_solutions(self, solutions):
-        for s in solutions:
-            value, point = s
-            self.points[point].append(value)
-        self.solutions = [(np.mean(values), point) for point, values in self.points.items() if values]
+    def register(self, results):
+        for result, point in results:
+            self.points[point].append(tuple(result))
+        self.solutions = [(self.objective(combine_results(r)), point)
+                          for point, r in self.points.items() if r]
         heapify(self.solutions)
+        self.history.append(self.solutions[0])
+
+    def combine(self, other, k_best=None):
+        if k_best is None:  # take all points
+            points = other.points.keys()
+        else:
+            points = other.best(k_best)
+        self.register((r, p) for p in points for r in other.points[p])
+        # self.register((combine_results(other.points[p]), p) for p in points)
 
     def visited(self, point):
         return point in self.points
@@ -303,14 +321,14 @@ def optimize(sim, sources=None, samples=500):
         'corr': (0., 1., .1)
     }
     print(f'grid: {dom}')
-    grid = Optimize.all_features(sim, domain=dom, sources=sources, samples=samples, explore_current_points=False)
+    grid = optimize_all_features(sim, domain=dom, sources=sources, samples=samples, explore_current_points=False)
     dom = {
         # 'edge_probability': (0., 0.3, .001),
         'discount_factor': (0., 1., .01),
         'corr': (0., .005, .0001)
     }
     print(f'opt: {dom}')
-    opts = Optimize.all_features(sim, domain=dom, sources=sources, samples=samples)
+    opts = optimize_all_features(sim, domain=dom, sources=sources, samples=samples)
 
     for o in grid.values():
         o.full_grid()
@@ -321,7 +339,7 @@ def optimize(sim, sources=None, samples=500):
 
     for feature, o in opts.items():
         grid[feature].evaluate()
-        o.add_solutions(grid[feature].solutions)
+        o.combine(grid[feature])
     print('grid done', flush=True)
 
     for _ in range(20):
@@ -337,7 +355,7 @@ def optimize(sim, sources=None, samples=500):
     print('hillclimb done', flush=True)
 
     for feature, o in opts.items():
-        o.set_best(sim, feature)
+        set_params(o.best(), sim, feature)
 
     return {feature: o.solutions for feature, o in opts.items()}
 
