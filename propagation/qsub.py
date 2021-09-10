@@ -74,14 +74,8 @@ def optimize_val(topic, repetitions=1):
     jobid, runid = qsub(optimize(topic, sources=64, samples=1000),
                         nodes=8, walltime='10:00:00', jobname=f'opt-{topic}')
     for _ in range(repetitions):
-        qsub(val(topic, sources=64, samples=100, params=runid),
-             nodes=1, walltime='00:30:00', jobname=f'val-{runid}', after=jobid)
         qsub(val(topic, sources=256, samples=1000, params=runid),
              nodes=1, walltime='00:30:00', jobname=f'val-{runid}', after=jobid)
-        qsub(val(topic, sources=64, samples=100, params=runid),
-             nodes=2, walltime='00:30:00', jobname=f'val-{runid}', after=jobid)
-        qsub(val(topic, sources=256, samples=1000, params=runid),
-             nodes=2, walltime='00:30:00', jobname=f'val-{runid}', after=jobid)
 
 
 def main():
@@ -100,8 +94,5 @@ if __name__ == '__main__':
         main()
     else:
         for topic in ['neos', 'fpoe']:
-            learn_val(topic, 10)
-            optimize_val(topic, 10)
-            optimize_val(topic, 10)
-            optimize_val(topic, 10)
-            optimize_val(topic, 10)
+            # learn_val(topic, 10)
+            optimize_val(topic, 5)

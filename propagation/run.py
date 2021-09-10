@@ -212,12 +212,14 @@ def main():
                 sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
 
             elif args.command == 'optimize':
-                opts = optimize.optimize(sim, sources=None if args.sources < 1 else args.sources, samples=args.samples)
+                opts = optimize.stochastic_hillclimb(sim, num=100, sources=None if args.sources < 1 else args.sources,
+                                                     samples=args.samples, timeout=18000)
                 sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
                 with open(f'{args.outdir}/optimize-{args.topic}-{args.runid}.pyon', 'w') as f:
                     f.write(repr(opts))
 
-                objective = pd.Series({k: o[0][0] for k, o in opts.items()})
+                # last history element in first optimization
+                objective = pd.Series({k: o[0][1][-1] for k, o in opts.items()})
                 real = sim.stats.mean_retweets
                 sim = real + objective
                 print(f'mae: {mae(sim, real)}')

@@ -244,7 +244,7 @@ class Optimize:
                           for point, r in self.points.items() if r]
         heapify(self.solutions)
         if self.solutions:
-            self.history.append(self.solutions[0])
+            self.history.append(self.solutions[0][0])
 
     def combine(self, other, k_best=None):
         if k_best is None:  # take all points
