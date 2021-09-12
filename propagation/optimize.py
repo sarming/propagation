@@ -319,6 +319,45 @@ class Optimize:
         self.history.append(float('nan'))
         return old_solutions
 
+def hillclimb(sim, num=1, timeout=60, sources=None, samples=1000):
+    dom = {
+        # 'edge_probability': (0., 0.3, .001),
+        'discount_factor': (0., 1., .01),
+        'corr': (0., .005, .0001)
+    }
+    print(f'opt: {dom}')
+
+    opts = {feature: [
+        Optimize.feature(sim, feature, domain=dom, sources=sources, samples=samples, explore_current_point=True)
+        for _ in range(num)]
+        for feature in sim.features}
+
+    best = optimize_all_features(sim, domain=dom, sources=sources, samples=samples, explore_current_points=True)
+    t = time.time()
+    while True:
+        for feature, os in opts.items():
+            for o in os:
+                o.evaluate()
+                for i in range(20):
+                    if not o.stuck(steps=i, k_best=2):
+                        o.iterate_steep(steps=1, k_best=2)
+                        break
+                else:
+                    best[feature].combine(o, k_best=2)
+                    o.random_restart(n=1, keep=0)
+
+        if time.time() - t > timeout:
+            break
+
+    for feature, os in opts.items():
+        for o in os:
+            best[feature].combine(o, k_best=2)
+            best[feature].evaluate()
+
+    for feature, o in best.items():
+        set_params(o.best(), sim, feature)
+
+    return {feature: [b.state()] + [o.state() for o in opts[feature]] for feature, b in best.items()}
 
 def stochastic_hillclimb(sim, num=1, timeout=60, sources=None, samples=1000):
     dom = {
@@ -334,7 +373,6 @@ def stochastic_hillclimb(sim, num=1, timeout=60, sources=None, samples=1000):
         for feature in sim.features}
 
     best = optimize_all_features(sim, domain=dom, sources=sources, samples=samples, explore_current_points=True)
-    print('timein')
     t = time.time()
     while True:
         for feature, os in random_starts.items():

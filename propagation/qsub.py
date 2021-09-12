@@ -49,8 +49,10 @@ def val(topic, sources, samples, params='', corr='', discount=''):
     return f'val {dataset(topic)} --sources {sources} --samples {samples} {params} {corr} {discount}'
 
 
-def optimize(topic, sources, samples):
-    return f'optimize {dataset(topic)} --sources {sources} --samples {samples}'
+def optimize(topic, sources, samples, corr='', discount=''):
+    corr = f'--corr out/{corr}/corr-{topic}-{corr}.csv' if corr else ''
+    discount = f'--discount out/{discount}/discount-{topic}-{discount}.csv' if discount else ''
+    return f'optimize {dataset(topic)} --sources {sources} --samples {samples} {corr} {discount}'
 
 
 def learn(param, topic, sources, samples, epsilon=0.001):
@@ -69,10 +71,22 @@ def learn_val(topic, repetitions=1):
              nodes=1, walltime='00:30:00', jobname=f'val-learn-{discount}', after=[djob, cjob])
 
 
+def learn_opt_val(topic, repetitions=1):
+    djob, discount = qsub(args=learn('discount', topic, sources=50, samples=100, epsilon=0.01),
+                          nodes=8, walltime='10:00:00', jobname=f'discount-{topic}')
+    cjob, corr = qsub(learn('corr', topic, sources=50, samples=100, epsilon=0.0001),
+                      nodes=8, walltime='10:00:00', jobname=f'corr-{topic}')
+    jobid, runid = qsub(optimize(topic, sources=256, samples=1000, corr=corr, discount=discount),
+                        nodes=256, walltime='24:00:00', jobname=f'opt-{topic}', after=[djob, cjob])
+    for _ in range(repetitions):
+        qsub(val(topic, sources=256, samples=1000, params=runid),
+             nodes=1, walltime='00:30:00', jobname=f'val-{runid}', after=jobid)
+
+
 def optimize_val(topic, repetitions=1):
     # jobid, runid = qsub(optimize(topic, sources=64, samples=1000)+' --corr out/corr-neos-1336746.hawk-pbs5.csv --discount out/discount-neos-1336745.hawk-pbs5.csv',
-    jobid, runid = qsub(optimize(topic, sources=64, samples=1000),
-                        nodes=8, walltime='10:00:00', jobname=f'opt-{topic}')
+    jobid, runid = qsub(optimize(topic, sources=256, samples=1000),
+                        nodes=256, walltime='24:00:00', jobname=f'opt-{topic}')
     for _ in range(repetitions):
         qsub(val(topic, sources=256, samples=1000, params=runid),
              nodes=1, walltime='00:30:00', jobname=f'val-{runid}', after=jobid)
@@ -93,6 +107,7 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         main()
     else:
-        for topic in ['neos', 'fpoe']:
+        for topic in ['neos', 'fpoe', 'socialdistance']:
+            learn_opt_val(topic, repetitions=2)
             # learn_val(topic, 10)
-            optimize_val(topic, 5)
+            # optimize_val(topic, 2)

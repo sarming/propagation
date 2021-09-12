@@ -174,6 +174,7 @@ def main():
             print("code_version: " + subprocess.run(['git', 'describe', '--tags', '--dirty'],
                                                     capture_output=True, text=True).stdout.rstrip())
             print(f"args: {vars(args)}")
+            print(f"argv: {' '.join(sys.argv)}")
 
             t = time.time()
             sim = build_sim(args)
@@ -212,8 +213,8 @@ def main():
                 sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
 
             elif args.command == 'optimize':
-                opts = optimize.stochastic_hillclimb(sim, num=100, sources=None if args.sources < 1 else args.sources,
-                                                     samples=args.samples, timeout=18000)
+                opts = optimize.hillclimb(sim, num=500, sources=None if args.sources < 1 else args.sources,
+                                          samples=args.samples, timeout=72000)
                 sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
                 with open(f'{args.outdir}/optimize-{args.topic}-{args.runid}.pyon', 'w') as f:
                     f.write(repr(opts))
