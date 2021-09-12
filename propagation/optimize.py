@@ -332,13 +332,13 @@ def hillclimb(sim, num=1, timeout=60, sources=None, samples=1000):
         for _ in range(num)]
         for feature in sim.features}
 
-    best = optimize_all_features(sim, domain=dom, sources=sources, samples=samples, explore_current_points=True)
+    best = optimize_all_features(sim, domain=dom, sources=sources, samples=samples, explore_current_points=False)
     t = time.time()
     while True:
         for feature, os in opts.items():
             for o in os:
                 o.evaluate()
-                for i in range(20):
+                for i in range(50):
                     if not o.stuck(steps=i, k_best=2):
                         o.iterate_steep(steps=1, k_best=2)
                         break
@@ -352,7 +352,6 @@ def hillclimb(sim, num=1, timeout=60, sources=None, samples=1000):
     for feature, os in opts.items():
         for o in os:
             best[feature].combine(o, k_best=2)
-            best[feature].evaluate()
 
     for feature, o in best.items():
         set_params(o.best(), sim, feature)
@@ -388,9 +387,9 @@ def stochastic_hillclimb(sim, num=1, timeout=60, sources=None, samples=1000):
             break
 
     for feature, os in random_starts.items():
+        best[feature].evaluate()
         for o in os:
             best[feature].combine(o, k_best=2)
-            best[feature].evaluate()
 
     for feature, o in best.items():
         set_params(o.best(), sim, feature)

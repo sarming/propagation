@@ -213,8 +213,8 @@ def main():
                 sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
 
             elif args.command == 'optimize':
-                opts = optimize.hillclimb(sim, num=500, sources=None if args.sources < 1 else args.sources,
-                                          samples=args.samples, timeout=72000)
+                opts = optimize.hillclimb(sim, num=20, sources=None if args.sources < 1 else args.sources,
+                                          samples=args.samples, timeout=3600)
                 sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
                 with open(f'{args.outdir}/optimize-{args.topic}-{args.runid}.pyon', 'w') as f:
                     f.write(repr(opts))

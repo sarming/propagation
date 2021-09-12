@@ -72,12 +72,12 @@ def learn_val(topic, repetitions=1):
 
 
 def learn_opt_val(topic, repetitions=1):
-    djob, discount = qsub(args=learn('discount', topic, sources=50, samples=100, epsilon=0.01),
-                          nodes=8, walltime='10:00:00', jobname=f'discount-{topic}')
-    cjob, corr = qsub(learn('corr', topic, sources=50, samples=100, epsilon=0.0001),
-                      nodes=8, walltime='10:00:00', jobname=f'corr-{topic}')
+    djob, discount = qsub(args=learn('discount', topic, sources=256, samples=1000, epsilon=0.01),
+                          nodes=32, walltime='10:00:00', jobname=f'discount-{topic}')
+    cjob, corr = qsub(learn('corr', topic, sources=256, samples=1000, epsilon=0.0001),
+                      nodes=32, walltime='10:00:00', jobname=f'corr-{topic}')
     jobid, runid = qsub(optimize(topic, sources=256, samples=1000, corr=corr, discount=discount),
-                        nodes=256, walltime='24:00:00', jobname=f'opt-{topic}', after=[djob, cjob])
+                        nodes=128, walltime='00:02:00', jobname=f'opt-{topic}', after=[djob, cjob])
     for _ in range(repetitions):
         qsub(val(topic, sources=256, samples=1000, params=runid),
              nodes=1, walltime='00:30:00', jobname=f'val-{runid}', after=jobid)
