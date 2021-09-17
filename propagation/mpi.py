@@ -104,6 +104,48 @@ def worker(args):
         # return [list(source) for source in r]
 
 
+def bcast_sim(sim, comm, root=0):
+    rank = comm.Get_rank()
+    if rank == root:
+        A = sim.A
+        seed = [s.state for s in sim.seed.spawn(comm.Get_size())]
+        sim.A = None
+        sim.seed = None
+        sim.rng = None
+    else:
+        sim = None
+        A = None
+        seed = None
+
+    sim = comm.bcast(sim, root=root)
+    A = bcast_csr_matrix(A, comm, root=root)
+    seed = comm.scatter(seed, root=root)
+
+    sim.A = A
+    sim.seed = np.random.SeedSequence(**seed)
+    sim.rng = np.random.default_rng(sim.seed)
+
+    comm.Barrier()
+    return sim
+
+
+@contextmanager
+def split(sim, n_splits, comm=MPI.COMM_WORLD, root=0):
+    global_rank = comm.Get_rank()
+    split_comm = comm.Split(global_rank % n_splits)
+    split_rank = split_comm.Get_rank()
+    split_root = root % n_splits
+    assert split_rank == global_rank % n_splits
+
+    heads = comm.Split(split_rank)
+    if split_rank == split_root:
+        sim = bcast_sim(sim, heads, root // n_splits)
+        assert sim is not None
+
+    with futures(sim, split_comm, root=split_root) as sim:
+        yield sim
+
+
 @contextmanager
 def futures(sim, comm=MPI.COMM_WORLD, root=0, chunksize=1, sample_split: int = 1):
     from mpi4py.futures import MPICommExecutor
