@@ -112,8 +112,10 @@ def futures(sim, comm=MPI.COMM_WORLD, root=0, chunksize=1, sample_split: int = 1
     def simulate(A: None, sources, params, samples=1, return_stats=True, seed=None):
         """Simulate tweets starting from sources, return mean retweets and retweet probability."""
         seeds = seed.spawn(len(sources) * sample_split)
-        sample_calls = [(params, [source], samples // sample_split, return_stats, seed.state) for source, seed in
-                        zip(np.repeat(sources, sample_split), seeds)]
+        sample_calls = [
+            (params, [source], samples // sample_split, return_stats, seed.state)
+            for source, seed in zip(np.repeat(sources, sample_split), seeds)
+        ]
         results = executor.map(worker, sample_calls, chunksize=chunksize)
 
         if return_stats:

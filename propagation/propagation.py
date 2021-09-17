@@ -2,7 +2,9 @@ import numpy as np
 from numba import njit
 
 
-def edge_propagate(A, source, p, corr=0., discount=1., depth=None, max_nodes=None, at_least_one=True):
+def edge_propagate(
+    A, source, p, corr=0.0, discount=1.0, depth=None, max_nodes=None, at_least_one=True
+):
     """Propagate message in graph A and return number of nodes visited.
 
     Args:
@@ -28,7 +30,7 @@ def edge_propagate(A, source, p, corr=0., discount=1., depth=None, max_nodes=Non
     visited = {source}
     leaves = {source}
     # done = {source}
-    for i in range(depth):
+    for _ in range(depth):
         next_leaves = set()
         for node in leaves:
             children = set(edge_sample(A, node, p, corr, at_least_one))
@@ -46,7 +48,9 @@ def edge_propagate(A, source, p, corr=0., discount=1., depth=None, max_nodes=Non
     return len(visited) - 1
 
 
-def edge_propagate_tree(A, source, p, corr=0., discount=1., depth=None, max_nodes=None, at_least_one=True):
+def edge_propagate_tree(
+    A, source, p, corr=0.0, discount=1.0, depth=None, max_nodes=None, at_least_one=True
+):
     """Propagate message in graph A and return retweet tree.
 
     Args:
@@ -70,7 +74,7 @@ def edge_propagate_tree(A, source, p, corr=0., discount=1., depth=None, max_node
     visited = {source}
     leaves = {source}
     tree = {source: -1}
-    for i in range(depth):
+    for _ in range(depth):
         next_leaves = set()
         for node in leaves:
             children = set(edge_sample(A, node, p, corr, at_least_one))
@@ -86,7 +90,7 @@ def edge_propagate_tree(A, source, p, corr=0., discount=1., depth=None, max_node
     return tree
 
 
-def edge_sample(A, node, p, corr=0., at_least_one=True):
+def edge_sample(A, node, p, corr=0.0, at_least_one=True):
     """Return sample of node's children using probability p.
 
     Note:
@@ -120,7 +124,8 @@ def set_seed(seed):
 
 def compile():
     from scipy.sparse import csr_matrix
-    edge_sample(csr_matrix([[1, 1], [1, 1]]), 0, 0.)
+
+    edge_sample(csr_matrix([[1, 1], [1, 1]]), 0, 0.0)
 
 
 def simulation_stats(simulation_results):
@@ -131,7 +136,7 @@ def simulation_stats(simulation_results):
 
 # @timecall
 def simulate(A, params, sources, samples=1, return_stats=True, seed=None):
-    """ Propagate messages and return mean retweets and retweet probability.
+    """Propagate messages and return mean retweets and retweet probability.
 
     Args:
         A: Sparse adjacency matrix of graph.
@@ -154,8 +159,22 @@ def simulate(A, params, sources, samples=1, return_stats=True, seed=None):
         seed = np.random.SeedSequence(**seed)
     set_seed(seed.generate_state(1)[0])
 
-    retweets = ((edge_propagate(A, source, p=p, corr=corr, discount=discount, depth=depth, max_nodes=max_nodes,
-                                at_least_one=at_least_one)
-                 for _ in range(samples)) for source in sources)
-    if return_stats: return simulation_stats(retweets)
+    retweets = (
+        (
+            edge_propagate(
+                A,
+                source,
+                p=p,
+                corr=corr,
+                discount=discount,
+                depth=depth,
+                max_nodes=max_nodes,
+                at_least_one=at_least_one,
+            )
+            for _ in range(samples)
+        )
+        for source in sources
+    )
+    if return_stats:
+        return simulation_stats(retweets)
     return retweets

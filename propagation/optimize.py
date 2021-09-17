@@ -125,13 +125,12 @@ class Domain:
             return self.__key() < other.__key()
 
     def to_point(self, dictlike):
-        return Domain.Point({dim: dictlike[dim] for dim in self.dims})  # Use only keys from self.dims
+        return Domain.Point(
+            {dim: dictlike[dim] for dim in self.dims}
+        )  # Use only keys from self.dims
 
     def in_bounds(self, point):
-        for dim in self.dims:
-            if not in_bound(point[dim], self.bounds[dim]):
-                return False
-        return True
+        return all(in_bound(point[dim], self.bounds[dim]) for dim in self.dims)
 
     def step(self, point, dim, steps, neg=False):
         if isinstance(steps, dict):
@@ -146,7 +145,7 @@ class Domain:
             point[dim] = discretize(old, bound) + steps * stepwidth
             if point[dim] < lb:
                 point[dim] = lb
-            if point[dim] > ub:
+            elif point[dim] > ub:
                 point[dim] = ub
         else:
             point[dim] = bound[(bound.index(old) + steps) % len(bound)]
@@ -174,11 +173,57 @@ def set_params(point, sim, feature):
         sim.params.at[feature, dim] = value
 
 
-def optimize_all_features(sim, domain=None, statistic='mean_retweets', sources=None, samples=500,
-                          explore_current_points=True):
-    return {feature: Optimize.feature(sim, feature, domain=domain, statistic=statistic, sources=sources,
-                                      samples=samples, explore_current_point=explore_current_points)
-            for feature in sim.features}
+def optimize_all_features(
+    sim,
+    domain=None,
+    statistic='mean_retweets',
+    sources=None,
+    samples=500,
+    explore_current_point=True,
+    num=None,
+):
+    def optimize(feature):
+        return optimize_feature(
+            sim,
+            feature,
+            domain=domain,
+            statistic=statistic,
+            sources=sources,
+            samples=samples,
+            explore_current_point=explore_current_point,
+        )
+
+    if num is None:
+        return {feature: optimize(feature) for feature in sim.features}
+    return {feature: [optimize(feature) for _ in range(num)] for feature in sim.features}
+
+
+def optimize_feature(
+    sim,
+    feature,
+    domain=None,
+    statistic='mean_retweets',
+    sources=None,
+    samples=500,
+    explore_current_point=True,
+):
+    if domain is None:
+        domain = {
+            'edge_probability': (0.0, 0.3, 0.001),
+            'at_least_one': [True, False],
+            'discount_factor': (0.0, 1.0, 0.1),
+            'corr': (0.0, 1.0, 0.001),
+            'max_nodes': range(100, 860, 20),
+            'max_depth': [100],
+        }
+    if not isinstance(domain, Domain):
+        domain = Domain(domain)
+    objective = single_objective(sim, feature, statistic)
+    f = lambda point: sim.simulate(feature, point, sources, samples, True)
+    o = Optimize(f, domain, objective, sim.seed.spawn(1)[0])
+    if explore_current_point:
+        o.explore_point(sim.params.astype('object').loc[feature], force=True)
+    return o
 
 
 def combine_results(results):
@@ -200,26 +245,6 @@ class Optimize:
         self.raw_results = []
         self.history = []
 
-    @classmethod
-    def feature(cls, sim, feature, domain=None, statistic='mean_retweets', sources=None, samples=500,
-                explore_current_point=True):
-        if domain is None:
-            domain = {'edge_probability': (0., 0.3, .001),
-                      'at_least_one': [True, False],
-                      'discount_factor': (0., 1., .1),
-                      'corr': (0., 1., .001),
-                      'max_nodes': range(100, 860, 20),
-                      'max_depth': [100],
-                      }
-        if not isinstance(domain, Domain):
-            domain = Domain(domain)
-        objective = single_objective(sim, feature, statistic)
-        f = lambda point: sim.simulate(feature, point, sources, samples, True)
-        self = cls(f, domain, objective, sim.seed.spawn(1)[0])
-        if explore_current_point:
-            self.explore_point(sim.params.astype('object').loc[feature], force=True)
-        return self
-
     def explore_point(self, point, force=False):
         if not isinstance(point, Domain.Point):
             point = self.dom.to_point(point)
@@ -240,17 +265,16 @@ class Optimize:
     def register(self, results):
         for result, point in results:
             self.points[point].append(tuple(result))
-        self.solutions = [(self.objective(combine_results(r)), point)
-                          for point, r in self.points.items() if r]
+        self.solutions = [
+            (self.objective(combine_results(r)), point) for point, r in self.points.items() if r
+        ]
         heapify(self.solutions)
         if self.solutions:
             self.history.append(self.solutions[0][0])
 
-    def combine(self, other, k_best=None):
-        if k_best is None:  # take all points
-            points = other.points.keys()
-        else:
-            points = other.best(k_best)
+    def register_from(self, other, k_best=None):
+        """Register k_best points with results from other (all points if k_best is None)."""
+        points = other.points.keys() if k_best is None else other.best(k_best)
         self.register((r, p) for p in points for r in other.points[p])
         # self.register((combine_results(other.points[p]), p) for p in points)
 
@@ -259,7 +283,10 @@ class Optimize:
 
     def stuck(self, steps=1, k_best=1):
         return self.points and all(
-            self.dom.step(p, dim, steps, neg) in self.points for p in self.best(k_best) for dim, neg in self.dirs)
+            self.dom.step(p, dim, steps, neg) in self.points
+            for p in self.best(k_best)
+            for dim, neg in self.dirs
+        )
 
     def state(self):
         return self.points, self.history
@@ -279,7 +306,7 @@ class Optimize:
     def iterate_stochastic(self, steps=1, k_best=1, n_dirs=1):
         self.evaluate()
         for point in self.best(k_best):
-            for i in range(n_dirs):
+            for _ in range(n_dirs):
                 self.take_random_dir(point, steps)
 
     def iterate_steep(self, steps=1, k_best=1):
@@ -319,20 +346,24 @@ class Optimize:
         self.history.append(float('nan'))
         return old_solutions
 
+
 def hillclimb(sim, num=1, timeout=60, sources=None, samples=1000):
     dom = {
         # 'edge_probability': (0., 0.3, .001),
-        'discount_factor': (0., 1., .01),
-        'corr': (0., .005, .0001)
+        'discount_factor': (0.0, 1.0, 0.01),
+        'corr': (0.0, 0.005, 0.0001),
     }
     print(f'opt: {dom}')
 
-    opts = {feature: [
-        Optimize.feature(sim, feature, domain=dom, sources=sources, samples=samples, explore_current_point=True)
-        for _ in range(num)]
-        for feature in sim.features}
+    opts = optimize_all_features(
+        sim, domain=dom, sources=sources, samples=samples, explore_current_point=True, num=num
+    )
 
-    best = optimize_all_features(sim, domain=dom, sources=sources, samples=samples, explore_current_points=False)
+    # print(list(opts.values())[0][0].dom.size())
+
+    best = optimize_all_features(
+        sim, domain=dom, sources=sources, samples=samples, explore_current_point=False
+    )
     t = time.time()
     while True:
         for feature, os in opts.items():
@@ -343,7 +374,7 @@ def hillclimb(sim, num=1, timeout=60, sources=None, samples=1000):
                         o.iterate_steep(steps=1, k_best=2)
                         break
                 else:
-                    best[feature].combine(o, k_best=2)
+                    best[feature].register_from(o, k_best=2)
                     o.random_restart(n=1, keep=0)
 
         if time.time() - t > timeout:
@@ -351,34 +382,38 @@ def hillclimb(sim, num=1, timeout=60, sources=None, samples=1000):
 
     for feature, os in opts.items():
         for o in os:
-            best[feature].combine(o, k_best=2)
+            best[feature].register_from(o, k_best=2)
 
     for feature, o in best.items():
         set_params(o.best(), sim, feature)
 
-    return {feature: [b.state()] + [o.state() for o in opts[feature]] for feature, b in best.items()}
+    return {
+        feature: [b.state()] + [o.state() for o in opts[feature]] for feature, b in best.items()
+    }
+
 
 def stochastic_hillclimb(sim, num=1, timeout=60, sources=None, samples=1000):
     dom = {
         # 'edge_probability': (0., 0.3, .001),
-        'discount_factor': (0., 1., .01),
-        'corr': (0., .005, .0001)
+        'discount_factor': (0.0, 1.0, 0.01),
+        'corr': (0.0, 0.005, 0.0001),
     }
     print(f'opt: {dom}')
 
-    random_starts = {feature: [
-        Optimize.feature(sim, feature, domain=dom, sources=sources, samples=samples, explore_current_point=False)
-        for _ in range(num)]
-        for feature in sim.features}
+    random_starts = optimize_all_features(
+        sim, domain=dom, sources=sources, samples=samples, explore_current_point=False, num=num
+    )
 
-    best = optimize_all_features(sim, domain=dom, sources=sources, samples=samples, explore_current_points=True)
+    best = optimize_all_features(
+        sim, domain=dom, sources=sources, samples=samples, explore_current_point=True
+    )
     t = time.time()
     while True:
         for feature, os in random_starts.items():
             for o in os:
                 o.evaluate()
                 if o.stuck(steps=1, k_best=2):
-                    best[feature].combine(o, k_best=2)
+                    best[feature].register_from(o, k_best=2)
                     o.random_restart(n=1, keep=0)
                 o.iterate_stochastic(steps=1, k_best=2)
 
@@ -389,26 +424,31 @@ def stochastic_hillclimb(sim, num=1, timeout=60, sources=None, samples=1000):
     for feature, os in random_starts.items():
         best[feature].evaluate()
         for o in os:
-            best[feature].combine(o, k_best=2)
+            best[feature].register_from(o, k_best=2)
 
     for feature, o in best.items():
         set_params(o.best(), sim, feature)
 
-    return {feature: [b.state()] + [o.state() for o in random_starts[feature]] for feature, b in best.items()}
+    return {
+        feature: [b.state()] + [o.state() for o in random_starts[feature]]
+        for feature, b in best.items()
+    }
 
 
 def optimize(sim, sources=None, samples=500):
     dom = {
         # 'edge_probability': (0., 0.3, .1),
-        'discount_factor': (0., .1, .1),
-        'corr': (0., .1, .1)
+        'discount_factor': (0.0, 0.1, 0.1),
+        'corr': (0.0, 0.1, 0.1),
     }
     print(f'grid: {dom}')
-    grid = optimize_all_features(sim, domain=dom, sources=sources, samples=samples, explore_current_points=False)
+    grid = optimize_all_features(
+        sim, domain=dom, sources=sources, samples=samples, explore_current_point=False
+    )
     dom = {
         # 'edge_probability': (0., 0.3, .001),
-        'discount_factor': (0., 1., .01),
-        'corr': (0., .005, .0001)
+        'discount_factor': (0.0, 1.0, 0.01),
+        'corr': (0.0, 0.005, 0.0001),
     }
     print(f'opt: {dom}')
     opts = optimize_all_features(sim, domain=dom, sources=sources, samples=samples)
@@ -422,7 +462,7 @@ def optimize(sim, sources=None, samples=500):
 
     for feature, o in opts.items():
         grid[feature].evaluate()
-        o.combine(grid[feature])
+        o.register_from(grid[feature])
     print('grid done', flush=True)
 
     for _ in range(20):
@@ -443,11 +483,13 @@ def optimize(sim, sources=None, samples=500):
     return {feature: o.state() for feature, o in opts.items()}
 
 
+# sourcery skip: hoist-if-from-if, merge-nested-ifs, remove-redundant-if
 if __name__ == "__main__":
     from .simulation import Simulation
 
-    sim = Simulation.from_files('data/anon_graph_inner_neos_20201110.npz', 'data/sim_features_neos_20201110.csv',
-                                seed=3)
+    sim = Simulation.from_files(
+        'data/anon_graph_inner_neos_20201110.npz', 'data/sim_features_neos_20201110.csv', seed=3
+    )
     # with mpi.futures(sim) as sim:
     if True:
         if sim is not None:

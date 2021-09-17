@@ -51,12 +51,13 @@ def live_propagate(A, tweet_stream):
             tweet['params'].edge_probability *= params.discount_factor
 
         for (source, params) in new_tweets:
-            tweet = {'id': tweet_id,
-                     'params': params,
-                     'leaves': {source},
-                     'visited': {source},
-                     'age': 0,
-                     }
+            tweet = {
+                'id': tweet_id,
+                'params': params,
+                'leaves': {source},
+                'visited': {source},
+                'age': 0,
+            }
             tweets.append(tweet)
             updates.append((tweet_id, None, source))
             tweet_id += 1
@@ -66,7 +67,7 @@ def live_propagate(A, tweet_stream):
 
 
 def uniform_tweet_stream(num_sources, params, skip=0):
-    """ Yields tweets with random source and fixed params."""
+    """Yields tweets with random source and fixed params."""
     while True:
         yield [(np.random.randint(num_sources), params)]
         for _ in range(skip):
@@ -80,11 +81,15 @@ if __name__ == "__main__":
     A = sp.sparse.csr_matrix(A)
     # A = nx.to_scipy_sparse_matrix(graph)
 
-    params = pd.Series({'edge_probability': 0.05,
-                        'discount_factor': 1.,
-                        'max_nodes': n,
-                        'max_depth': 100,
-                        }, dtype=object)
+    params = pd.Series(
+        {
+            'edge_probability': 0.05,
+            'discount_factor': 1.0,
+            'max_nodes': n,
+            'max_depth': 100,
+        },
+        dtype=object,
+    )
 
     tweet_stream = uniform_tweet_stream(n, params, 2)  #
 

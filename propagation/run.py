@@ -31,16 +31,29 @@ def parse_args():
     parser.add_argument('--source_map', help="source map file (.csv)")
     parser.add_argument('--indir', help="input directory (default: data)", default='data')
     parser.add_argument('--outdir', help="output directory (default: out)", default='out')
-    parser.add_argument('-f', '--features', help="number of features to simulate", type=int, default=1)
-    parser.add_argument('-a', '--sources', help="number of authors per feature class", type=int, default=1)
+    parser.add_argument(
+        '-f', '--features', help="number of features to simulate", type=int, default=1
+    )
+    parser.add_argument(
+        '-a', '--sources', help="number of authors per feature class", type=int, default=1
+    )
     parser.add_argument('-s', '--samples', help="number of samples per tweet", type=int, default=1)
-    parser.add_argument('--epsilon', help="epsilon for parameter learning", type=float, default=0.001)
+    parser.add_argument(
+        '--epsilon', help="epsilon for parameter learning", type=float, default=0.001
+    )
     parser.add_argument('--max_depth', help="maximum depth to simulate", type=int)
     parser.add_argument('--max_nodes', help="maximum retweet count to simulate", type=int)
-    parser.add_argument('--sample_split', help="split tasks (default: 1, has to divide 'samples', changes RNG)",
-                        type=int, default=1)
+    parser.add_argument(
+        '--sample_split',
+        help="split tasks (default: 1, has to divide 'samples', changes RNG)",
+        type=int,
+        default=1,
+    )
     parser.add_argument('--seed', help="seed for RNG", type=int)
-    parser.add_argument("command", choices=['learn_discount', 'learn_corr', 'optimize', 'sim', 'simtweets', 'val'])
+    parser.add_argument(
+        "command",
+        choices=['learn_discount', 'learn_corr', 'optimize', 'sim', 'simtweets', 'val'],
+    )
     parser.add_argument("topic")
     args = parser.parse_args()
 
@@ -68,12 +81,17 @@ def parse_args():
 
 
 def build_sim(args):
-    """ Construct simulation object. """
+    """Construct simulation object."""
     if args.graph.endswith('.adjlist'):
-        A, node_labels = read.adjlist(args.graph, save_as=args.graph.replace('.adjlist', '.adjlist.npz'))
+        A, node_labels = read.adjlist(
+            args.graph, save_as=args.graph.replace('.adjlist', '.adjlist.npz')
+        )
     elif args.graph.endswith('.metis'):
-        A, node_labels = read.metis(args.graph, zero_based=args.metis_zero_based,
-                                    save_as=args.graph.replace('.metis', '.npz'))
+        A, node_labels = read.metis(
+            args.graph,
+            zero_based=args.metis_zero_based,
+            save_as=args.graph.replace('.metis', '.npz'),
+        )
     elif args.graph.endswith('.npz'):
         A, node_labels = read.labelled_graph(args.graph)
         if args.tweets:
@@ -92,10 +110,8 @@ def build_sim(args):
     if args.source_map:
         source_map = read.source_map(args.source_map)
 
-    if args.params:
-        sim = simulation.Simulation(A, stats, source_map, params=read.params(args.params), seed=args.seed)
-    else:
-        sim = simulation.Simulation(A, stats, source_map, seed=args.seed)
+    params = read.params(args.params) if args.params else None
+    sim = simulation.Simulation(A, stats, source_map, params=params, seed=args.seed)
 
     if args.max_depth:
         sim.params.max_depth = args.max_depth
@@ -109,7 +125,9 @@ def build_sim(args):
         sim.params['corr'] = read.single_param(args.corr)
 
     # Sort features by decreasing expected runtime
-    sim.stats.sort_values(by=['mean_retweets', 'retweet_probability'], ascending=False, inplace=True)
+    sim.stats.sort_values(
+        by=['mean_retweets', 'retweet_probability'], ascending=False, inplace=True
+    )
     sim.features = sim.stats.index  # TODO check if necessary
     sim.params = sim.params.reindex(index=sim.features)
 
@@ -129,11 +147,11 @@ def agg_statistics(feature_results):
     r = pd.DataFrame(feature_results, columns=['feature', 'results'])
     r[['author_feature', 'tweet_feature']] = pd.DataFrame(r['feature'].tolist())
     r[['mean_retweets', 'retweet_probability']] = pd.DataFrame(r['results'].tolist())
-    stats = r.groupby(['author_feature', 'tweet_feature']).agg(
+    return r.groupby(['author_feature', 'tweet_feature']).agg(
         tweets=('feature', 'size'),  # TODO: multiply with authors * samples
         mean_retweets=('mean_retweets', 'mean'),
-        retweet_probability=('retweet_probability', 'mean'))
-    return stats
+        retweet_probability=('retweet_probability', 'mean'),
+    )
 
 
 def explode_tweets(tweet_results):
@@ -151,7 +169,7 @@ def explode_tweets(tweet_results):
     return r[['author', 'author_feature', 'tweet_feature', 'retweets']]
 
 
-def mae(sim, real=0.):
+def mae(sim, real=0.0):
     return (sim - real).abs().mean()
 
 
@@ -167,29 +185,27 @@ def main():
     start_time = time.time()
     args = parse_args()
     if MPI.COMM_WORLD.Get_rank() == 0:
+        pd_setup()
+        print(f"mpi_size: {MPI.COMM_WORLD.Get_size()}")
+        print(f"mpi_vendor: {MPI.get_vendor()}")
+        print(f"args: {vars(args)}")
+        print(f"argv: {' '.join(sys.argv)}")
+        t = time.time()
+
         try:
-            pd_setup()
-            print(f"mpi_size: {MPI.COMM_WORLD.Get_size()}")
-            print(f"mpi_vendor: {MPI.get_vendor()}")
-            print("code_version: " + subprocess.run(['git', 'describe', '--tags', '--dirty'],
-                                                    capture_output=True, text=True).stdout.rstrip())
-            print(f"args: {vars(args)}")
-            print(f"argv: {' '.join(sys.argv)}")
-
-            t = time.time()
+            code_version = subprocess.run(
+                ['git', 'describe', '--tags', '--dirty'], capture_output=True, text=True
+            ).stdout.rstrip()
             sim = build_sim(args)
-            print(f"readtime: {time.time() - t}")
-            t = time.time()
-
-            print(f"seed: {sim.seed.entropy}")
-        # except SystemExit as e:
-        #     sys.stderr.flush()
-        #     MPI.COMM_WORLD.Abort(e.code)
-        #     return e.code
         except Exception as e:
             print(e, flush=True, file=sys.stderr)
             MPI.COMM_WORLD.Abort(1)
             return
+        print(f"code_version: {code_version}")
+        print(f"readtime: {time.time() - t}")
+        t = time.time()
+
+        print(f"seed: {sim.seed.entropy}")
     else:
         propagation.compile()
         sim = None
@@ -200,72 +216,87 @@ def main():
             print(f"setuptime: {time.time() - t}", flush=True)
             t = time.time()
 
-            if args.command == 'learn_discount':
-                discount = sim.discount_factor_from_mean_retweets(samples=args.samples, eps=args.epsilon)
-                discount.to_csv(f'{args.outdir}/discount-{args.topic}-{args.runid}.csv')
-                sim.params['discount_factor'] = discount
-                sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
-
-            elif args.command == 'learn_corr':
-                corr = sim.corr_from_mean_retweets(samples=args.samples, eps=args.epsilon)
-                corr.to_csv(f'{args.outdir}/corr-{args.topic}-{args.runid}.csv')
-                sim.params['corr'] = corr
-                sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
-
-            elif args.command == 'optimize':
-                opts = optimize.hillclimb(sim, num=20, sources=None if args.sources < 1 else args.sources,
-                                          samples=args.samples, timeout=3600)
-                sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
-                with open(f'{args.outdir}/optimize-{args.topic}-{args.runid}.pyon', 'w') as f:
-                    f.write(repr(opts))
-
-                # last history element in first optimization
-                objective = pd.Series({k: o[0][1][-1] for k, o in opts.items()})
-                real = sim.stats.mean_retweets
-                sim = real + objective
-                print(f'mae: {mae(sim, real)}')
-                print(f'mape: {mape(sim, real)}')
-                print(f'wmape: {wmape(sim, real)}')
-
-            elif args.command == 'val':
-                print(f'{len(sim.features)} features, {args.sources} sources, {args.samples} samples')
-                r = agg_statistics((feature, sim.simulate(feature, sources=args.sources, samples=args.samples))
-                                   for feature in sim.features)
-                # for feature in [('0000', '0000')])
-
-                # assert r.index.equals(sim.stats.index)
-                # r = r.reindex(index=sim.features)
-                r.columns = pd.MultiIndex.from_product([['sim'], r.columns])
-                r[('real', 'mean_retweets')] = sim.stats.mean_retweets
-                r[('real', 'retweet_probability')] = sim.stats.retweet_probability
-
-                r.to_csv(f'{args.outdir}/results-val-{args.topic}-{args.runid}.csv')
-                # r = pd.read_csv(..., header=[0,1], index_col=[0,1])
-
-                pretty = r.swaplevel(axis=1).sort_index(axis=1).drop(columns='tweets')
-                pretty.index = r.index.to_flat_index()
-                print(pretty)
-
-                print(f"mae_retweet_probability: {mae(r.sim.retweet_probability, r.real.retweet_probability)}")
-                print(f"mae_mean_retweets: {mae(r.sim.mean_retweets, r.real.mean_retweets)}")
-                print(f"mape_retweet_probability: {mape(r.sim.retweet_probability, r.real.retweet_probability)}")
-                print(f"mape_mean_retweets: {mape(r.sim.mean_retweets, r.real.mean_retweets)}")
-                print(f"wmape_retweet_probability: {wmape(r.sim.retweet_probability, r.real.retweet_probability)}")
-                print(f"wmape_mean_retweets: {wmape(r.sim.mean_retweets, r.real.mean_retweets)}")
-
-            elif args.command == 'sim':
-                r = agg_statistics((feature, sim.simulate(feature, sources=args.sources, samples=args.samples))
-                                   for feature in sim.sample_feature(args.features))
-                r.to_csv(f'{args.outdir}/results-sim-{args.topic}-{args.runid}.csv')
-                print(r)
-
-            elif args.command == 'simtweets':
-                r = explode_tweets(sim.run(num_features=args.features, num_sources=args.sources, samples=args.samples))
-                r.to_csv(f'{args.outdir}/results-simtweets-{args.topic}-{args.runid}.csv')
-                print(r)
+            run(sim, args)
 
             print(f"runtime: {time.time() - t}")
             print(f"totaltime: {time.time() - start_time}")
+
+
+def run(sim, args):
+    if args.command == 'learn_discount':
+        discount = sim.discount_factor_from_mean_retweets(samples=args.samples, eps=args.epsilon)
+        discount.to_csv(f'{args.outdir}/discount-{args.topic}-{args.runid}.csv')
+        sim.params['discount_factor'] = discount
+        sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
+
+    elif args.command == 'learn_corr':
+        corr = sim.corr_from_mean_retweets(samples=args.samples, eps=args.epsilon)
+        corr.to_csv(f'{args.outdir}/corr-{args.topic}-{args.runid}.csv')
+        sim.params['corr'] = corr
+        sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
+
+    elif args.command == 'optimize':
+        opts = optimize.hillclimb(
+            sim,
+            num=1,
+            sources=None if args.sources < 1 else args.sources,
+            samples=args.samples,
+            timeout=6,
+        )
+        sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
+        with open(f'{args.outdir}/optimize-{args.topic}-{args.runid}.pyon', 'w') as f:
+            f.write(repr(opts))
+
+        # last history element in first optimization
+        objective = pd.Series({k: o[0][1][-1] for k, o in opts.items()})
+        real = sim.stats.mean_retweets
+        sim = real + objective
+        print(f'mae: {mae(sim, real)}')
+        print(f'mape: {mape(sim, real)}')
+        print(f'wmape: {wmape(sim, real)}')
+
+    elif args.command == 'val':
+        print(f'{len(sim.features)} features, {args.sources} sources, {args.samples} samples')
+        r = agg_statistics(
+            (feature, sim.simulate(feature, sources=args.sources, samples=args.samples))
+            for feature in sim.features
+        )
+        # for feature in [('0000', '0000')])
+
+        # assert r.index.equals(sim.stats.index)
+        # r = r.reindex(index=sim.features)
+        r.columns = pd.MultiIndex.from_product([['sim'], r.columns])
+        r[('real', 'mean_retweets')] = sim.stats.mean_retweets
+        r[('real', 'retweet_probability')] = sim.stats.retweet_probability
+
+        r.to_csv(f'{args.outdir}/results-val-{args.topic}-{args.runid}.csv')
+        # r = pd.read_csv(..., header=[0,1], index_col=[0,1])
+
+        pretty = r.swaplevel(axis=1).sort_index(axis=1).drop(columns='tweets')
+        pretty.index = r.index.to_flat_index()
+        print(pretty)
+
+        def print_error(measure, stat, real=r.real, sim=r.sim):
+            print(f"{measure.__name__}_{stat}: {measure(sim[stat], real[stat])}")
+
+        for stat in ['retweet_probability', 'mean_retweets']:
+            for measure in [mae,mape,wmape]:
+                print_error(measure, stat)
+
+    elif args.command == 'sim':
+        r = agg_statistics(
+            (feature, sim.simulate(feature, sources=args.sources, samples=args.samples))
+            for feature in sim.sample_feature(args.features)
+        )
+        r.to_csv(f'{args.outdir}/results-sim-{args.topic}-{args.runid}.csv')
+        print(r)
+
+    elif args.command == 'simtweets':
+        r = explode_tweets(
+            sim.run(num_features=args.features, num_sources=args.sources, samples=args.samples)
+        )
+        r.to_csv(f'{args.outdir}/results-simtweets-{args.topic}-{args.runid}.csv')
+        print(r)
 
 
 def pd_setup():

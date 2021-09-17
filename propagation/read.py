@@ -20,28 +20,33 @@ def adjlist(filename, save_as=None):
     with open(filename) as f:
         for line in f:
             nodes = [labels[int(v)] for v in line.split()]
-            mtx[nodes[0], sorted(nodes[1:])] = 1.
-    mtx = mtx.tocsr()
-
-    if save_as:
-        save_labelled_graph(save_as, mtx, node_labels)
-    return mtx, node_labels
+            mtx[nodes[0], sorted(nodes[1:])] = 1.0
+    return save_labelled_graph(save_as, mtx, node_labels)
 
 
 def save_labelled_graph(filename, A, node_labels, compressed=False):
-    savez = np.savez_compressed if compressed else np.savez
-    if isinstance(node_labels, range):  # Store just starting index for ranges
-        node_labels = node_labels.start
-    savez(filename, data=False, indices=A.indices, indptr=A.indptr, shape=A.shape, node_labels=node_labels)
+    A = A.tocsr()
+    if filename:
+        savez = np.savez_compressed if compressed else np.savez
+        if isinstance(node_labels, range):  # Store just starting index for ranges
+            node_labels = node_labels.start
+        savez(
+            filename,
+            data=False,
+            indices=A.indices,
+            indptr=A.indptr,
+            shape=A.shape,
+            node_labels=node_labels,
+        )
+    return A, node_labels
 
 
 def labelled_graph(filename):
     loader = np.load(filename)
     data = loader['data']
     if not data.shape:
-        data = np.full(loader['indices'].shape, 1.)
-    A = csr_matrix((data, loader['indices'], loader['indptr']),
-                   shape=loader['shape'])
+        data = np.full(loader['indices'].shape, 1.0)
+    A = csr_matrix((data, loader['indices'], loader['indptr']), shape=loader['shape'])
 
     node_labels = loader['node_labels']
     if not node_labels.shape and loader['shape'][0]:  # Restore saved range
@@ -57,12 +62,9 @@ def metis(filename, zero_based=False, save_as=None):
         for (node, neighbors) in enumerate(f.readlines()):
             neighbors = [int(v) - (1 if not zero_based else 0) for v in neighbors.split()]
             if neighbors:
-                mtx[node, sorted(neighbors)] = 1.
+                mtx[node, sorted(neighbors)] = 1.0
         node_labels = range(n) if zero_based else range(1, n + 1)
-        mtx = mtx.tocsr()
-        if save_as:
-            save_labelled_graph(save_as, mtx, node_labels)
-        return mtx, node_labels
+        return save_labelled_graph(save_as, mtx, node_labels)
 
 
 def tweets(file, node_labels, id_type='metis'):
@@ -73,8 +75,12 @@ def tweets(file, node_labels, id_type='metis'):
 
     csv = pd.read_csv(file)
 
-    csv['author_feature'] = str_cat_series(csv['verified'], csv['activity'], csv['defaultprofile'], csv['userurl'])
-    csv['tweet_feature'] = str_cat_series(csv['hashtag'], csv['tweeturl'], csv['mentions'], csv['media'])
+    csv['author_feature'] = str_cat_series(
+        csv['verified'], csv['activity'], csv['defaultprofile'], csv['userurl']
+    )
+    csv['tweet_feature'] = str_cat_series(
+        csv['hashtag'], csv['tweeturl'], csv['mentions'], csv['media']
+    )
 
     if isinstance(node_labels, range):
         a, b = node_labels.start, node_labels.stop
@@ -83,18 +89,25 @@ def tweets(file, node_labels, id_type='metis'):
         r = {node: idx for idx, node in enumerate(node_labels)}
         reverse = lambda x: r.get(x, None)
 
-    csv['source'] = pd.Series((reverse(author) for author in csv[f'author_{id_type}']), dtype='Int64')
+    csv['source'] = pd.Series(
+        (reverse(author) for author in csv[f'author_{id_type}']), dtype='Int64'
+    )
 
     return csv[['source', 'author_feature', 'tweet_feature', 'retweets']]
 
 
 def stats(file):
-    stats = pd.read_csv(file, dtype={'author_feature': str,
-                                     'tweet_feature': str,
-                                     'tweets': 'Int64',
-                                     'retweet_probability': float,
-                                     'mean_retweets': float,
-                                     'max_retweets': 'Int64'})
+    stats = pd.read_csv(
+        file,
+        dtype={
+            'author_feature': str,
+            'tweet_feature': str,
+            'tweets': 'Int64',
+            'retweet_probability': float,
+            'mean_retweets': float,
+            'max_retweets': 'Int64',
+        },
+    )
     # set default max retweets if not provided
     if 'max_retweets' not in stats.columns:
         stats['max_retweets'] = 100

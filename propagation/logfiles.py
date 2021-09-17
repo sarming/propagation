@@ -72,11 +72,10 @@ def parse_stats(s):
             args = ast.literal_eval(m.group(1))
         except ValueError:
             from argparse import Namespace
+
             args = vars(eval(m.group(1)))
-            pass
         finally:
             res.update(args)
-
     return res
 
 
