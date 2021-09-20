@@ -14,7 +14,7 @@ if __name__ == "__main__" and __package__ is None:
     __package__ = "propagation"
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.path.pardir))
 
-from . import mpi, optimize, read, simulation, propagation
+from . import mpi, read, simulation, propagation
 
 
 def parse_args():
@@ -197,10 +197,12 @@ def main():
                 ['git', 'describe', '--tags', '--dirty'], capture_output=True, text=True
             ).stdout.rstrip()
             sim = build_sim(args)
+            print(sim.params)
         except Exception as e:
-            print(e, flush=True, file=sys.stderr)
-            MPI.COMM_WORLD.Abort(1)
-            return
+            raise e
+        #     print(e, flush=True, file=sys.stderr)
+        # MPI.COMM_WORLD.Abort(1)
+        # return
         print(f"code_version: {code_version}")
         print(f"readtime: {time.time() - t}")
         t = time.time()
@@ -236,7 +238,7 @@ def run(sim, args):
         sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
 
     elif args.command == 'optimize':
-        opts = optimize.hillclimb(
+        opts = localsearch.hillclimb(
             sim,
             num=1,
             sources=None if args.sources < 1 else args.sources,
@@ -280,7 +282,7 @@ def run(sim, args):
             print(f"{measure.__name__}_{stat}: {measure(sim[stat], real[stat])}")
 
         for stat in ['retweet_probability', 'mean_retweets']:
-            for measure in [mae,mape,wmape]:
+            for measure in [mae, mape, wmape]:
                 print_error(measure, stat)
 
     elif args.command == 'sim':

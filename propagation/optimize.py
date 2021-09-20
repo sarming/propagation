@@ -1,42 +1,159 @@
-import time
-from collections import defaultdict
 from functools import wraps
-from heapq import heapify, nsmallest
-from itertools import product
-from math import floor
+from typing import Protocol, Iterator, Tuple, Any, Callable, TypeVar, Optional
 
 import numpy as np
+import pandas as pd
+
+from propagation.searchspace import SearchSpace, bisect, middle_value, Point
+
+Result = TypeVar('T')
+Fun = Callable[[Point], Result]
+ObjectiveFun = Callable[[Result], float]
 
 
-def invert_monotone(fun, goal, lb, ub, eps, logging=False):
-    """Find fun^-1( goal ) by binary search.
+class FindRoot(Protocol):
+    def __iter__(self) -> Iterator[Tuple[float, Point]]:
+        ...
 
-    Note:
-        For correctness fun has to be monotone up to eps, viz. fun(x) <= fun(x+eps) for all x
-        This is an issue with stochastic functions.
+    def state(self) -> Any:
+        ...
 
-    Args:
-        fun: Monotone Function.
-        goal: Goal value.
-        lb: Initial lower bound.
-        ub: Initial upper bound.
-        eps: Precision at which to stop.
-        logging: Print function calls and results.
 
-    Returns: x s.t. lb<x<ub and there is y with |x-y|<=eps and fun(y)=goal
-    """
-    mid = (ub + lb) / 2
-    if ub - lb < eps:
-        return mid
-    if logging:
-        print(f'f({mid})=', end='')
-    f = fun(mid)
-    if logging:
-        print(f"{f}{'<' if f < goal else '>'}{goal} [{lb},{ub}]")
-    if f < goal:
-        return invert_monotone(fun, goal, mid, ub, eps, logging)
-    else:
-        return invert_monotone(fun, goal, lb, mid, eps, logging)
+class FindRootFactory(Protocol):
+    def __call__(
+        self,
+        f: Fun,
+        domain: SearchSpace,
+        objective: ObjectiveFun,
+        initial: Optional[Point],
+        seed=None,
+    ) -> FindRoot:
+        ...
+
+
+class WithHistory:
+    def __init__(self, o: FindRoot):
+        self.o = o
+        self.history = []
+
+    def __iter__(self):
+        for res in self.o:
+            self.history.append(res)
+            yield res
+
+    def best(self):
+        return min((abs(o), p) for o, p in self.history)[1]
+
+    def state(self):
+        return self.o.state(), self.history
+
+
+class WithCallback:
+    def __init__(self, o: FindRoot, callback, *vars):
+        self.o = o
+        self.callback = callback
+        self.vars = vars
+
+    def __iter__(self):
+        for res in self.o:
+            if self.callback(res, self.o, *self.vars):
+                continue
+            yield res
+
+    def state(self):
+        return self.o.state()
+
+
+class FindRootParallel:
+    def __init__(self, opts):
+        self.opts = [iter(o) for o in opts]
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return min(o.__next__() for o in self.opts)
+
+    def state(self):
+        return [o.state() for o in self.opts]
+
+
+class FindRootCollection:
+    def __init__(self, opts):
+        self.active = {key: [iter(o) for o in os] for key, os in opts.items()}
+        self.opts = opts
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        next_active = {}
+        res = {}
+        for key, opts in self.active.items():
+            next_opts = []
+            res_opts = []
+            print(key)
+            for o in opts:
+                try:
+                    r = o.__next__()
+                    next_opts.append(o)
+                    res_opts.append(r)
+                except StopIteration:
+                    pass
+            next_active[key] = next_opts
+            res[key] = res_opts
+        self.active = next_active
+
+        if not any(self.active.values()):
+            raise StopIteration()
+
+        return res
+
+        # return {key: [o.__next__() for o in opts] for key, opts in self.opts.items()}
+
+    def best(self):
+        return {key: [o.best() for o in opts] for key, opts in self.opts.items()}
+
+    def state(self):
+        return {key: [o.state() for o in opts] for key, opts in self.opts.items()}
+
+
+class MonotoneRoot:
+    def __init__(
+        self, f: Fun, domain: SearchSpace, objective: ObjectiveFun, initial=None, seed=None
+    ):  # implement initial
+        assert len(domain.dims) == 1
+        self.dim = tuple(domain.dims)[0]
+        self.bound = domain.bounds[self.dim]
+        self.f = f
+        self.objective = objective
+
+    def __iter__(self):
+        def _middle():
+            return Point({self.dim: middle_value(self.bound)})
+
+        self.mid = _middle()
+        self.result = self.f(self.mid)
+
+        while True:
+            result = self.objective(self.result)
+            lower, upper = bisect(middle_value(self.bound), self.bound)
+            mid = _middle()
+            print(f'f({mid})={result} (={self.result}) {self.bound}')
+
+            if not (lower and upper):  # could be improved to use midpoint of remaining
+                return result, mid
+            print(result)
+            self.bound = upper if result < 0 else lower
+            self.mid = _middle()
+            self.result = self.f(self.mid)
+            yield result, mid
+
+    def state(self):
+        return self.result, self.bound
+
+    def best(self):
+        return self.mid
 
 
 def logging(fun):
@@ -48,6 +165,23 @@ def logging(fun):
         return fun(*args, **kwargs)
 
     return wrapper
+
+
+def calculate_retweet_probability(A, sources, p, at_least_one):
+    """Return average number of retweeted messages when starting from sources using edge probability p.
+
+    Args:
+        A: Adjacency matrix of graph.
+        sources: List of source nodes, one per tweet.
+        p: Edge probability.
+
+    Returns:
+        mean_{x in sources} 1-(1-p)^{deg-(x)}
+        This is the expected value of simulate(A, sources, p, depth=1)[1].
+    """
+    if at_least_one:
+        return p
+    return sum(1 - (1 - p) ** float(A.indptr[x + 1] - A.indptr[x]) for x in sources) / len(sources)
 
 
 def single_objective(sim, feature, statistic, absolute=True):
@@ -64,144 +198,50 @@ def single_objective(sim, feature, statistic, absolute=True):
     return obj
 
 
-def in_bound(value, bound):
-    if isinstance(bound, tuple):
-        return bound[0] <= value <= bound[1]
-    return value in bound
-
-
-def discretize(value, bound):
-    if not isinstance(bound, tuple):  # only continuous bounds need to be discretized
-        return value
-    lb, ub, width = bound
-    k = floor((value - lb) / width)
-    return lb + k * width
-
-
-def bound_size(bound):
-    if not isinstance(bound, tuple):  # only continuous bounds need to be discretized
-        return len(bound)
-    lb, ub, width = bound
-    return floor((ub - lb) / width)
-
-
-def all_values(bound):
-    if isinstance(bound, tuple):
-        lb, ub, width = bound
-        while lb < ub:
-            yield lb
-            lb += width
-    else:
-        yield from bound
-
-
-def random_value(bound, rng=np.random.default_rng()):
-    if isinstance(bound, tuple):
-        lb, ub, _ = bound
-        if isinstance(lb, int):
-            return discretize(rng.integers(lb, ub, endpoint=True), bound)
-        if isinstance(lb, float):
-            return discretize(rng.uniform(lb, ub), bound)
-        assert False
-    return rng.choice(bound)
-
-
-class Domain:
-    def __init__(self, bounds):
-        self.bounds = bounds
-        self.dims = bounds.keys()
-
-    class Point(dict):  # https://stackoverflow.com/a/1151686/153408
-        def __key(self):
-            return tuple((k, self[k]) for k in sorted(self))
-
-        def __hash__(self):
-            return hash(self.__key())
-
-        def __eq__(self, other):
-            return self.__key() == other.__key()
-
-        def __lt__(self, other):
-            return self.__key() < other.__key()
-
-    def to_point(self, dictlike):
-        return Domain.Point(
-            {dim: dictlike[dim] for dim in self.dims}
-        )  # Use only keys from self.dims
-
-    def in_bounds(self, point):
-        return all(in_bound(point[dim], self.bounds[dim]) for dim in self.dims)
-
-    def step(self, point, dim, steps, neg=False):
-        if isinstance(steps, dict):
-            steps = steps[dim]
-        if neg:
-            steps = -steps
-        point = Domain.Point(point)  # Copy point
-        bound = self.bounds[dim]
-        old = point[dim]
-        if isinstance(bound, tuple):
-            lb, ub, stepwidth = bound
-            point[dim] = discretize(old, bound) + steps * stepwidth
-            if point[dim] < lb:
-                point[dim] = lb
-            elif point[dim] > ub:
-                point[dim] = ub
-        else:
-            point[dim] = bound[(bound.index(old) + steps) % len(bound)]
-        return point
-
-    def random_point(self, n=None, rng=np.random.default_rng()):
-        def rnd_point():
-            return Domain.Point({dim: random_value(self.bounds[dim], rng) for dim in self.dims})
-
-        if n is None:
-            return rnd_point()
-        return [rnd_point() for _ in range(n)]
-
-    def all_points(self):
-        values = product(*[all_values(bound) for bound in self.bounds.values()])
-        for v in values:
-            yield dict(zip(self.bounds.keys(), v))
-
-    def size(self):
-        return np.prod([bound_size(bound) for bound in self.bounds.values()])
-
-
 def set_params(point, sim, feature):
     for dim, value in point.items():
         sim.params.at[feature, dim] = value
 
 
 def optimize_all_features(
+    factory,
+    callback,
     sim,
     domain=None,
     statistic='mean_retweets',
     sources=None,
     samples=500,
     explore_current_point=True,
-    num=None,
+    num=1,
 ):
     def optimize(feature):
-        return optimize_feature(
-            sim,
-            feature,
-            domain=domain,
-            statistic=statistic,
-            sources=sources,
-            samples=samples,
-            explore_current_point=explore_current_point,
+        return WithHistory(
+            WithCallback(
+                optimize_feature(
+                    factory,
+                    sim,
+                    feature,
+                    domain=domain,
+                    statistic=statistic,
+                    sources=sources,
+                    samples=samples,
+                    explore_current_point=explore_current_point,
+                ),
+                callback,
+                feature,
+            )
         )
 
-    if num is None:
-        return {feature: optimize(feature) for feature in sim.features}
-    return {feature: [optimize(feature) for _ in range(num)] for feature in sim.features}
+    return FindRootCollection(
+        {feature: [optimize(feature) for _ in range(num)] for feature in sim.features}
+    )
 
 
 def optimize_feature(
+    factory: FindRootFactory,
     sim,
-    feature,
-    domain=None,
+    feature: str,
+    domain: SearchSpace = None,
     statistic='mean_retweets',
     sources=None,
     samples=500,
@@ -216,14 +256,12 @@ def optimize_feature(
             'max_nodes': range(100, 860, 20),
             'max_depth': [100],
         }
-    if not isinstance(domain, Domain):
-        domain = Domain(domain)
+    if not isinstance(domain, SearchSpace):
+        domain = SearchSpace(domain)
     objective = single_objective(sim, feature, statistic)
     f = lambda point: sim.simulate(feature, point, sources, samples, True)
-    o = Optimize(f, domain, objective, sim.seed.spawn(1)[0])
-    if explore_current_point:
-        o.explore_point(sim.params.astype('object').loc[feature], force=True)
-    return o
+    i = domain.to_point(sim.params.astype('object').loc[feature]) if explore_current_point else None
+    return factory(f, domain, objective, initial=i, seed=sim.seed.spawn(1)[0])
 
 
 def combine_results(results):
@@ -231,267 +269,122 @@ def combine_results(results):
     return np.mean(mean_retweets), np.mean(retweet_probability)
 
 
-class Optimize:
-    def __init__(self, f, domain, objective, seed=None):
-        self.f = f
-        self.dom = domain
-        self.objective = objective
-        self.rng = np.random.default_rng(seed)
+def edge_probability_from_retweet_probability(sim, sources=None, eps=1e-5, features=None):
+    """Find edge probability for given feature vector (or all if none given)."""
+    if features is None:
+        features = sim.features
 
-        self.dirs = list(product(self.dom.dims, [False, True]))
-
-        self.points = defaultdict(list)
-        self.solutions = []
-        self.raw_results = []
-        self.history = []
-
-    def explore_point(self, point, force=False):
-        if not isinstance(point, Domain.Point):
-            point = self.dom.to_point(point)
-        if (not self.dom.in_bounds(point) or self.visited(point)) and not force:
-            return False
-        result = self.f(point)
-        self.raw_results.append((result, point))
-        self.points.get(point)  # Access to add key to dict
-        # print(f'add point {point}')
-        return True
-
-    def evaluate(self):
-        self.register(self.raw_results)
-        if self.raw_results:
-            print('.', flush=True, end='')
-        self.raw_results = []
-
-    def register(self, results):
-        for result, point in results:
-            self.points[point].append(tuple(result))
-        self.solutions = [
-            (self.objective(combine_results(r)), point) for point, r in self.points.items() if r
-        ]
-        heapify(self.solutions)
-        if self.solutions:
-            self.history.append(self.solutions[0][0])
-
-    def register_from(self, other, k_best=None):
-        """Register k_best points with results from other (all points if k_best is None)."""
-        points = other.points.keys() if k_best is None else other.best(k_best)
-        self.register((r, p) for p in points for r in other.points[p])
-        # self.register((combine_results(other.points[p]), p) for p in points)
-
-    def visited(self, point):
-        return point in self.points
-
-    def stuck(self, steps=1, k_best=1):
-        return self.points and all(
-            self.dom.step(p, dim, steps, neg) in self.points
-            for p in self.best(k_best)
-            for dim, neg in self.dirs
+    def fun(feature):
+        s = sim._default_sources(sources, feature)
+        alo = sim.params.at[feature, 'at_least_one']
+        return lambda p: calculate_retweet_probability(
+            sim.A,
+            s,
+            p['retweet_probability'],
+            alo,
         )
 
-    def state(self):
-        return self.points, self.history
+    def obj(feature):
+        goal = sim.stats.at[feature, 'retweet_probability']
+        print('goal:', goal)
+        return lambda x: x - goal
 
-    def take_all_dirs(self, point, steps=1):
-        for dim, neg in self.dirs:
-            self.explore_point(self.dom.step(point, dim, steps, neg))
-
-    def take_random_dir(self, point, steps=1):
-        dirs = self.rng.permutation(self.dirs)
-        for dim, neg in dirs:
-            p = self.dom.step(point, dim, steps, neg)
-            if self.explore_point(p):
-                return True
-        return False
-
-    def iterate_stochastic(self, steps=1, k_best=1, n_dirs=1):
-        self.evaluate()
-        for point in self.best(k_best):
-            for _ in range(n_dirs):
-                self.take_random_dir(point, steps)
-
-    def iterate_steep(self, steps=1, k_best=1):
-        self.evaluate()
-        for point in self.best(k_best):
-            self.take_all_dirs(point, steps)
-
-    def full_grid(self, force=False):
-        # self.evaluate() # Can ignore old results
-        for point in self.dom.all_points():
-            self.explore_point(point, force)
-
-    def best(self, n=None):
-        if n is None:
-            return self.solutions[0][1]
-        return [x[1] for x in self._best_solutions(n)]
-
-    def _best_solutions(self, n=1):
-        if n == 1 and self.solutions:
-            return [self.solutions[0]]
-        return list(nsmallest(n, self.solutions))
-
-    def explore_random_point(self, n=1):
-        for point in self.dom.random_point(n, self.rng):
-            self.explore_point(point)
-
-    def reexplore_best(self, n=1):
-        for point in self.best(n):
-            self.explore_point(point, force=True)
-
-    def random_restart(self, n=1, keep=1):
-        self.evaluate()
-        old_solutions = self._best_solutions(keep)
-        self.solutions = []
-        self.points = defaultdict(list)
-        self.explore_random_point(n)
-        self.history.append(float('nan'))
-        return old_solutions
+    dom = SearchSpace({'retweet_probability': (0, 1, eps)})
+    opt = FindRootCollection(
+        {feature: [MonotoneRoot(fun(feature), dom, obj(feature))] for feature in features}
+    )
+    for _ in opt:
+        pass
+    print(opt.best())
+    return pd.Series({feature: o[0]['retweet_probability'] for feature, o in opt.best().items()})
 
 
-def hillclimb(sim, num=1, timeout=60, sources=None, samples=1000):
-    dom = {
-        # 'edge_probability': (0., 0.3, .001),
-        'discount_factor': (0.0, 1.0, 0.01),
-        'corr': (0.0, 0.005, 0.0001),
-    }
-    print(f'opt: {dom}')
+def learn(sim, param, goal_stat, lb, ub, eps, sources, samples, features=None):
+    if features is None:
+        features = sim.features
+    dom = SearchSpace({param: (lb, ub, eps)})
+    opt = FindRootCollection(
+        {
+            feature: [
+                WithHistory(
+                    MonotoneRoot(
+                        lambda point: sim.simulate(feature, point, sources, samples, True),
+                        dom,
+                        single_objective(sim, feature, goal_stat, absolute=False),
+                    )
+                )
+            ]
+            for feature in features
+        }
+    )
+    for _ in opt:
+        pass
+    return pd.Series(opt.best())
 
-    opts = optimize_all_features(
-        sim, domain=dom, sources=sources, samples=samples, explore_current_point=True, num=num
+
+# @timecall
+def learn(self, param, goal_stat, lb, ub, eps, params, sources, samples, features):
+    def set_param(value, feature):
+        p = self._default_params(params, feature)
+        p[param] = value
+        return p
+
+    def fun(feature):
+        return lambda x: list(
+            self.simulator(
+                A=self.A,
+                params=set_param(x, feature),
+                sources=self._default_sources(sources, feature),
+                samples=samples,
+                seed=self.seed.spawn(1)[0],
+            )
+        )[0 if goal_stat == 'mean_retweets' else 1]
+
+    if features is None:
+        features = self.features
+    return pd.Series(
+        (
+            invert_monotone(
+                fun=fun(f),
+                goal=self.stats.at[f, goal_stat],
+                lb=lb,
+                ub=ub,
+                eps=eps,
+                logging=True,
+            )
+            for f in features
+        ),
+        index=features,
     )
 
-    # print(list(opts.values())[0][0].dom.size())
 
-    best = optimize_all_features(
-        sim, domain=dom, sources=sources, samples=samples, explore_current_point=False
-    )
-    t = time.time()
-    while True:
-        for feature, os in opts.items():
-            for o in os:
-                o.evaluate()
-                for i in range(50):
-                    if not o.stuck(steps=i, k_best=2):
-                        o.iterate_steep(steps=1, k_best=2)
-                        break
-                else:
-                    best[feature].register_from(o, k_best=2)
-                    o.random_restart(n=1, keep=0)
-
-        if time.time() - t > timeout:
-            break
-
-    for feature, os in opts.items():
-        for o in os:
-            best[feature].register_from(o, k_best=2)
-
-    for feature, o in best.items():
-        set_params(o.best(), sim, feature)
-
-    return {
-        feature: [b.state()] + [o.state() for o in opts[feature]] for feature, b in best.items()
-    }
-
-
-def stochastic_hillclimb(sim, num=1, timeout=60, sources=None, samples=1000):
-    dom = {
-        # 'edge_probability': (0., 0.3, .001),
-        'discount_factor': (0.0, 1.0, 0.01),
-        'corr': (0.0, 0.005, 0.0001),
-    }
-    print(f'opt: {dom}')
-
-    random_starts = optimize_all_features(
-        sim, domain=dom, sources=sources, samples=samples, explore_current_point=False, num=num
+def discount_factor_from_mean_retweets(
+    self, params=None, sources=None, samples=1000, eps=0.1, features=None
+):
+    """Find discount factor for given feature vector (or all if none given)."""
+    return self.learn(
+        param='discount_factor',
+        goal_stat='mean_retweets',
+        lb=0.0,
+        ub=1.0,
+        eps=eps,
+        params=params,
+        sources=sources,
+        samples=samples,
+        features=features,
     )
 
-    best = optimize_all_features(
-        sim, domain=dom, sources=sources, samples=samples, explore_current_point=True
+
+def corr_from_mean_retweets(self, params=None, sources=None, samples=1000, eps=0.1, features=None):
+    """Find corr for given feature vector (or all if none given)."""
+    return self.learn(
+        param='corr',
+        goal_stat='mean_retweets',
+        lb=0.0,
+        ub=0.01,
+        eps=eps,
+        params=params,
+        sources=sources,
+        samples=samples,
+        features=features,
     )
-    t = time.time()
-    while True:
-        for feature, os in random_starts.items():
-            for o in os:
-                o.evaluate()
-                if o.stuck(steps=1, k_best=2):
-                    best[feature].register_from(o, k_best=2)
-                    o.random_restart(n=1, keep=0)
-                o.iterate_stochastic(steps=1, k_best=2)
-
-        if time.time() - t > timeout:
-            print('timeout')
-            break
-
-    for feature, os in random_starts.items():
-        best[feature].evaluate()
-        for o in os:
-            best[feature].register_from(o, k_best=2)
-
-    for feature, o in best.items():
-        set_params(o.best(), sim, feature)
-
-    return {
-        feature: [b.state()] + [o.state() for o in random_starts[feature]]
-        for feature, b in best.items()
-    }
-
-
-def optimize(sim, sources=None, samples=500):
-    dom = {
-        # 'edge_probability': (0., 0.3, .1),
-        'discount_factor': (0.0, 0.1, 0.1),
-        'corr': (0.0, 0.1, 0.1),
-    }
-    print(f'grid: {dom}')
-    grid = optimize_all_features(
-        sim, domain=dom, sources=sources, samples=samples, explore_current_point=False
-    )
-    dom = {
-        # 'edge_probability': (0., 0.3, .001),
-        'discount_factor': (0.0, 1.0, 0.01),
-        'corr': (0.0, 0.005, 0.0001),
-    }
-    print(f'opt: {dom}')
-    opts = optimize_all_features(sim, domain=dom, sources=sources, samples=samples)
-
-    for o in grid.values():
-        o.full_grid()
-        # o.full_grid(force=True) # Repeat
-
-    for o in opts.values():
-        o.explore_random_point(10)
-
-    for feature, o in opts.items():
-        grid[feature].evaluate()
-        o.register_from(grid[feature])
-    print('grid done', flush=True)
-
-    for _ in range(20):
-        for o in opts.values():
-            o.iterate_stochastic(steps=5, k_best=10)
-            # o.reexplore_best(10)
-    print('stochastic done', flush=True)
-
-    for _ in range(20):
-        for o in opts.values():
-            o.iterate_steep(k_best=5)
-            # o.reexplore_best(5)
-    print('hillclimb done', flush=True)
-
-    for feature, o in opts.items():
-        set_params(o.best(), sim, feature)
-
-    return {feature: o.state() for feature, o in opts.items()}
-
-
-# sourcery skip: hoist-if-from-if, merge-nested-ifs, remove-redundant-if
-if __name__ == "__main__":
-    from .simulation import Simulation
-
-    sim = Simulation.from_files(
-        'data/anon_graph_inner_neos_20201110.npz', 'data/sim_features_neos_20201110.csv', seed=3
-    )
-    # with mpi.futures(sim) as sim:
-    if True:
-        if sim is not None:
-            optimize(sim, 1, 1)
-            print(sim.params.to_csv())

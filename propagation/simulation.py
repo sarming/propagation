@@ -1,25 +1,8 @@
 import numpy as np
 import pandas as pd
 
+from propagation.optimize import edge_probability_from_retweet_probability
 from . import read, propagation
-from .optimize import invert_monotone
-
-
-def calculate_retweet_probability(A, sources, p, at_least_one):
-    """Return average number of retweeted messages when starting from sources using edge probability p.
-
-    Args:
-        A: Adjacency matrix of graph.
-        sources: List of source nodes, one per tweet.
-        p: Edge probability.
-
-    Returns:
-        mean_{x in sources} 1-(1-p)^{deg-(x)}
-        This is the expected value of simulate(A, sources, p, depth=1)[1].
-    """
-    if at_least_one:
-        return p
-    return sum(1 - (1 - p) ** float(A.indptr[x + 1] - A.indptr[x]) for x in sources) / len(sources)
 
 
 def tweet_statistics(tweets, min_size=10):
@@ -67,14 +50,14 @@ class Simulation:
 
         self.simulator = simulator
 
-        self.params['edge_probability'] = self.edge_probability_from_retweet_probability()
-        if params is not None:
-            self.params.update(params)
-
         if not isinstance(seed, np.random.SeedSequence):
             seed = np.random.SeedSequence(seed)  # Random if seed is None
         self.seed = seed
         self.rng = np.random.default_rng(self.seed)
+
+        self.params['edge_probability'] = edge_probability_from_retweet_probability(self)
+        if params is not None:
+            self.params.update(params)
 
     @classmethod
     def from_files(cls, graph_file, tweet_file, simulator=propagation.simulate, seed=None):
@@ -140,115 +123,6 @@ class Simulation:
         return params.fillna(
             default_params, downcast={'at_least_one': bool, 'max_nodes': int, 'max_depth': int}
         )
-
-    def edge_probability_from_retweet_probability(self, sources=None, eps=1e-5, features=None):
-        """Find edge probability for given feature vector (or all if none given)."""
-        if features is None:
-            features = self.features
-        return pd.Series(
-            (
-                invert_monotone(
-                    lambda p: calculate_retweet_probability(
-                        self.A,
-                        self._default_sources(sources, f),
-                        p,
-                        self.params.at[f, 'at_least_one'],
-                    ),
-                    self.stats.at[f, 'retweet_probability'],
-                    0,
-                    1,
-                    eps,
-                )
-                for f in features
-            ),
-            index=features,
-        )
-
-    # @timecall
-    def learn(self, param, goal_stat, lb, ub, eps, params, sources, samples, features):
-        def set_param(value, feature):
-            p = self._default_params(params, feature)
-            p[param] = value
-            return p
-
-        def fun(feature):
-            return lambda x: list(
-                self.simulator(
-                    A=self.A,
-                    params=set_param(x, feature),
-                    sources=self._default_sources(sources, feature),
-                    samples=samples,
-                    seed=self.seed.spawn(1)[0],
-                )
-            )[0 if goal_stat == 'mean_retweets' else 1]
-
-        if features is None:
-            features = self.features
-        return pd.Series(
-            (
-                invert_monotone(
-                    fun=fun(f),
-                    goal=self.stats.at[f, goal_stat],
-                    lb=lb,
-                    ub=ub,
-                    eps=eps,
-                    logging=True,
-                )
-                for f in features
-            ),
-            index=features,
-        )
-
-    def discount_factor_from_mean_retweets(
-        self, params=None, sources=None, samples=1000, eps=0.1, features=None
-    ):
-        """Find discount factor for given feature vector (or all if none given)."""
-        return self.learn(
-            param='discount_factor',
-            goal_stat='mean_retweets',
-            lb=0.0,
-            ub=1.0,
-            eps=eps,
-            params=params,
-            sources=sources,
-            samples=samples,
-            features=features,
-        )
-
-    def corr_from_mean_retweets(
-        self, params=None, sources=None, samples=1000, eps=0.1, features=None
-    ):
-        """Find corr for given feature vector (or all if none given)."""
-        return self.learn(
-            param='corr',
-            goal_stat='mean_retweets',
-            lb=0.0,
-            ub=0.01,
-            eps=eps,
-            params=params,
-            sources=sources,
-            samples=samples,
-            features=features,
-        )
-
-    def objective(
-        self,
-        feature,
-        statistic='mean_retweets',
-        absolute=True,
-        params=None,
-        sources=None,
-        samples=1,
-    ):
-        assert statistic in {'mean_retweets', 'retweet_probability'}
-
-        mean_retweets, retweet_probability = self.simulate(feature, params, sources, samples, True)
-
-        goal = self.stats.at[feature, statistic]
-        result = mean_retweets if statistic == 'mean_retweets' else retweet_probability
-        if absolute:
-            return abs(result - goal)
-        return result - goal
 
     # @timecall
     def simulate(self, feature=None, params=None, sources=None, samples=1, return_stats=True):
