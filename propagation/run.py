@@ -52,8 +52,7 @@ def parse_args():
     )
     parser.add_argument('--seed', help="seed for RNG", type=int)
     parser.add_argument(
-        "command",
-        choices=['learn_discount', 'learn_corr', 'optimize', 'sim', 'simtweets', 'val'],
+        "command", choices=['learn_discount', 'learn_corr', 'optimize', 'sim', 'simtweets', 'val'],
     )
     parser.add_argument("topic")
     args = parser.parse_args()
@@ -198,7 +197,6 @@ def main():
                 ['git', 'describe', '--tags', '--dirty'], capture_output=True, text=True
             ).stdout.rstrip()
             sim = build_sim(args)
-            print(sim.params)
         except Exception as e:
             raise e
         #     print(e, flush=True, file=sys.stderr)
@@ -227,13 +225,13 @@ def main():
 
 def run(sim, args):
     if args.command == 'learn_discount':
-        discount = sim.discount_factor_from_mean_retweets(samples=args.samples, eps=args.epsilon)
+        discount = optimize.discount_from_mean_retweets(sim, samples=args.samples, eps=args.epsilon)
         discount.to_csv(f'{args.outdir}/discount-{args.topic}-{args.runid}.csv')
         sim.params['discount_factor'] = discount
         sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
 
     elif args.command == 'learn_corr':
-        corr = sim.corr_from_mean_retweets(samples=args.samples, eps=args.epsilon)
+        corr = optimize.corr_from_mean_retweets(sim, samples=args.samples, eps=args.epsilon)
         corr.to_csv(f'{args.outdir}/corr-{args.topic}-{args.runid}.csv')
         sim.params['corr'] = corr
         sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')

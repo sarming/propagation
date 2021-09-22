@@ -7,7 +7,13 @@ from optimization.findroot import FindRootFactory
 from optimization.localsearch import SingleHillclimb
 from optimization.monotone import MonotoneRoot
 from optimization.searchspace import SearchSpace
-from optimization.wrap import WithHistory, WithCallback, FindRootParallel, FindRootMapping
+from optimization.wrap import (
+    WithHistory,
+    WithCallback,
+    FindRootParallel,
+    DictFindRoot,
+    WithAllTimeBest,
+)
 
 
 def calculate_retweet_probability(A, sources, p, at_least_one):
@@ -78,9 +84,11 @@ def optimize_all_features(
         optimize = lambda feature: WithHistory(opthist(feature))
     if num is not None:
         optnum = optimize
-        optimize = lambda feature: FindRootParallel([optnum(feature) for _ in range(num)])
+        optimize = lambda feature: WithAllTimeBest(
+            FindRootParallel([optnum(feature) for _ in range(num)])
+        )
 
-    return FindRootMapping({feature: optimize(feature) for feature in sim.features})
+    return DictFindRoot({feature: optimize(feature) for feature in sim.features})
 
 
 def optimize_feature(
@@ -92,6 +100,7 @@ def optimize_feature(
     sources=None,
     samples=500,
     explore_current_point=True,
+    absolute=True,
 ):
     if domain is None:
         domain = {
@@ -104,7 +113,7 @@ def optimize_feature(
         }
     if not isinstance(domain, SearchSpace):
         domain = SearchSpace(domain)
-    objective = single_objective(sim, feature, statistic)
+    objective = single_objective(sim, feature, statistic, absolute)
     f = lambda point: sim.simulate(feature, point, sources, samples, True)
     i = domain.to_point(sim.params.astype('object').loc[feature]) if explore_current_point else None
     return factory(f, domain, objective, initial=i, seed=sim.seed.spawn(1)[0])
@@ -123,12 +132,7 @@ def edge_probability_from_retweet_probability(sim, sources=None, eps=1e-5, featu
     def fun(feature):
         s = sim._default_sources(sources, feature)
         alo = sim.params.at[feature, 'at_least_one']
-        return lambda p: calculate_retweet_probability(
-            sim.A,
-            s,
-            p['retweet_probability'],
-            alo,
-        )
+        return lambda p: calculate_retweet_probability(sim.A, s, p['retweet_probability'], alo)
 
     def obj(feature):
         goal = sim.stats.at[feature, 'retweet_probability']
@@ -136,12 +140,11 @@ def edge_probability_from_retweet_probability(sim, sources=None, eps=1e-5, featu
         return lambda x: x - goal
 
     dom = SearchSpace({'retweet_probability': (0, 1, eps)})
-    opt = FindRootMapping(
+    opt = DictFindRoot(
         {feature: MonotoneRoot(fun(feature), dom, obj(feature)) for feature in features}
     )
     for _ in opt:
         pass
-    print(opt.best())
     return pd.Series({feature: o['retweet_probability'] for feature, o in opt.best().items()})
 
 
@@ -154,17 +157,13 @@ def learn(sim, param, goal_stat, lb, ub, eps, sources, samples, features=None):
     if features is None:
         features = sim.features
     dom = SearchSpace({param: (lb, ub, eps)})
-    opt = FindRootMapping(
+    opt = DictFindRoot(
         {
-            feature: [
-                WithHistory(
-                    MonotoneRoot(
-                        fun(feature),
-                        dom,
-                        single_objective(sim, feature, goal_stat, absolute=False),
-                    )
+            feature: WithHistory(
+                MonotoneRoot(
+                    fun(feature), dom, single_objective(sim, feature, goal_stat, absolute=False),
                 )
-            ]
+            )
             for feature in features
         }
     )
@@ -173,39 +172,37 @@ def learn(sim, param, goal_stat, lb, ub, eps, sources, samples, features=None):
     return pd.Series(opt.best())
 
 
-def discount_factor_from_mean_retweets(
-    self, params=None, sources=None, samples=1000, eps=0.1, features=None
-):
+def discount_from_mean_retweets(sim, sources=None, samples=1000, eps=0.1, features=None):
     """Find discount factor for given feature vector (or all if none given)."""
-    return self.learn(
+    return learn(
+        sim,
         param='discount_factor',
         goal_stat='mean_retweets',
         lb=0.0,
         ub=1.0,
         eps=eps,
-        params=params,
         sources=sources,
         samples=samples,
         features=features,
     )
 
 
-def corr_from_mean_retweets(self, params=None, sources=None, samples=1000, eps=0.1, features=None):
+def corr_from_mean_retweets(sim, sources=None, samples=1000, eps=0.1, features=None):
     """Find corr for given feature vector (or all if none given)."""
-    return self.learn(
+    return learn(
+        sim,
         param='corr',
         goal_stat='mean_retweets',
         lb=0.0,
         ub=0.01,
         eps=eps,
-        params=params,
         sources=sources,
         samples=samples,
         features=features,
     )
 
 
-def hillclimb(sim, num=1, timeout=60, sources=None, samples=1000):
+def hillclimb(sim, num=None, timeout=60, sources=None, samples=1000):
     dom = {
         # 'edge_probability': (0., 0.3, .001),
         'discount_factor': (0.0, 1.0, 0.01),
@@ -223,8 +220,9 @@ def hillclimb(sim, num=1, timeout=60, sources=None, samples=1000):
         num=num,
     )
     for i, res in zip(range(10), opts):
-        print(res)
-    return opts.state()
+        pass
+        # print(res)
+    return opts.best(), opts.state()
 
     # print(list(opts.values())[0][0].dom.size())
 

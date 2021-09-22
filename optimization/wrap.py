@@ -23,19 +23,19 @@ class WithHistory:
 class WithAllTimeBest:
     def __init__(self, o: FindRoot):
         self.o = o
-        self.best = (float("inf"), None)
+        self.current_best = (float("inf"), None)
 
     def __iter__(self):
         for res in self.o:
-            if res[0] <= self.best[0]:
-                self.best = res
+            if res[0] <= self.current_best[0]:
+                self.current_best = res
             yield res
 
     def best(self):
-        return self.best[1]
+        return self.current_best[1]
 
     def state(self):
-        return self.o.state(), self.best
+        return self.o.state(), self.current_best
 
 
 class WithCallback:
@@ -54,24 +54,6 @@ class WithCallback:
         return self.o.state()
 
 
-class WithAllTimeBest:
-    def __init__(self, o: FindRoot):
-        self.o = o
-        self.best = (float("inf"), None)
-
-    def __iter__(self):
-        for res in self.o:
-            if res[0] <= self.best[0]:
-                self.best = res
-            yield res
-
-    def best(self):
-        return self.best[1]
-
-    def state(self):
-        return self.o.state(), self.best
-
-
 class WithTimeout:
     def __init__(self, o: FindRoot, timeout_seconds):
         self.o = o
@@ -82,6 +64,26 @@ class WithTimeout:
         for res in self.o:
             if t + self.timeout >= time.time():
                 return res
+            yield res
+
+    def state(self):
+        return self.o.state()
+
+
+class WithPrint:
+    def __init__(self, o: FindRoot, *info, print_state=False, flush=False):
+        self.o = o
+        self.info = info
+        self.print_state = print_state
+        self.flush = flush
+
+    def __iter__(self):
+        for res in self.o:
+            print(*self.info, end=": ")
+            print(res, end=" ")
+            if self.print_state:
+                print(f"<<{self.o.state()}>>", end=" ")
+            print(flush=self.flush)
             yield res
 
     def state(self):
@@ -108,13 +110,13 @@ class FindRootParallel:
         res = sum((self._next_or_remove(o) for o in current_active), [])
         if not self.active:
             raise StopIteration()
-        return min(res, key=abs_value)[1]
+        return min(res, key=abs_value)
 
     def state(self):
         return [o.state() for o in self.opts]
 
 
-class FindRootMapping:
+class DictFindRoot:
     def __init__(self, opts):
         self.opts = opts
         self.active = {key: iter(o) for key, o in opts.items()}
