@@ -6,7 +6,14 @@ from itertools import product
 
 import numpy as np
 
-from propagation.optimize import combine_results, Fun, ObjectiveFun, WithCallback, WithHistory
+from propagation.optimize import (
+    combine_results,
+    Fun,
+    ObjectiveFun,
+    WithCallback,
+    WithHistory,
+    optimize_all_features,
+)
 from propagation.searchspace import SearchSpace, Point
 
 
@@ -67,28 +74,37 @@ class LocalSearch(ABC):
 
         return init
 
+
     @abstractmethod
     def next(self, new_results):
         ...
 
 
+    @abstractmethod
+    def state(self):
+        ...
+
+
 class SingleLocalSearch(LocalSearch):
     def __init__(self, f, domain, objective, initial=None, seed=None):
-        super(f, domain, objective, initial, seed)
+        super().__init__(f, domain, objective, initial, seed)
         self.current = None
 
     def next(self, results):
         m = min((self.objective(r), point) for r, point in results)
-        self.current = m[1]
+        self.current = m
         return m
 
     def best(self):
+        return self.current[1]
+
+    def state(self):
         return self.current
 
 
 class PopulationLocalSearch(LocalSearch):
     def __init__(self, f, domain, objective, initial=None, seed=None):
-        super(f, domain, objective, initial, seed)
+        super().__init__(f, domain, objective, initial, seed)
         self.points = defaultdict(list)
         self.solutions = []
 
@@ -98,7 +114,7 @@ class PopulationLocalSearch(LocalSearch):
 
     def explore_point(self, point, force=False):
         if (self.dom.in_bounds(point) and self.visited(point)) or force:
-            super(point)
+            super().explore_point(point)
             return True
         return False
 
@@ -133,6 +149,7 @@ class PopulationLocalSearch(LocalSearch):
         for point in self.best(n):
             self.explore_point(point, force=True)
 
+
     def random_restart(self, n=1, return_kbest=1):
         self.points = defaultdict(list)
         self.explore_random_point(n)
@@ -141,15 +158,20 @@ class PopulationLocalSearch(LocalSearch):
         return old_solutions
 
 
+    def state(self):
+        return self.points
+
+
 class SingleHillclimb(SingleLocalSearch):
     def next(self, results):
-        super(results)
+        res = super().next(results)  # Call this first to get new self.best()
         self.explore_all_dirs(self.best())
+        return res
 
 
 class SingleStochasticHillclimb(SingleHillclimb):
     def next(self, results):
-        super(results)
+        super().next(results)
 
 
 def iterate_stochastic(self, steps=1, k_best=1, n_dirs=1):
@@ -172,8 +194,17 @@ def hillclimb(sim, num=1, timeout=60, sources=None, samples=1000):
     print(f'opt: {dom}')
 
     opts = optimize_all_features(
-        sim, domain=dom, sources=sources, samples=samples, explore_current_point=True, num=num
+        SingleHillclimb,
+        sim,
+        domain=dom,
+        sources=sources,
+        samples=samples,
+        explore_current_point=True,
+        num=num,
     )
+    for i, res in zip(range(10), opts):
+        print(res)
+    return opts.state()
 
     # print(list(opts.values())[0][0].dom.size())
 

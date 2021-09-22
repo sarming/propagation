@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import argparse
 import os
+import pickle
 import subprocess
 import sys
 import time
@@ -14,7 +15,7 @@ if __name__ == "__main__" and __package__ is None:
     __package__ = "propagation"
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.path.pardir))
 
-from . import mpi, read, simulation, propagation
+from . import mpi, read, simulation, propagation, localsearch
 
 
 def parse_args():
@@ -246,16 +247,15 @@ def run(sim, args):
             timeout=6,
         )
         sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
-        with open(f'{args.outdir}/optimize-{args.topic}-{args.runid}.pyon', 'w') as f:
-            f.write(repr(opts))
-
+        with open(f'{args.outdir}/optimize-{args.topic}-{args.runid}.pickle', 'bw') as f:
+            pickle.dump(opts, f)
         # last history element in first optimization
-        objective = pd.Series({k: o[0][1][-1] for k, o in opts.items()})
-        real = sim.stats.mean_retweets
-        sim = real + objective
-        print(f'mae: {mae(sim, real)}')
-        print(f'mape: {mape(sim, real)}')
-        print(f'wmape: {wmape(sim, real)}')
+        # objective = pd.Series({k: o[0][1][-1] for k, o in opts.items()})
+        # real = sim.stats.mean_retweets
+        # sim = real + objective
+        # print(f'mae: {mae(sim, real)}')
+        # print(f'mape: {mape(sim, real)}')
+        # print(f'wmape: {wmape(sim, real)}')
 
     elif args.command == 'val':
         print(f'{len(sim.features)} features, {args.sources} sources, {args.samples} samples')

@@ -21,14 +21,18 @@ class FindRoot(Protocol):
 
 class FindRootFactory(Protocol):
     def __call__(
-        self,
-        f: Fun,
-        domain: SearchSpace,
-        objective: ObjectiveFun,
-        initial: Optional[Point],
-        seed=None,
+            self,
+            f: Fun,
+            domain: SearchSpace,
+            objective: ObjectiveFun,
+            initial: Optional[Point],
+            seed=None,
     ) -> FindRoot:
         ...
+
+
+def abs_value(res: Tuple[float, Point]) -> float:
+    return abs(res[0])
 
 
 class WithHistory:
@@ -42,10 +46,28 @@ class WithHistory:
             yield res
 
     def best(self):
-        return min((abs(o), p) for o, p in self.history)[1]
+        return min(self.history, key=abs_value)[1]
 
     def state(self):
         return self.o.state(), self.history
+
+
+class WithAllTimeBest:
+    def __init__(self, o: FindRoot):
+        self.o = o
+        self.best = (float("inf"), None)
+
+    def __iter__(self):
+        for res in self.o:
+            if res[0] <= self.best[0]:
+                self.best = res
+            yield res
+
+    def best(self):
+        return self.best[1]
+
+    def state(self):
+        return self.o.state(), self.best
 
 
 class WithCallback:
@@ -66,56 +88,57 @@ class WithCallback:
 
 class FindRootParallel:
     def __init__(self, opts):
-        self.opts = [iter(o) for o in opts]
+        self.opts = opts
+        self.active = [iter(o) for o in opts]
 
     def __iter__(self):
         return self
 
+    def _next_or_remove(self, o):
+        try:
+            return [o.__next__()]
+        except StopIteration:
+            self.active.remove(o)
+            return []
+
     def __next__(self):
-        return min(o.__next__() for o in self.opts)
+        current_active = self.active.copy()
+        res = sum((self._next_or_remove(o) for o in current_active), [])
+        if not self.active:
+            raise StopIteration()
+        return min(res, key=abs_value)[1]
 
     def state(self):
         return [o.state() for o in self.opts]
 
 
-class FindRootCollection:
+class FindRootMapping:
     def __init__(self, opts):
-        self.active = {key: [iter(o) for o in os] for key, os in opts.items()}
         self.opts = opts
+        self.active = {key: iter(o) for key, o in opts.items()}
 
     def __iter__(self):
         return self
 
+    def _next_or_remove(self, key):
+        try:
+            return [(key, self.active[key].__next__())]
+        except StopIteration:
+            del self.active[key]
+            return []
+
     def __next__(self):
-        next_active = {}
-        res = {}
-        for key, opts in self.active.items():
-            next_opts = []
-            res_opts = []
-            print(key)
-            for o in opts:
-                try:
-                    r = o.__next__()
-                    next_opts.append(o)
-                    res_opts.append(r)
-                except StopIteration:
-                    pass
-            next_active[key] = next_opts
-            res[key] = res_opts
-        self.active = next_active
-
-        if not any(self.active.values()):
+        current_active = self.active.copy()
+        res = dict(sum((self._next_or_remove(key) for key in current_active), []))
+        if not self.active:
             raise StopIteration()
-
         return res
 
-        # return {key: [o.__next__() for o in opts] for key, opts in self.opts.items()}
-
     def best(self):
-        return {key: [o.best() for o in opts] for key, opts in self.opts.items()}
+        return {key: opt.best() for key, opt in self.opts.items()}
 
     def state(self):
-        return {key: [o.state() for o in opts] for key, opts in self.opts.items()}
+        return {key: opt.state() for key, opt in self.opts.items()}
 
 
 class MonotoneRoot:
@@ -204,37 +227,40 @@ def set_params(point, sim, feature):
 
 
 def optimize_all_features(
-    factory,
-    callback,
-    sim,
-    domain=None,
-    statistic='mean_retweets',
-    sources=None,
-    samples=500,
-    explore_current_point=True,
-    num=1,
+        factory,
+        sim,
+        domain=None,
+        statistic='mean_retweets',
+        sources=None,
+        samples=500,
+        explore_current_point=True,
+        callback=None,
+        history=True,
+        num=1,
 ):
     def optimize(feature):
-        return WithHistory(
-            WithCallback(
-                optimize_feature(
-                    factory,
-                    sim,
-                    feature,
-                    domain=domain,
-                    statistic=statistic,
-                    sources=sources,
-                    samples=samples,
-                    explore_current_point=explore_current_point,
-                ),
-                callback,
-                feature,
-            )
+        return optimize_feature(
+            factory,
+            sim,
+            feature,
+            domain=domain,
+            statistic=statistic,
+            sources=sources,
+            samples=samples,
+            explore_current_point=explore_current_point,
         )
 
-    return FindRootCollection(
-        {feature: [optimize(feature) for _ in range(num)] for feature in sim.features}
-    )
+    if callback is not None:
+        optcal = optimize
+        optimize = lambda feature: WithCallback(optcal(feature), callback, feature)
+    if history:
+        opthist = optimize
+        optimize = lambda feature: WithHistory(opthist(feature))
+    if num is not None:
+        optnum = optimize
+        optimize = lambda feature: FindRootParallel([optnum(feature) for _ in range(num)])
+
+    return FindRootMapping({feature: optimize(feature) for feature in sim.features})
 
 
 def optimize_feature(
@@ -286,29 +312,34 @@ def edge_probability_from_retweet_probability(sim, sources=None, eps=1e-5, featu
 
     def obj(feature):
         goal = sim.stats.at[feature, 'retweet_probability']
-        print('goal:', goal)
+        # print('goal:', goal)
         return lambda x: x - goal
 
     dom = SearchSpace({'retweet_probability': (0, 1, eps)})
-    opt = FindRootCollection(
-        {feature: [MonotoneRoot(fun(feature), dom, obj(feature))] for feature in features}
+    opt = FindRootMapping(
+        {feature: MonotoneRoot(fun(feature), dom, obj(feature)) for feature in features}
     )
     for _ in opt:
         pass
     print(opt.best())
-    return pd.Series({feature: o[0]['retweet_probability'] for feature, o in opt.best().items()})
+    return pd.Series({feature: o['retweet_probability'] for feature, o in opt.best().items()})
 
 
 def learn(sim, param, goal_stat, lb, ub, eps, sources, samples, features=None):
+    def fun(f):
+        return lambda x: sim.simulate(
+            feature=f, params=x, sources=sources, samples=samples, return_stats=True
+        )
+
     if features is None:
         features = sim.features
     dom = SearchSpace({param: (lb, ub, eps)})
-    opt = FindRootCollection(
+    opt = FindRootMapping(
         {
             feature: [
                 WithHistory(
                     MonotoneRoot(
-                        lambda point: sim.simulate(feature, point, sources, samples, True),
+                        fun(feature),
                         dom,
                         single_objective(sim, feature, goal_stat, absolute=False),
                     )
@@ -320,42 +351,6 @@ def learn(sim, param, goal_stat, lb, ub, eps, sources, samples, features=None):
     for _ in opt:
         pass
     return pd.Series(opt.best())
-
-
-# @timecall
-def learn(self, param, goal_stat, lb, ub, eps, params, sources, samples, features):
-    def set_param(value, feature):
-        p = self._default_params(params, feature)
-        p[param] = value
-        return p
-
-    def fun(feature):
-        return lambda x: list(
-            self.simulator(
-                A=self.A,
-                params=set_param(x, feature),
-                sources=self._default_sources(sources, feature),
-                samples=samples,
-                seed=self.seed.spawn(1)[0],
-            )
-        )[0 if goal_stat == 'mean_retweets' else 1]
-
-    if features is None:
-        features = self.features
-    return pd.Series(
-        (
-            invert_monotone(
-                fun=fun(f),
-                goal=self.stats.at[f, goal_stat],
-                lb=lb,
-                ub=ub,
-                eps=eps,
-                logging=True,
-            )
-            for f in features
-        ),
-        index=features,
-    )
 
 
 def discount_factor_from_mean_retweets(
