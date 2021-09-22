@@ -15,7 +15,7 @@ if __name__ == "__main__" and __package__ is None:
     __package__ = "propagation"
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.path.pardir))
 
-from . import mpi, read, simulation, propagation, localsearch
+from . import mpi, read, simulation, propagation, optimize
 
 
 def parse_args():
@@ -239,7 +239,7 @@ def run(sim, args):
         sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
 
     elif args.command == 'optimize':
-        opts = localsearch.hillclimb(
+        opts = optimize.hillclimb(
             sim,
             num=1,
             sources=None if args.sources < 1 else args.sources,

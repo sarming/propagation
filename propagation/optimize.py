@@ -1,193 +1,13 @@
-from functools import wraps
-from typing import Protocol, Iterator, Tuple, Any, Callable, TypeVar, Optional
+import time
 
 import numpy as np
 import pandas as pd
 
-from propagation.searchspace import SearchSpace, bisect, middle_value, Point
-
-Result = TypeVar('T')
-Fun = Callable[[Point], Result]
-ObjectiveFun = Callable[[Result], float]
-
-
-class FindRoot(Protocol):
-    def __iter__(self) -> Iterator[Tuple[float, Point]]:
-        ...
-
-    def state(self) -> Any:
-        ...
-
-
-class FindRootFactory(Protocol):
-    def __call__(
-            self,
-            f: Fun,
-            domain: SearchSpace,
-            objective: ObjectiveFun,
-            initial: Optional[Point],
-            seed=None,
-    ) -> FindRoot:
-        ...
-
-
-def abs_value(res: Tuple[float, Point]) -> float:
-    return abs(res[0])
-
-
-class WithHistory:
-    def __init__(self, o: FindRoot):
-        self.o = o
-        self.history = []
-
-    def __iter__(self):
-        for res in self.o:
-            self.history.append(res)
-            yield res
-
-    def best(self):
-        return min(self.history, key=abs_value)[1]
-
-    def state(self):
-        return self.o.state(), self.history
-
-
-class WithAllTimeBest:
-    def __init__(self, o: FindRoot):
-        self.o = o
-        self.best = (float("inf"), None)
-
-    def __iter__(self):
-        for res in self.o:
-            if res[0] <= self.best[0]:
-                self.best = res
-            yield res
-
-    def best(self):
-        return self.best[1]
-
-    def state(self):
-        return self.o.state(), self.best
-
-
-class WithCallback:
-    def __init__(self, o: FindRoot, callback, *vars):
-        self.o = o
-        self.callback = callback
-        self.vars = vars
-
-    def __iter__(self):
-        for res in self.o:
-            if self.callback(res, self.o, *self.vars):
-                continue
-            yield res
-
-    def state(self):
-        return self.o.state()
-
-
-class FindRootParallel:
-    def __init__(self, opts):
-        self.opts = opts
-        self.active = [iter(o) for o in opts]
-
-    def __iter__(self):
-        return self
-
-    def _next_or_remove(self, o):
-        try:
-            return [o.__next__()]
-        except StopIteration:
-            self.active.remove(o)
-            return []
-
-    def __next__(self):
-        current_active = self.active.copy()
-        res = sum((self._next_or_remove(o) for o in current_active), [])
-        if not self.active:
-            raise StopIteration()
-        return min(res, key=abs_value)[1]
-
-    def state(self):
-        return [o.state() for o in self.opts]
-
-
-class FindRootMapping:
-    def __init__(self, opts):
-        self.opts = opts
-        self.active = {key: iter(o) for key, o in opts.items()}
-
-    def __iter__(self):
-        return self
-
-    def _next_or_remove(self, key):
-        try:
-            return [(key, self.active[key].__next__())]
-        except StopIteration:
-            del self.active[key]
-            return []
-
-    def __next__(self):
-        current_active = self.active.copy()
-        res = dict(sum((self._next_or_remove(key) for key in current_active), []))
-        if not self.active:
-            raise StopIteration()
-        return res
-
-    def best(self):
-        return {key: opt.best() for key, opt in self.opts.items()}
-
-    def state(self):
-        return {key: opt.state() for key, opt in self.opts.items()}
-
-
-class MonotoneRoot:
-    def __init__(
-        self, f: Fun, domain: SearchSpace, objective: ObjectiveFun, initial=None, seed=None
-    ):  # implement initial
-        assert len(domain.dims) == 1
-        self.dim = tuple(domain.dims)[0]
-        self.bound = domain.bounds[self.dim]
-        self.f = f
-        self.objective = objective
-
-    def __iter__(self):
-        def _middle():
-            return Point({self.dim: middle_value(self.bound)})
-
-        self.mid = _middle()
-        self.result = self.f(self.mid)
-
-        while True:
-            result = self.objective(self.result)
-            lower, upper = bisect(middle_value(self.bound), self.bound)
-            mid = _middle()
-            print(f'f({mid})={result} (={self.result}) {self.bound}')
-
-            if not (lower and upper):  # could be improved to use midpoint of remaining
-                return result, mid
-            print(result)
-            self.bound = upper if result < 0 else lower
-            self.mid = _middle()
-            self.result = self.f(self.mid)
-            yield result, mid
-
-    def state(self):
-        return self.result, self.bound
-
-    def best(self):
-        return self.mid
-
-
-def logging(fun):
-    """Simple function decorator that prints every function invocation."""
-
-    @wraps(fun)
-    def wrapper(*args, **kwargs):
-        print(f'calling {fun.__name__}({args},{kwargs})')
-        return fun(*args, **kwargs)
-
-    return wrapper
+from optimization.findroot import FindRootFactory
+from optimization.localsearch import SingleHillclimb
+from optimization.monotone import MonotoneRoot
+from optimization.searchspace import SearchSpace
+from optimization.wrap import WithHistory, WithCallback, FindRootParallel, FindRootMapping
 
 
 def calculate_retweet_probability(A, sources, p, at_least_one):
@@ -227,16 +47,16 @@ def set_params(point, sim, feature):
 
 
 def optimize_all_features(
-        factory,
-        sim,
-        domain=None,
-        statistic='mean_retweets',
-        sources=None,
-        samples=500,
-        explore_current_point=True,
-        callback=None,
-        history=True,
-        num=1,
+    factory,
+    sim,
+    domain=None,
+    statistic='mean_retweets',
+    sources=None,
+    samples=500,
+    explore_current_point=True,
+    callback=None,
+    history=True,
+    num=1,
 ):
     def optimize(feature):
         return optimize_feature(
@@ -383,3 +203,162 @@ def corr_from_mean_retweets(self, params=None, sources=None, samples=1000, eps=0
         samples=samples,
         features=features,
     )
+
+
+def hillclimb(sim, num=1, timeout=60, sources=None, samples=1000):
+    dom = {
+        # 'edge_probability': (0., 0.3, .001),
+        'discount_factor': (0.0, 1.0, 0.01),
+        'corr': (0.0, 0.005, 0.0001),
+    }
+    print(f'opt: {dom}')
+
+    opts = optimize_all_features(
+        SingleHillclimb,
+        sim,
+        domain=dom,
+        sources=sources,
+        samples=samples,
+        explore_current_point=True,
+        num=num,
+    )
+    for i, res in zip(range(10), opts):
+        print(res)
+    return opts.state()
+
+    # print(list(opts.values())[0][0].dom.size())
+
+    best = optimize_all_features(
+        sim, domain=dom, sources=sources, samples=samples, explore_current_point=False
+    )
+    t = time.time()
+    while True:
+        for feature, os in opts.items():
+            for o in os:
+                o.register_results()
+                for i in range(50):
+                    if not o.stuck(steps=i, k_best=2):
+                        o.iterate_steep(steps=1, k_best=2)
+                        break
+                else:
+                    best[feature].register_from(o, k_best=2)
+                    o.random_restart(n=1, keep=0)
+
+        if time.time() - t > timeout:
+            break
+
+    for feature, os in opts.items():
+        for o in os:
+            best[feature].register_from(o, k_best=2)
+
+    for feature, o in best.items():
+        set_params(o.best(), sim, feature)
+
+    return {
+        feature: [b.state()] + [o.state() for o in opts[feature]] for feature, b in best.items()
+    }
+
+
+def stochastic_hillclimb(sim, num=1, timeout=60, sources=None, samples=1000):
+    dom = {
+        # 'edge_probability': (0., 0.3, .001),
+        'discount_factor': (0.0, 1.0, 0.01),
+        'corr': (0.0, 0.005, 0.0001),
+    }
+    print(f'opt: {dom}')
+
+    random_starts = optimize_all_features(
+        sim, domain=dom, sources=sources, samples=samples, explore_current_point=False, num=num
+    )
+
+    best = optimize_all_features(
+        sim, domain=dom, sources=sources, samples=samples, explore_current_point=True
+    )
+    t = time.time()
+    while True:
+        for feature, os in random_starts.items():
+            for o in os:
+                o.register_results()
+                if o.stuck(steps=1, k_best=2):
+                    best[feature].register_from(o, k_best=2)
+                    o.random_restart(n=1, keep=0)
+                o.iterate_stochastic(steps=1, k_best=2)
+
+        if time.time() - t > timeout:
+            print('timeout')
+            break
+
+    for feature, os in random_starts.items():
+        best[feature].register_results()
+        for o in os:
+            best[feature].register_from(o, k_best=2)
+
+    for feature, o in best.items():
+        set_params(o.best(), sim, feature)
+
+    return {
+        feature: [b.state()] + [o.state() for o in random_starts[feature]]
+        for feature, b in best.items()
+    }
+
+
+def optimize(sim, sources=None, samples=500):
+    dom = {
+        # 'edge_probability': (0., 0.3, .1),
+        'discount_factor': (0.0, 0.1, 0.1),
+        'corr': (0.0, 0.1, 0.1),
+    }
+    print(f'grid: {dom}')
+    grid = optimize_all_features(
+        sim, domain=dom, sources=sources, samples=samples, explore_current_point=False
+    )
+    dom = {
+        # 'edge_probability': (0., 0.3, .001),
+        'discount_factor': (0.0, 1.0, 0.01),
+        'corr': (0.0, 0.005, 0.0001),
+    }
+    print(f'opt: {dom}')
+    opts = optimize_all_features(sim, domain=dom, sources=sources, samples=samples)
+
+    for o in grid.values():
+        o.explore_full_grid()
+        # o.full_grid(force=True) # Repeat
+
+    for o in opts.values():
+        o.explore_random_point(10)
+
+    for feature, o in opts.items():
+        grid[feature].register_results()
+        o.register_from(grid[feature])
+    print('grid done', flush=True)
+
+    for _ in range(20):
+        for o in opts.values():
+            o.iterate_stochastic(steps=5, k_best=10)
+            # o.reexplore_best(10)
+    print('stochastic done', flush=True)
+
+    for _ in range(20):
+        for o in opts.values():
+            o.iterate_steep(k_best=5)
+            # o.reexplore_best(5)
+    print('hillclimb done', flush=True)
+
+    for feature, o in opts.items():
+        set_params(o.best(), sim, feature)
+
+    return {feature: o.state() for feature, o in opts.items()}
+
+
+# sourcery skip: hoist-if-from-if, merge-nested-ifs, remove-redundant-if
+if __name__ == "__main__":
+    from propagation.simulation import Simulation
+
+    sim = Simulation.from_files(
+        'data/anon_graph_inner_neos_20201110.npz', 'data/sim_features_neos_20201110.csv', seed=3
+    )
+    # with mpi.futures(sim) as sim:
+    if True:
+        if sim is not None:
+            hillclimb(sim, sources=2, samples=10, num=2)
+            print(sim.params.to_csv())
