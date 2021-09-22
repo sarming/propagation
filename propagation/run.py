@@ -237,16 +237,16 @@ def run(sim, args):
         sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
 
     elif args.command == 'optimize':
-        opts = optimize.hillclimb(
+        best, state = optimize.gridsearch(
             sim,
-            num=1,
+            # num=1,
             sources=None if args.sources < 1 else args.sources,
             samples=args.samples,
-            timeout=6,
         )
+        optimize.set_params(best, sim)
         sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
         with open(f'{args.outdir}/optimize-{args.topic}-{args.runid}.pickle', 'bw') as f:
-            pickle.dump(opts, f)
+            pickle.dump((best, state), f)
         # last history element in first optimization
         # objective = pd.Series({k: o[0][1][-1] for k, o in opts.items()})
         # real = sim.stats.mean_retweets

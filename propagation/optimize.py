@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from optimization.findroot import FindRootFactory
-from optimization.localsearch import SingleHillclimb
+from optimization.localsearch import SingleHillclimb, GridSearch
 from optimization.monotone import MonotoneRoot
 from optimization.searchspace import SearchSpace
 from optimization.wrap import (
@@ -47,9 +47,10 @@ def single_objective(sim, feature, statistic, absolute=True):
     return obj
 
 
-def set_params(point, sim, feature):
-    for dim, value in point.items():
-        sim.params.at[feature, dim] = value
+def set_params(best_points, sim):
+    for feature, point in best_points.items():
+        for dim, value in point.items():
+            sim.params.at[feature, dim] = value
 
 
 def optimize_all_features(
@@ -62,7 +63,7 @@ def optimize_all_features(
     explore_current_point=True,
     callback=None,
     history=True,
-    num=1,
+    num=None,
 ):
     def optimize(feature):
         return optimize_feature(
@@ -159,7 +160,7 @@ def learn(sim, param, goal_stat, lb, ub, eps, sources, samples, features=None):
     dom = SearchSpace({param: (lb, ub, eps)})
     opt = DictFindRoot(
         {
-            feature: WithHistory(
+            feature: WithAllTimeBest(
                 MonotoneRoot(
                     fun(feature), dom, single_objective(sim, feature, goal_stat, absolute=False),
                 )
@@ -169,7 +170,7 @@ def learn(sim, param, goal_stat, lb, ub, eps, sources, samples, features=None):
     )
     for _ in opt:
         pass
-    return pd.Series(opt.best())
+    return pd.Series({feature: o[param] for feature, o in opt.best().items()})
 
 
 def discount_from_mean_retweets(sim, sources=None, samples=1000, eps=0.1, features=None):
@@ -202,13 +203,31 @@ def corr_from_mean_retweets(sim, sources=None, samples=1000, eps=0.1, features=N
     )
 
 
-def hillclimb(sim, num=None, timeout=60, sources=None, samples=1000):
+def gridsearch(sim, sources=None, samples=1000):
     dom = {
         # 'edge_probability': (0., 0.3, .001),
         'discount_factor': (0.0, 1.0, 0.01),
         'corr': (0.0, 0.005, 0.0001),
     }
-    print(f'opt: {dom}')
+    print(f'grid: {dom}')
+
+    opts = optimize_all_features(
+        GridSearch, sim, domain=dom, sources=sources, samples=samples, explore_current_point=False
+    )
+    for res in opts:
+        # print(res)
+        pass
+
+    return opts.best(), opts.state()
+
+
+def hillclimb(sim, num=None, sources=None, samples=1000):
+    dom = {
+        # 'edge_probability': (0., 0.3, .001),
+        'discount_factor': (0.0, 1.0, 0.01),
+        'corr': (0.0, 0.005, 0.0001),
+    }
+    print(f'hill: {dom}')
 
     opts = optimize_all_features(
         SingleHillclimb,
@@ -249,9 +268,6 @@ def hillclimb(sim, num=None, timeout=60, sources=None, samples=1000):
         for o in os:
             best[feature].register_from(o, k_best=2)
 
-    for feature, o in best.items():
-        set_params(o.best(), sim, feature)
-
     return {
         feature: [b.state()] + [o.state() for o in opts[feature]] for feature, b in best.items()
     }
@@ -290,9 +306,6 @@ def stochastic_hillclimb(sim, num=1, timeout=60, sources=None, samples=1000):
         best[feature].register_results()
         for o in os:
             best[feature].register_from(o, k_best=2)
-
-    for feature, o in best.items():
-        set_params(o.best(), sim, feature)
 
     return {
         feature: [b.state()] + [o.state() for o in random_starts[feature]]
@@ -341,9 +354,6 @@ def optimize(sim, sources=None, samples=500):
             o.iterate_steep(k_best=5)
             # o.reexplore_best(5)
     print('hillclimb done', flush=True)
-
-    for feature, o in opts.items():
-        set_params(o.best(), sim, feature)
 
     return {feature: o.state() for feature, o in opts.items()}
 

@@ -26,7 +26,7 @@ class LocalSearch(ABC):
         if initial is not None:
             self.explore_point(initial)
 
-    def explore_point(self, point, force=False):
+    def explore_point(self, point):
         if not isinstance(point, Point):
             point = self.dom.to_point(point)
         result = self.f(point)
@@ -45,10 +45,9 @@ class LocalSearch(ABC):
                 return True
         return False
 
-    def explore_full_grid(self, force=False):
-        # self.evaluate() # Can ignore old results
+    def explore_full_grid(self):
         for point in self.dom.all_points():
-            self.explore_point(point, force)
+            self.explore_point(point)
 
     def explore_random_point(self, n=1):
         for point in self.dom.random_point(n, self.rng):
@@ -58,6 +57,9 @@ class LocalSearch(ABC):
         return self
 
     def __next__(self):
+        if not self.raw_results:
+            raise StopIteration
+
         new_results = self.raw_results
         self.raw_results = []
         return self.next(new_results)
@@ -169,6 +171,27 @@ class SingleHillclimb(SingleLocalSearch):
 class SingleStochasticHillclimb(SingleHillclimb):
     def next(self, results):
         super().next(results)
+
+
+class GridSearch(LocalSearch):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.results = None
+        self.best_point = (float('inf'), {})
+
+        self.explore_full_grid()
+
+    def next(self, results):
+        self.results = [(tuple(r), point) for r, point in results]
+        val, point = min((self.objective(r), point) for r, point in self.results)
+        self.best_point = point
+        return val, point
+
+    def state(self):
+        return self.results
+
+    def best(self):
+        return self.best_point
 
 
 def iterate_stochastic(self, steps=1, k_best=1, n_dirs=1):

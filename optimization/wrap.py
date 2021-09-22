@@ -1,9 +1,16 @@
 import time
+from abc import ABC
 
-from optimization.findroot import FindRoot, abs_value
+from optimization.findroot import FindRoot, abs_value, FindRootFactory
 
 
-class WithHistory:
+class Wrapper(ABC):
+    @classmethod
+    def wrap(cls, wrapee: FindRootFactory, *args, **kwargs):
+        return lambda *iargs, **ikwargs: cls(wrapee(*iargs, **ikwargs), *args, **kwargs)
+
+
+class WithHistory(Wrapper):
     def __init__(self, o: FindRoot):
         self.o = o
         self.history = []
@@ -20,7 +27,7 @@ class WithHistory:
         return self.o.state(), self.history
 
 
-class WithAllTimeBest:
+class WithAllTimeBest(Wrapper):
     def __init__(self, o: FindRoot):
         self.o = o
         self.current_best = (float("inf"), None)
@@ -38,7 +45,7 @@ class WithAllTimeBest:
         return self.o.state(), self.current_best
 
 
-class WithCallback:
+class WithCallback(Wrapper):
     def __init__(self, o: FindRoot, callback, *vars):
         self.o = o
         self.callback = callback
@@ -54,7 +61,7 @@ class WithCallback:
         return self.o.state()
 
 
-class WithTimeout:
+class WithTimeout(Wrapper):
     def __init__(self, o: FindRoot, timeout_seconds):
         self.o = o
         self.timeout = timeout_seconds
@@ -70,7 +77,7 @@ class WithTimeout:
         return self.o.state()
 
 
-class WithPrint:
+class WithPrint(Wrapper):
     def __init__(self, o: FindRoot, *info, print_state=False, flush=False):
         self.o = o
         self.info = info
@@ -79,7 +86,8 @@ class WithPrint:
 
     def __iter__(self):
         for res in self.o:
-            print(*self.info, end=": ")
+            if self.info:
+                print(*self.info, end=": ")
             print(res, end=" ")
             if self.print_state:
                 print(f"<<{self.o.state()}>>", end=" ")
@@ -96,7 +104,9 @@ class FindRootParallel:
         self.active = [iter(o) for o in opts]
 
     def __iter__(self):
-        return self
+    if not self.active:
+        self.active = [iter(o) for o in self.opts]
+    return self
 
     def _next_or_remove(self, o):
         try:
@@ -122,7 +132,9 @@ class DictFindRoot:
         self.active = {key: iter(o) for key, o in opts.items()}
 
     def __iter__(self):
-        return self
+    if not self.active:
+        self.active = {key: iter(o) for key, o in self.opts.items()}
+    return self
 
     def _next_or_remove(self, key):
         try:
