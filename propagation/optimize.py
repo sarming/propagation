@@ -55,45 +55,6 @@ def set_params(best_points, sim):
             sim.params.at[feature, dim] = value
 
 
-def optimize_all_features(
-    factory,
-    sim,
-    domain=None,
-    statistic='mean_retweets',
-    sources=None,
-    samples=500,
-    explore_current_point=True,
-    callback=None,
-    history=True,
-    num=None,
-):
-    def optimize(feature):
-        return optimize_feature(
-            factory,
-            sim,
-            feature,
-            domain=domain,
-            statistic=statistic,
-            sources=sources,
-            samples=samples,
-            explore_current_point=explore_current_point,
-        )
-
-    if callback is not None:
-        optcal = optimize
-        optimize = lambda feature: WithCallback(optcal(feature), callback, feature)
-    if history:
-        opthist = optimize
-        optimize = lambda feature: WithHistory(opthist(feature))
-    if num is not None:
-        optnum = optimize
-        optimize = lambda feature: WithAllTimeBest(
-            FindRootParallel([optnum(feature) for _ in range(num)])
-        )
-
-    return DictFindRoot({feature: optimize(feature) for feature in sim.features})
-
-
 def optimize_feature(
     factory: FindRootFactory,
     sim,
@@ -104,6 +65,9 @@ def optimize_feature(
     samples=500,
     explore_current_point=True,
     absolute=True,
+    history=False,
+    callback=None,
+    num=None,
 ):
     if domain is None:
         domain = {
@@ -119,7 +83,25 @@ def optimize_feature(
     objective = single_objective(sim, feature, statistic, absolute)
     f = lambda point: sim.simulate(feature, point, sources, samples, True)
     i = domain.to_point(sim.params.astype('object').loc[feature]) if explore_current_point else None
+    if callback is not None:
+        factory = WithCallback.wrap(factory, callback, feature)
+    if history:
+        factory = WithHistory.wrap(factory)
+    if num is not None:
+        seeds = sim.seed.spawn(num)
+        return WithAllTimeBest(
+            FindRootParallel(factory(f, domain, objective, initial=i, seed=seed) for seed in seeds)
+        )
     return factory(f, domain, objective, initial=i, seed=sim.seed.spawn(1)[0])
+
+
+def optimize_all_features(factory, sim, *args, features=None, **kwargs):
+    if features is None:
+        features = sim.features
+
+    return DictFindRoot(
+        {feature: optimize_feature(factory, sim, feature, *args, **kwargs) for feature in features}
+    )
 
 
 def combine_results(results):
@@ -234,16 +216,18 @@ def bayesian(sim, sources=None, samples=1000):
     print(f'bayes: {dom}')
 
     opts = optimize_all_features(
-        WithTimeout.wrap(Bayesian, 15),
+        WithTimeout.wrap(Bayesian, 20),
         sim,
         domain=dom,
         sources=sources,
         samples=samples,
         explore_current_point=True,
+        history=True,
+        # callback=lambda res, o, feature: print(f"{feature}: {res}"),
+        num=1,
     )
     for i, res in zip(range(10000), opts):
         print(i, res)
-
     return opts.best(), opts.state()
 
 
@@ -394,5 +378,5 @@ if __name__ == "__main__":
     # with mpi.futures(sim) as sim:
     if True:
         if sim is not None:
-            hillclimb(sim, sources=2, samples=10, num=2)
-            print(sim.params.to_csv())
+            bayesian(sim, sources=1, samples=1)
+            # hillclimb(sim, sources=2, samples=10, num=2)

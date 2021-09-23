@@ -1,5 +1,5 @@
 from .bayesian import Bayesian
-from .findroot import *
+from .findroot import FindRoot, FindRootFactory, Result, ObjectiveFun, Fun
 from .localsearch import (
     GridSearch,
     PopulationLocalSearch,
@@ -8,4 +8,5 @@ from .localsearch import (
 )
 from .monotone import MonotoneRoot
 from .searchspace import Point, SearchSpace
-from .wrap import *
+from .wrap import WithAllTimeBest, WithCallback, WithHistory, WithPrint, WithTimeout
+from .collections import FindRootParallel, DictFindRoot
