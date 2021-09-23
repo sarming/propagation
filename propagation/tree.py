@@ -34,8 +34,9 @@ def bfs_nodes(tree, root, node_labels=None):
 
 if __name__ == "__main__":
     from itertools import starmap
-    from .simulation import Simulation
+
     from . import propagation, read
+    from .simulation import Simulation
 
     propagation.edge_propagate = propagation.edge_propagate_tree
 

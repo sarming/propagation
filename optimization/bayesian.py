@@ -1,8 +1,10 @@
-import numpy as np
-from optimization.findroot import Fun, ObjectiveFun
-from optimization.searchspace import Point, SearchSpace
 from typing import Optional
+
+import numpy as np
 from bayes_opt import BayesianOptimization, UtilityFunction
+
+from .findroot import Fun, ObjectiveFun
+from .searchspace import Point, SearchSpace
 
 
 class Bayesian:

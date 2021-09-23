@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from scipy.sparse import lil_matrix, csr_matrix
+from scipy.sparse import csr_matrix, lil_matrix
 
 
 def adjlist(filename, save_as=None):

@@ -15,7 +15,7 @@ if __name__ == "__main__" and __package__ is None:
     __package__ = "propagation"
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.path.pardir))
 
-from . import mpi, read, simulation, propagation, optimize
+from . import mpi, optimize, propagation, read, simulation
 
 
 def parse_args():

@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from itertools import islice, chain
+from itertools import chain, islice
 
 import numpy as np
 from mpi4py import MPI

@@ -7,7 +7,8 @@ from mpi4py import MPI
 
 # https://stackoverflow.com/a/28154841/153408
 if __name__ == "__main__" and __package__ is None:
-    import os, sys
+    import os
+    import sys
 
     __package__ = "propagation"
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.path.pardir))

@@ -5,12 +5,9 @@ from itertools import product
 
 import numpy as np
 
-from optimization.findroot import (
-    Fun,
-    ObjectiveFun,
-)
-from optimization.searchspace import SearchSpace, Point
-from optimization.wrap import WithHistory, WithCallback
+from .findroot import Fun, ObjectiveFun
+from .searchspace import Point, SearchSpace
+from .wrap import WithCallback, WithHistory
 
 
 class LocalSearch(ABC):

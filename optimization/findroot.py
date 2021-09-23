@@ -1,7 +1,7 @@
 from functools import wraps
-from typing import Protocol, Iterator, Tuple, Any, Callable, TypeVar, Optional
+from typing import Any, Callable, Iterator, Optional, Protocol, Tuple, TypeVar
 
-from optimization.searchspace import SearchSpace, Point
+from .searchspace import Point, SearchSpace
 
 Result = TypeVar('Result')
 Fun = Callable[[Point], Result]

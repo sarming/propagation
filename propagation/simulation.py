@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 
 from propagation.optimize import edge_probability_from_retweet_probability
-from . import read, propagation
+
+from . import propagation, read
 
 
 def tweet_statistics(tweets, min_size=10):

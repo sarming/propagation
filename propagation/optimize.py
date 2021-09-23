@@ -1,19 +1,19 @@
-from optimization.bayesian import Bayesian
 import time
 
 import numpy as np
 import pandas as pd
-
-from optimization.findroot import FindRootFactory
-from optimization.localsearch import SingleHillclimb, GridSearch
-from optimization.monotone import MonotoneRoot
-from optimization.searchspace import SearchSpace
-from optimization.wrap import (
-    WithHistory,
-    WithCallback,
-    FindRootParallel,
+from optimization import (
+    Bayesian,
     DictFindRoot,
+    FindRootFactory,
+    FindRootParallel,
+    GridSearch,
+    MonotoneRoot,
+    SearchSpace,
+    SingleHillclimb,
     WithAllTimeBest,
+    WithCallback,
+    WithHistory,
 )
 
 

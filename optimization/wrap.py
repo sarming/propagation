@@ -1,7 +1,7 @@
 import time
 from abc import ABC
 
-from optimization.findroot import FindRoot, abs_value, FindRootFactory
+from .findroot import FindRoot, FindRootFactory, abs_value
 
 
 class Wrapper(ABC):

@@ -1,5 +1,5 @@
-from optimization.findroot import Fun, ObjectiveFun
-from optimization.searchspace import SearchSpace, Point, middle_value, bisect
+from .findroot import Fun, ObjectiveFun
+from .searchspace import Point, SearchSpace, bisect, middle_value
 
 
 class MonotoneRoot:
