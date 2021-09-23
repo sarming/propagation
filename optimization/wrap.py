@@ -1,12 +1,13 @@
 import time
 from abc import ABC
+from typing import Callable
 
-from .findroot import FindRoot, FindRootFactory, abs_value
+from .findroot import FindRoot, abs_value
 
 
 class Wrapper(ABC):
     @classmethod
-    def wrap(cls, wrapee: FindRootFactory, *args, **kwargs):
+    def wrap(cls, wrapee: Callable[..., FindRoot], *args, **kwargs):
         return lambda *iargs, **ikwargs: cls(wrapee(*iargs, **ikwargs), *args, **kwargs)
 
 
@@ -69,9 +70,9 @@ class WithTimeout(Wrapper):
     def __iter__(self):
         t = time.time()
         for res in self.o:
-            if t + self.timeout >= time.time():
-                return res
             yield res
+            if t + self.timeout <= time.time():
+                return
 
     def state(self):
         return self.o.state()

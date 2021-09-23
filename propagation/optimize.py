@@ -14,6 +14,7 @@ from optimization import (
     WithAllTimeBest,
     WithCallback,
     WithHistory,
+    WithTimeout,
 )
 
 
@@ -233,10 +234,15 @@ def bayesian(sim, sources=None, samples=1000):
     print(f'bayes: {dom}')
 
     opts = optimize_all_features(
-        Bayesian, sim, domain=dom, sources=sources, samples=samples, explore_current_point=True
+        WithTimeout.wrap(Bayesian, 15),
+        sim,
+        domain=dom,
+        sources=sources,
+        samples=samples,
+        explore_current_point=True,
     )
-    for i, res in zip(range(10), opts):
-        print(res)
+    for i, res in zip(range(10000), opts):
+        print(i, res)
 
     return opts.best(), opts.state()
 
