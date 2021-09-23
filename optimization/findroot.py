@@ -3,7 +3,7 @@ from typing import Protocol, Iterator, Tuple, Any, Callable, TypeVar, Optional
 
 from optimization.searchspace import SearchSpace, Point
 
-Result = TypeVar('T')
+Result = TypeVar('Result')
 Fun = Callable[[Point], Result]
 ObjectiveFun = Callable[[Result], float]
 
@@ -18,7 +18,6 @@ class FindRoot(Protocol):
 
 class FindRootFactory(Protocol):
     def __call__(
-        self,
         f: Fun,
         domain: SearchSpace,
         objective: ObjectiveFun,

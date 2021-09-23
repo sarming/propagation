@@ -104,9 +104,9 @@ class FindRootParallel:
         self.active = [iter(o) for o in opts]
 
     def __iter__(self):
-    if not self.active:
-        self.active = [iter(o) for o in self.opts]
-    return self
+        if not self.active:
+            self.active = [iter(o) for o in self.opts]
+        return self
 
     def _next_or_remove(self, o):
         try:
@@ -132,9 +132,9 @@ class DictFindRoot:
         self.active = {key: iter(o) for key, o in opts.items()}
 
     def __iter__(self):
-    if not self.active:
-        self.active = {key: iter(o) for key, o in self.opts.items()}
-    return self
+        if not self.active:
+            self.active = {key: iter(o) for key, o in self.opts.items()}
+        return self
 
     def _next_or_remove(self, key):
         try:

@@ -52,7 +52,8 @@ def parse_args():
     )
     parser.add_argument('--seed', help="seed for RNG", type=int)
     parser.add_argument(
-        "command", choices=['learn_discount', 'learn_corr', 'optimize', 'sim', 'simtweets', 'val'],
+        "command",
+        choices=['learn_discount', 'learn_corr', 'optimize', 'sim', 'simtweets', 'val'],
     )
     parser.add_argument("topic")
     args = parser.parse_args()
@@ -237,7 +238,7 @@ def run(sim, args):
         sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
 
     elif args.command == 'optimize':
-        best, state = optimize.gridsearch(
+        best, state = optimize.bayesian(
             sim,
             # num=1,
             sources=None if args.sources < 1 else args.sources,

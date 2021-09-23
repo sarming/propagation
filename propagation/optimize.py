@@ -1,3 +1,4 @@
+from optimization.bayesian import Bayesian
 import time
 
 import numpy as np
@@ -162,7 +163,9 @@ def learn(sim, param, goal_stat, lb, ub, eps, sources, samples, features=None):
         {
             feature: WithAllTimeBest(
                 MonotoneRoot(
-                    fun(feature), dom, single_objective(sim, feature, goal_stat, absolute=False),
+                    fun(feature),
+                    dom,
+                    single_objective(sim, feature, goal_stat, absolute=False),
                 )
             )
             for feature in features
@@ -214,9 +217,26 @@ def gridsearch(sim, sources=None, samples=1000):
     opts = optimize_all_features(
         GridSearch, sim, domain=dom, sources=sources, samples=samples, explore_current_point=False
     )
-    for res in opts:
-        # print(res)
+    for _ in opts:
+        # print(_)
         pass
+
+    return opts.best(), opts.state()
+
+
+def bayesian(sim, sources=None, samples=1000):
+    dom = {
+        # 'edge_probability': (0., 0.3, .001),
+        'discount_factor': (0.0, 1.0, 0.01),
+        'corr': (0.0, 0.005, 0.0001),
+    }
+    print(f'bayes: {dom}')
+
+    opts = optimize_all_features(
+        Bayesian, sim, domain=dom, sources=sources, samples=samples, explore_current_point=True
+    )
+    for i, res in zip(range(10), opts):
+        print(res)
 
     return opts.best(), opts.state()
 
@@ -238,9 +258,9 @@ def hillclimb(sim, num=None, sources=None, samples=1000):
         explore_current_point=True,
         num=num,
     )
-    for i, res in zip(range(10), opts):
+    for i, _ in zip(range(10), opts):
+        # print(_)
         pass
-        # print(res)
     return opts.best(), opts.state()
 
     # print(list(opts.values())[0][0].dom.size())

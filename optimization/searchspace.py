@@ -48,12 +48,10 @@ def random_value(bound, rng=np.random.default_rng()):
 
 
 def middle_value(bound):
-    if isinstance(bound, tuple):
-        lb, ub, width = bound
-        mid = discretize((ub + lb) / 2, bound)
-    else:
-        mid = bound[len(bound) // 2]
-    return mid
+    if not isinstance(bound, tuple):
+        return bound[len(bound) // 2]
+    lb, ub, width = bound
+    return discretize((ub + lb) / 2, bound)
 
 
 def bisect(mid, bound):
