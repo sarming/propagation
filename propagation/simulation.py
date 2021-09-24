@@ -43,8 +43,8 @@ class Simulation:
                 'at_least_one': True,
                 'discount_factor': 1.0,
                 'corr': 0.0,
-                'max_nodes': 10 * self.stats.max_retweets,
-                'max_depth': 50,
+                'max_nodes': 2 * self.stats.max_retweets,
+                'max_depth': 10,
             }
         )
         self.features = self.stats.index
