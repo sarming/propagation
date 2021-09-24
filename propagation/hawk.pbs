@@ -21,4 +21,4 @@ echo walltime: {walltime} >> $OUTFILE
 echo jobid: "$PBS_JOBID" >> $OUTFILE
 echo date: $(date +"%Y-%m-%dT%H:%M:%S")
 
-mpirun {mpiargs} bin/run {args} --outdir=out/$RUNID >>$OUTFILE 2>&1
+mpiexec {mpiargs} bin/run {args} --outdir=out/$RUNID >>$OUTFILE 2>&1

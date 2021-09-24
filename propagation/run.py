@@ -64,6 +64,8 @@ def parse_args():
             args.runid = os.environ.get('RUNID')
         elif 'PBS_JOBID' in os.environ:
             args.runid = os.environ.get('PBS_JOBID')
+        elif 'SLURM_JOB_ID' in os.environ:
+            args.runid = os.environ.get('SLURM_JOB_ID')
         else:
             args.runid = datetime.now().isoformat()
     if not args.graph:

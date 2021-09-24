@@ -4,10 +4,8 @@ import os
 import subprocess
 import sys
 
-default_template = os.path.dirname(__file__) + '/mpi.pbs'
 
-
-def qsub(
+def sub(
     args='sim neos_20201110',
     jobname='propagation',
     nodes=1,
@@ -15,30 +13,46 @@ def qsub(
     walltime='01:00:00',
     mpiargs='',
     after=None,
-    keep_files=False,
     queue=None,
-    template=default_template,
+    template=None,
+    sub_cmd=None,
 ):
+    template = config['template'] if template is None else template
+    sub_cmd = config['sub_cmd'] if sub_cmd is None else sub_cmd
     with open(template, 'r') as f:
         batch = f.read().format(
             jobname=jobname, nodes=nodes, procs=procs, walltime=walltime, mpiargs=mpiargs, args=args
         )
-    cmd = ['qsub']
-    if queue:
-        cmd += ['-q', queue]
-    if keep_files:
-        cmd += ['-koed']
-    if after:
-        if isinstance(after, list):
-            after = ':'.join(after)
-        cmd += ['-W', f'depend=afterok:{after}']
+    cmd, get_jobid = sub_cmd(after, queue)
     r = subprocess.run(cmd, input=batch, text=True, capture_output=True)
     if r.returncode == 0:
-        jobid = r.stdout.strip()
+        jobid = get_jobid(r.stdout.strip())
         print(f'submitted job {jobname} as {jobid}')
         runid = f'{jobname}_{jobid}'
         return jobid, runid
     print(f'Could not submit {jobname}: {r}')
+
+
+def qsub_cmd(after, queue):
+    cmd = ['qsub']
+    if queue:
+        cmd += ['-q', queue]
+    if after:
+        if isinstance(after, list):
+            after = ':'.join(after)
+        cmd += ['-W', f'depend=afterok:{after}']
+    return cmd, lambda x: x
+
+
+def sbatch_cmd(after, queue):
+    cmd = ['sbatch']
+    if queue:
+        cmd += ['-p', queue]
+    if after:
+        if isinstance(after, list):
+            after = ':'.join(after)
+        cmd += ['-d', f'afterok:{after}']
+    return cmd, lambda x: x.replace("Submitted batch job ", "")
 
 
 def dataset(topic, outer=True):
@@ -69,27 +83,27 @@ def learn(param, topic, sources, samples, epsilon=0.001):
 
 
 def learn_val(topic, repetitions=1):
-    djob, discount = qsub(
+    djob, discount = sub(
         args=learn('discount', topic, sources=50, samples=100, epsilon=0.01),
         nodes=8,
         walltime='10:00:00',
         jobname=f'discount-{topic}',
     )
-    cjob, corr = qsub(
-        learn('corr', topic, sources=50, samples=100, epsilon=0.0001),
+    cjob, corr = sub(
+        args=learn('corr', topic, sources=50, samples=100, epsilon=0.0001),
         nodes=8,
         walltime='10:00:00',
         jobname=f'corr-{topic}',
     )
     for _ in range(repetitions):
-        qsub(
+        sub(
             val(topic, sources=64, samples=100, discount=discount, corr=corr),
             nodes=1,
             walltime='00:30:00',
             jobname=f'val-learn-{discount}',
             after=[djob, cjob],
         )
-        qsub(
+        sub(
             val(topic, sources=256, samples=1000, discount=discount, corr=corr),
             nodes=1,
             walltime='00:30:00',
@@ -99,19 +113,19 @@ def learn_val(topic, repetitions=1):
 
 
 def learn_opt_val(topic, repetitions=1):
-    djob, discount = qsub(
+    djob, discount = sub(
         args=learn('discount', topic, sources=256, samples=1000, epsilon=0.01),
         nodes=32,
         walltime='10:00:00',
         jobname=f'discount-{topic}',
     )
-    cjob, corr = qsub(
+    cjob, corr = sub(
         learn('corr', topic, sources=256, samples=1000, epsilon=0.0001),
         nodes=32,
         walltime='10:00:00',
         jobname=f'corr-{topic}',
     )
-    jobid, runid = qsub(
+    jobid, runid = sub(
         optimize(topic, sources=256, samples=1000, corr=corr, discount=discount),
         nodes=128,
         walltime='02:00:00',
@@ -119,7 +133,7 @@ def learn_opt_val(topic, repetitions=1):
         after=[djob, cjob],
     )
     for _ in range(repetitions):
-        qsub(
+        sub(
             val(topic, sources=256, samples=1000, params=runid),
             nodes=1,
             walltime='00:30:00',
@@ -130,14 +144,14 @@ def learn_opt_val(topic, repetitions=1):
 
 def optimize_val(topic, repetitions=1):
     # jobid, runid = qsub(optimize(topic, sources=64, samples=1000)+' --corr out/corr-neos-1336746.hawk-pbs5.csv --discount out/discount-neos-1336745.hawk-pbs5.csv',
-    jobid, runid = qsub(
+    jobid, runid = sub(
         optimize(topic, sources=256, samples=1000),
         nodes=256,
         walltime='24:00:00',
         jobname=f'opt-{topic}',
     )
     for _ in range(repetitions):
-        qsub(
+        sub(
             val(topic, sources=256, samples=1000, params=runid),
             nodes=1,
             walltime='00:30:00',
@@ -146,14 +160,25 @@ def optimize_val(topic, repetitions=1):
         )
 
 
+configs = {
+    'hawk': {'template': os.path.dirname(__file__) + '/hawk.pbs', 'sub_cmd': qsub_cmd},
+    'supermuc': {'template': os.path.dirname(__file__) + '/supermuc.sh', 'sub_cmd': sbatch_cmd},
+}
+config = configs[os.environ.get('PROP_HOST', 'hawk')]
+
+
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--host', help="host config", choices=configs.keys())
     parser.add_argument('--jobname', help="jobname", default="iprop")
     parser.add_argument('-t', '--walltime', help="walltime", default="01:00:00")
     parser.add_argument('-n', '--nodes', help="number of nodes", type=int, default=1)
-    parser.add_argument('-q', '--queue', help="queue")
+    parser.add_argument('-q', '--queue', help="queue/partition")
     args, run_args = parser.parse_known_args()
-    _, j = qsub(
+    global config
+    if args.host is not None:
+        config = configs[args.host]
+    _, j = sub(
         ' '.join(run_args),
         jobname=args.jobname,
         nodes=args.nodes,
