@@ -1,4 +1,8 @@
-# Created by .ignore support plugin (hsz.mobi)
+out
+slurm
+data
+
+*.pickle
 *.npz
 *.adjlist
 *.metis
@@ -7,7 +11,6 @@
 # IntelliJ project files
 .idea/
 *.iml
-out
 gen
 ### JupyterNotebooks template
 # gitignore template for Jupyter Notebooks

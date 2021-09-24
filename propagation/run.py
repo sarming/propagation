@@ -13,7 +13,7 @@ from mpi4py import MPI
 # https://stackoverflow.com/a/28154841/153408
 if __name__ == "__main__" and __package__ is None:
     __package__ = "propagation"
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.path.pardir))
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.pardir))
 
 from . import mpi, optimize, propagation, read, simulation
 
@@ -52,8 +52,7 @@ def parse_args():
     )
     parser.add_argument('--seed', help="seed for RNG", type=int)
     parser.add_argument(
-        "command",
-        choices=['learn_discount', 'learn_corr', 'optimize', 'sim', 'simtweets', 'val'],
+        "command", choices=['learn_discount', 'learn_corr', 'optimize', 'sim', 'simtweets', 'val'],
     )
     parser.add_argument("topic")
     args = parser.parse_args()

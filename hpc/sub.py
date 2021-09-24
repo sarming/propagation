@@ -9,16 +9,22 @@ def sub(
     args='sim neos_20201110',
     jobname='propagation',
     nodes=1,
-    procs=128,
     walltime='01:00:00',
     mpiargs='',
+    procs=None,
     after=None,
     queue=None,
     template=None,
     sub_cmd=None,
 ):
-    template = config['template'] if template is None else template
+    for key, val in config.items():
+        if vars()[key] is None:
+            vars()
+    template = os.path.join('hpc', config['template']) if template is None else template
     sub_cmd = config['sub_cmd'] if sub_cmd is None else sub_cmd
+    procs = config['procs'] if procs is None else procs
+    queue = config['queue'] if queue is None else queue
+
     with open(template, 'r') as f:
         batch = f.read().format(
             jobname=jobname, nodes=nodes, procs=procs, walltime=walltime, mpiargs=mpiargs, args=args
@@ -29,8 +35,9 @@ def sub(
         jobid = get_jobid(r.stdout.strip())
         print(f'submitted job {jobname} as {jobid}')
         runid = f'{jobname}_{jobid}'
+        # print(r)
         return jobid, runid
-    print(f'Could not submit {jobname}: {r}')
+    raise RuntimeError(f'Could not submit {jobname}: {r}')
 
 
 def qsub_cmd(after, queue):
@@ -161,8 +168,9 @@ def optimize_val(topic, repetitions=1):
 
 
 configs = {
-    'hawk': {'template': os.path.dirname(__file__) + '/hawk.pbs', 'sub_cmd': qsub_cmd},
-    'supermuc': {'template': os.path.dirname(__file__) + '/supermuc.sh', 'sub_cmd': sbatch_cmd},
+    'hawk': {'template': 'hawk.pbs', 'sub_cmd': qsub_cmd, 'procs': 128},
+    'supermuc': {'template': 'supermuc.sh', 'sub_cmd': sbatch_cmd, 'procs': 48},
+    'training': {'template': 'training.sh', 'sub_cmd': sbatch_cmd, 'queue': 'hidalgo', 'procs': 32},
 }
 config = configs[os.environ.get('PROP_HOST', 'hawk')]
 
