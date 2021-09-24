@@ -52,7 +52,8 @@ def parse_args():
     )
     parser.add_argument('--seed', help="seed for RNG", type=int)
     parser.add_argument(
-        "command", choices=['learn_discount', 'learn_corr', 'optimize', 'sim', 'simtweets', 'val'],
+        "command",
+        choices=['learn_discount', 'learn_corr', 'optimize', 'sim', 'simtweets', 'val'],
     )
     parser.add_argument("topic")
     args = parser.parse_args()
@@ -184,45 +185,43 @@ def wmape(sim, real):
 
 
 def main():
+    set_excepthook()
     start_time = time.time()
-    args = parse_args()
     if MPI.COMM_WORLD.Get_rank() == 0:
         pd_setup()
-        print(f"mpi_size: {MPI.COMM_WORLD.Get_size()}")
-        print(f"mpi_vendor: {MPI.get_vendor()}")
-        print(f"args: {vars(args)}")
-        print(f"argv: {' '.join(sys.argv)}")
+        print("mpi_size:", MPI.COMM_WORLD.Get_size())
+        print("mpi_vendor:", MPI.get_vendor())
+        args = parse_args()
+        print("args:", vars(args))
+        print("argv:", ' '.join(sys.argv))
+        print("date:", datetime.now().isoformat())
+        code_version = subprocess.run(
+            ['git', 'describe', '--tags', '--dirty'], capture_output=True, text=True
+        ).stdout.strip()
+        print("code_version:", code_version)
+
+        t = time.time()
+        sim = build_sim(args)
+        print("readtime:", time.time() - t)
         t = time.time()
 
-        try:
-            code_version = subprocess.run(
-                ['git', 'describe', '--tags', '--dirty'], capture_output=True, text=True
-            ).stdout.rstrip()
-            sim = build_sim(args)
-        except Exception as e:
-            raise e
-        #     print(e, flush=True, file=sys.stderr)
-        # MPI.COMM_WORLD.Abort(1)
-        # return
-        print(f"code_version: {code_version}")
-        print(f"readtime: {time.time() - t}")
-        t = time.time()
-
-        print(f"seed: {sim.seed.entropy}")
+        print("seed:", sim.seed.entropy)
+        sample_split = args.sample_split
     else:
         propagation.compile()
         sim = None
+        sample_split = None
 
     # if True: # bypass mpi
-    with mpi.futures(sim, chunksize=1, sample_split=args.sample_split) as sim:
+    with mpi.futures(sim, chunksize=1, sample_split=sample_split) as sim:
         if sim is not None:
-            print(f"setuptime: {time.time() - t}", flush=True)
+            print("setuptime:", time.time() - t, flush=True)
             t = time.time()
 
             run(sim, args)
 
-            print(f"runtime: {time.time() - t}")
-            print(f"totaltime: {time.time() - start_time}")
+            print("runtime:", time.time() - t)
+            print("totaltime:", time.time() - start_time)
 
 
 def run(sim, args):
@@ -239,7 +238,7 @@ def run(sim, args):
         sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
 
     elif args.command == 'optimize':
-        best, state = optimize.bayesian(
+        best, state = optimize.gridsearch(
             sim,
             # num=1,
             sources=None if args.sources < 1 else args.sources,
@@ -306,6 +305,16 @@ def pd_setup():
     pd.set_option('display.max_rows', None)
     pd.set_option('display.max_colwidth', None)
     pd.set_option('display.width', 1000)
+
+
+def set_excepthook():
+    old = sys.excepthook
+
+    def e(*args, **kwargs):
+        old(*args, **kwargs)
+        MPI.COMM_WORLD.Abort(1)
+
+    sys.excepthook = e
 
 
 if __name__ == "__main__":

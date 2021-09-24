@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --mail-type=ALL
+#SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=sarming@cs.uni-salzburg.at
 #SBATCH --no-requeue
 
@@ -29,6 +29,5 @@ echo nodes: {nodes} > $OUTFILE
 echo mpiprocs: "$SLURM_NPROCS" >> $OUTFILE
 echo walltime: {walltime} >>$OUTFILE
 echo jobid: "$SLURM_JOB_ID" >>$OUTFILE
-echo date: $(date +"%Y-%m-%dT%H:%M:%S") >>$OUTFILE
 
 mpiexec {mpiargs} bin/run {args} --outdir=out/$RUNID &>> $OUTFILE

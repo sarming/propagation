@@ -192,8 +192,8 @@ def corr_from_mean_retweets(sim, sources=None, samples=1000, eps=0.1, features=N
 def gridsearch(sim, sources=None, samples=1000):
     dom = {
         # 'edge_probability': (0., 0.3, .001),
-        'discount_factor': (0.0, 1.0, 0.01),
-        'corr': (0.0, 0.005, 0.0001),
+        'discount_factor': (0.0, 1.0, 0.1),
+        'corr': (0.0, 0.005, 0.001),
     }
     print(f'grid: {dom}')
 
@@ -234,8 +234,8 @@ def bayesian(sim, sources=None, samples=1000):
 def hillclimb(sim, num=None, sources=None, samples=1000):
     dom = {
         # 'edge_probability': (0., 0.3, .001),
-        'discount_factor': (0.0, 1.0, 0.01),
-        'corr': (0.0, 0.005, 0.0001),
+        'discount_factor': (0.0, 1.0, 0.2),
+        'corr': (0.0, 0.005, 0.001),
     }
     print(f'hill: {dom}')
 

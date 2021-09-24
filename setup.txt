@@ -4,4 +4,4 @@ bash
 conda config --set auto_activate_base false
 conda create -n propagation -c conda-forge python pandas numpy scipy mpi4py numba bayesian-optimization
 conda activate propagation
-# conda install -c conda-forge jupyterlab
+# conda install -c conda-forge jupyterlab black git
