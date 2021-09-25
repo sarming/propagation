@@ -185,36 +185,20 @@ def wmape(sim, real):
 
 
 def main():
-    set_excepthook()
-    start_time = time.time()
-    if MPI.COMM_WORLD.Get_rank() == 0:
-        pd_setup()
-        print("mpi_size:", MPI.COMM_WORLD.Get_size())
-        print("mpi_vendor:", MPI.get_vendor())
-        args = parse_args()
-        print("args:", vars(args))
-        print("argv:", ' '.join(sys.argv))
-        print("date:", datetime.now().isoformat())
-        code_version = subprocess.run(
-            ['git', 'describe', '--tags', '--dirty'], capture_output=True, text=True
-        ).stdout.strip()
-        print("code_version:", code_version)
-
+    is_head = MPI.COMM_WORLD.Get_rank() == 0
+    if is_head:
+        start_time = time.time()
+        args, sim = setup()
         t = time.time()
-        sim = build_sim(args)
-        print("readtime:", time.time() - t)
-        t = time.time()
-
-        print("seed:", sim.seed.entropy)
-        sample_split = args.sample_split
+        print("readtime:", t - start_time)
     else:
         propagation.compile()
         sim = None
-        sample_split = None
 
     # if True: # bypass mpi
-    with mpi.futures(sim, chunksize=1, sample_split=sample_split) as sim:
+    with mpi.futures(sim, chunksize=1, sample_split=args.sample_split if is_head else None) as sim:
         if sim is not None:
+            assert is_head
             print("setuptime:", time.time() - t, flush=True)
             t = time.time()
 
@@ -222,6 +206,30 @@ def main():
 
             print("runtime:", time.time() - t)
             print("totaltime:", time.time() - start_time, flush=True)
+
+            MPI.COMM_WORLD.Abort(0)
+
+
+def setup():
+    set_excepthook()
+    pd_setup()
+
+    args = parse_args()
+
+    print("date:", datetime.now().isoformat())
+    print("mpi_size:", MPI.COMM_WORLD.Get_size())
+    print("mpi_vendor:", MPI.get_vendor())
+    code_version = subprocess.run(
+        ['git', 'describe', '--tags', '--dirty'], capture_output=True, text=True
+    ).stdout.strip()
+    print("code_version:", code_version)
+    print("argv:", ' '.join(sys.argv))
+    print("args:", vars(args))
+
+    sim = build_sim(args)
+
+    print("seed:", sim.seed.entropy)
+    return args, sim
 
 
 def run(sim, args):
@@ -309,13 +317,13 @@ def pd_setup():
 
 
 def set_excepthook():
-    old = sys.excepthook
+    oldhook = sys.excepthook
 
-    def e(*args, **kwargs):
-        old(*args, **kwargs)
+    def newhook(*args, **kwargs):
+        oldhook(*args, **kwargs)
         MPI.COMM_WORLD.Abort(1)
 
-    sys.excepthook = e
+    sys.excepthook = newhook
 
 
 if __name__ == "__main__":
