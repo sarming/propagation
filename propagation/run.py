@@ -18,6 +18,23 @@ if __name__ == "__main__" and __package__ is None:
 from . import mpi, optimize, propagation, read, simulation
 
 
+def set_excepthook():
+    oldhook = sys.excepthook
+
+    def newhook(*args, **kwargs):
+        oldhook(*args, **kwargs)
+        MPI.COMM_WORLD.Abort(1)
+
+    sys.excepthook = newhook
+
+
+def pd_setup():
+    pd.set_option('display.max_columns', None)
+    pd.set_option('display.max_rows', None)
+    pd.set_option('display.max_colwidth', None)
+    pd.set_option('display.width', 1000)
+
+
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser()
@@ -137,6 +154,28 @@ def build_sim(args):
     return sim
 
 
+def setup():
+    set_excepthook()
+    pd_setup()
+
+    args = parse_args()
+
+    print("date:", datetime.now().isoformat())
+    print("mpi_size:", MPI.COMM_WORLD.Get_size())
+    print("mpi_vendor:", MPI.get_vendor())
+    code_version = subprocess.run(
+        ['git', 'describe', '--tags', '--dirty'], capture_output=True, text=True
+    ).stdout.strip()
+    print("code_version:", code_version)
+    print("argv:", ' '.join(sys.argv))
+    print("args:", vars(args))
+
+    sim = build_sim(args)
+
+    print("seed:", sim.seed.entropy)
+    return sim, args
+
+
 def agg_statistics(feature_results):
     """Aggregate statistics by feature.
 
@@ -182,54 +221,6 @@ def mape(sim, real):
 
 def wmape(sim, real):
     return ((sim - real) / real.mean()).abs().mean()
-
-
-def main():
-    is_head = MPI.COMM_WORLD.Get_rank() == 0
-    if is_head:
-        start_time = time.time()
-        args, sim = setup()
-        t = time.time()
-        print("readtime:", t - start_time)
-    else:
-        propagation.compile()
-        sim = None
-
-    # if True: # bypass mpi
-    with mpi.futures(sim, chunksize=1, sample_split=args.sample_split if is_head else None) as sim:
-        if sim is not None:
-            assert is_head
-            print("setuptime:", time.time() - t, flush=True)
-            t = time.time()
-
-            run(sim, args)
-
-            print("runtime:", time.time() - t)
-            print("totaltime:", time.time() - start_time, flush=True)
-
-            MPI.COMM_WORLD.Abort(0)
-
-
-def setup():
-    set_excepthook()
-    pd_setup()
-
-    args = parse_args()
-
-    print("date:", datetime.now().isoformat())
-    print("mpi_size:", MPI.COMM_WORLD.Get_size())
-    print("mpi_vendor:", MPI.get_vendor())
-    code_version = subprocess.run(
-        ['git', 'describe', '--tags', '--dirty'], capture_output=True, text=True
-    ).stdout.strip()
-    print("code_version:", code_version)
-    print("argv:", ' '.join(sys.argv))
-    print("args:", vars(args))
-
-    sim = build_sim(args)
-
-    print("seed:", sim.seed.entropy)
-    return args, sim
 
 
 def run(sim, args):
@@ -309,21 +300,31 @@ def run(sim, args):
         print(r)
 
 
-def pd_setup():
-    pd.set_option('display.max_columns', None)
-    pd.set_option('display.max_rows', None)
-    pd.set_option('display.max_colwidth', None)
-    pd.set_option('display.width', 1000)
+def main():
+    is_head = MPI.COMM_WORLD.Get_rank() == 0
 
+    if is_head:
+        start_time = time.time()
+        sim, args = setup()
+        t = time.time()
+        print("readtime:", t - start_time, flush=True)
+    else:
+        propagation.compile()
+        sim = None
 
-def set_excepthook():
-    oldhook = sys.excepthook
+    # if True: # bypass mpi
+    with mpi.futures(sim, chunksize=1, sample_split=args.sample_split if is_head else None) as sim:
+        if sim is not None:
+            assert is_head
+            print("setuptime:", time.time() - t, flush=True)
+            t = time.time()
 
-    def newhook(*args, **kwargs):
-        oldhook(*args, **kwargs)
-        MPI.COMM_WORLD.Abort(1)
+            run(sim, args)
 
-    sys.excepthook = newhook
+            print("runtime:", time.time() - t)
+            print("totaltime:", time.time() - start_time, flush=True)
+
+            MPI.COMM_WORLD.Abort(0)
 
 
 if __name__ == "__main__":
