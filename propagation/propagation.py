@@ -73,7 +73,7 @@ def edge_propagate_tree(
         max_nodes = int(A.shape[0])
     visited = {source}
     leaves = {source}
-    tree = {source: -1}
+    tree = {source: np.int32(-1)}
     for _ in range(depth):
         next_leaves = set()
         for node in leaves:

@@ -253,35 +253,6 @@ def hillclimb(sim, num=None, sources=None, samples=1000):
         pass
     return opts.best(), opts.state()
 
-    # print(list(opts.values())[0][0].dom.size())
-
-    best = optimize_all_features(
-        sim, domain=dom, sources=sources, samples=samples, explore_current_point=False
-    )
-    t = time.time()
-    while True:
-        for feature, os in opts.items():
-            for o in os:
-                o.register_results()
-                for i in range(50):
-                    if not o.stuck(steps=i, k_best=2):
-                        o.iterate_steep(steps=1, k_best=2)
-                        break
-                else:
-                    best[feature].register_from(o, k_best=2)
-                    o.random_restart(n=1, keep=0)
-
-        if time.time() - t > timeout:
-            break
-
-    for feature, os in opts.items():
-        for o in os:
-            best[feature].register_from(o, k_best=2)
-
-    return {
-        feature: [b.state()] + [o.state() for o in opts[feature]] for feature, b in best.items()
-    }
-
 
 def stochastic_hillclimb(sim, num=1, timeout=60, sources=None, samples=1000):
     dom = {

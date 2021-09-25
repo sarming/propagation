@@ -24,8 +24,8 @@ def top_k_users(graph, k):
 
 
 if MPI.COMM_WORLD.Get_rank() == 0:
-    graph, node_labels = read.metis(f'data/anon_graph_inner_neos_20201110.metis')
-    tweets = read.tweets(f'data/sim_features_neos_20201110.csv', node_labels)
+    graph, node_labels = read.metis('data/anon_graph_inner_neos_20201110.metis')
+    tweets = read.tweets('data/sim_features_neos_20201110.csv', node_labels)
     sim = Simulation.from_tweets(graph, tweets, seed=None)  # Put seed here
 
     # Play around with these parameters

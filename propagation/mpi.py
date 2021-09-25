@@ -127,8 +127,6 @@ def futures(sim, comm=MPI.COMM_WORLD, root=0, chunksize=1, sample_split: int = 1
     if rank == 0:
         A = sim.A
 
-    size = comm.Get_size()
-
     assert root == 0
 
     global global_A

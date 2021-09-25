@@ -10,7 +10,7 @@ import pandas as pd
 def parse_file(filename):
     with open(filename, 'r') as file:
         res = {
-            'jobid': re.search('[_-](\d+\.hawk-pbs5)', filename).group(1),
+            'jobid': re.search(r'[_-](\d+\.hawk-pbs5)', filename).group(1),
             'filename': os.path.basename(filename),
             'file': filename,
         }
@@ -21,8 +21,8 @@ def parse_file(filename):
         else:
             res.update(parse_stats(firstline))
 
-        for l in file:
-            res.update(parse_stats(l))
+        for line in file:
+            res.update(parse_stats(line))
         return res
 
 
@@ -53,10 +53,10 @@ def parse_stats(s):
     )
 
     fields = [
-        ('cfeatures', '(\d+) features, \d+ sources, \d+ samples$', int),
-        ('csources', '\d+ features, (\d+) sources, \d+ samples$', int),
-        ('csamples', '\d+ features, \d+ sources, (\d+) samples$', int),
-        ('totaltime', 'Total Time Elapsed: (.+)$', float),
+        ('cfeatures', r'(\d+) features, \d+ sources, \d+ samples$', int),
+        ('csources', r'\d+ features, (\d+) sources, \d+ samples$', int),
+        ('csamples', r'\d+ features, \d+ sources, (\d+) samples$', int),
+        ('totaltime', r'Total Time Elapsed: (.+)$', float),
     ]
     fields += [(x, f'{x}: (.+)$', t) for x, t in std_fields]
 
@@ -71,7 +71,7 @@ def parse_stats(s):
         try:
             args = ast.literal_eval(m.group(1))
         except ValueError:
-            from argparse import Namespace
+            from argparse import Namespace  # noqa: F401
 
             args = vars(eval(m.group(1)))
         finally:

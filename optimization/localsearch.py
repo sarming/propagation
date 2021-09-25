@@ -81,7 +81,7 @@ class LocalSearch(ABC):
 class SingleLocalSearch(LocalSearch):
     def __init__(self, f, domain, objective, initial=None, seed=None):
         super().__init__(f, domain, objective, initial, seed)
-        self.current = None
+        self.current = (float("inf"), None)
 
     def next(self, results):
         m = min((self.objective(r), point) for r, point in results)

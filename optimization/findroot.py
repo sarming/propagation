@@ -18,6 +18,7 @@ class FindRoot(Protocol):
 
 class FindRootFactory(Protocol):
     def __call__(
+        self,
         f: Fun,
         domain: SearchSpace,
         objective: ObjectiveFun,

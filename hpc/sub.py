@@ -168,8 +168,8 @@ def optimize_val(topic, repetitions=1):
 
 
 configs = {
-    'hawk': {'template': 'hawk.pbs', 'sub_cmd': qsub_cmd, 'queue':'route', 'procs': 128},
-    'supermuc': {'template': 'supermuc.sh', 'sub_cmd': sbatch_cmd, 'queue':'test', 'procs': 48},
+    'hawk': {'template': 'hawk.pbs', 'sub_cmd': qsub_cmd, 'queue': 'route', 'procs': 128},
+    'supermuc': {'template': 'supermuc.sh', 'sub_cmd': sbatch_cmd, 'queue': 'test', 'procs': 48},
     'training': {'template': 'training.sh', 'sub_cmd': sbatch_cmd, 'queue': 'hidalgo', 'procs': 32},
 }
 config = configs[os.environ.get('PROP_HOST', 'hawk')]
