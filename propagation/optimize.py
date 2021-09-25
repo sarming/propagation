@@ -189,13 +189,15 @@ def corr_from_mean_retweets(sim, sources=None, samples=1000, eps=0.1, features=N
     )
 
 
-def gridsearch(sim, sources=None, samples=1000):
-    dom = {
-        # 'edge_probability': (0., 0.3, .001),
-        'discount_factor': (0.0, 1.0, 0.1),
-        'corr': (0.0, 0.005, 0.001),
-    }
-    print(f'grid: {dom}')
+def gridsearch(sim, sources=None, samples=1000, eps=0.001):
+    dom = SearchSpace(
+        {  # 'edge_probability': (0., 0.3, .001),
+            'discount_factor': (0.0, 1.0, 200 * eps),  # = 0.2 * (eps / 0.001)
+            'corr': (0.0, 0.005, eps),  # = 0.001 * (eps / 0.001)
+        }
+    )
+    print("grid:", dom.bounds)
+    print("gridsize:", dom.size())
 
     opts = optimize_all_features(
         GridSearch, sim, domain=dom, sources=sources, samples=samples, explore_current_point=False
@@ -349,5 +351,5 @@ if __name__ == "__main__":
     # with mpi.futures(sim) as sim:
     if True:
         if sim is not None:
-            bayesian(sim, sources=1, samples=1)
+            gridsearch(sim, sources=1, samples=1, eps=0.001)
             # hillclimb(sim, sources=2, samples=10, num=2)

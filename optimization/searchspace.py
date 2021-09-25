@@ -132,3 +132,6 @@ class SearchSpace:
 
     def ndims(self):
         return len(1 for bound in self.bounds.values() if bound_size(bound) > 1)
+
+    def __repr__(self) -> str:
+        return "SearchSpace(" + repr(self.bounds) + ")"

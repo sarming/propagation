@@ -243,6 +243,7 @@ def run(sim, args):
             # num=1,
             sources=None if args.sources < 1 else args.sources,
             samples=args.samples,
+            eps=args.epsilon,
         )
         optimize.set_params(best, sim)
         sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
