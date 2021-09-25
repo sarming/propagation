@@ -221,7 +221,7 @@ def main():
             run(sim, args)
 
             print("runtime:", time.time() - t)
-            print("totaltime:", time.time() - start_time)
+            print("totaltime:", time.time() - start_time, flush=True)
 
 
 def run(sim, args):
