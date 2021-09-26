@@ -197,14 +197,12 @@ def gridsearch(sim, sources=None, samples=1000, eps=0.001):
         }
     )
     print("grid:", dom.bounds)
-    print("gridsize:", dom.size())
+    print("gridsize:", dom.size(), flush=True)
 
     opts = optimize_all_features(
         GridSearch, sim, domain=dom, sources=sources, samples=samples, explore_current_point=False
     )
-    for _ in opts:
-        # print(_)
-        pass
+    next(iter(opts))
 
     return opts.best(), opts.state()
 
@@ -351,5 +349,5 @@ if __name__ == "__main__":
     # with mpi.futures(sim) as sim:
     if True:
         if sim is not None:
-            gridsearch(sim, sources=1, samples=1, eps=0.001)
+            gridsearch(sim, sources=1, samples=1)
             # hillclimb(sim, sources=2, samples=10, num=2)
