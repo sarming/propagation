@@ -7,7 +7,6 @@ import numpy as np
 
 from .findroot import Fun, ObjectiveFun
 from .searchspace import Point, SearchSpace
-from .wrap import WithCallback, WithHistory
 
 
 class LocalSearch(ABC):
@@ -60,14 +59,6 @@ class LocalSearch(ABC):
         new_results = self.raw_results
         self.raw_results = []
         return self.next(new_results)
-
-    @classmethod
-    def with_callback(cls, callback, *vars):
-        def init(f: Fun, domain, objective, initial=None, seed=None):
-            o = cls(f, domain, objective, initial, seed)
-            return WithHistory(WithCallback(o, callback, *vars))
-
-        return init
 
     @abstractmethod
     def next(self, new_results):
@@ -174,21 +165,19 @@ class GridSearch(LocalSearch):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.results = None
-        self.best_point = (float('inf'), {})
+        self.best_result = (float('inf'), {})
 
         self.explore_full_grid()
 
     def next(self, results):
-        self.results = [(tuple(r), point) for r, point in results]
-        val, point = min((self.objective(r), point) for r, point in self.results)
-        self.best_point = point
-        return val, point
+        self.best_result = min((self.objective(r), point) for r, point in results)
+        return self.best_result
 
     def state(self):
-        return self.results
+        return self.best_result
 
     def best(self):
-        return self.best_point
+        return self.best_result[1]
 
 
 def iterate_stochastic(self, steps=1, k_best=1, n_dirs=1):
