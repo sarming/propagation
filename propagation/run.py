@@ -2,6 +2,7 @@
 import argparse
 import os
 import pickle
+import resource
 import subprocess
 import sys
 import time
@@ -322,8 +323,11 @@ def main():
             run(sim, args)
 
             print("runtime:", time.time() - t)
-            print("totaltime:", time.time() - start_time, flush=True)
-
+            print("totaltime:", time.time() - start_time)
+            print("ru_self:", resource.getrusage(resource.RUSAGE_SELF))
+            print("ru_children:", resource.getrusage(resource.RUSAGE_CHILDREN), flush=True)
+            if hasattr(resource, 'RUSAGE_BOTH'):
+                print("ru_both:", resource.getrusage(resource.RUSAGE_BOTH), flush=True)
             MPI.COMM_WORLD.Abort(0)
 
 
