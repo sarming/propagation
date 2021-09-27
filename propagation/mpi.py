@@ -90,10 +90,16 @@ def bcast_csr_matrix(A=None, comm=MPI.COMM_WORLD):
 
 
 global_A = None
+global_sources = None
 
 
 def worker(params, sources, samples, return_stats, seed):
     """Worker function for futures implentation below."""
+    if isinstance(sources, str):
+        sources = np.random.default_rng(np.random.SeedSequence(**seed)).choice(
+            global_sources[sources], 1
+        )
+
     r = propagation.simulate(global_A, params, sources, samples, return_stats, seed)
 
     if return_stats:  # return_stats
@@ -109,6 +115,12 @@ def futures(sim, comm=MPI.COMM_WORLD, root=0, chunksize=1, sample_split: int = 1
 
     # @timecall
     def simulate(A: None, sources, params, samples=1, return_stats=True, seed=None):
+        if isinstance(sources, tuple):
+            author, num = sources
+            # print(type(author), type(num), flush=True)
+            sources = [author] * num
+        else:
+            pass
         """Simulate tweets starting from sources, return mean retweets and retweet probability."""
         seeds = seed.spawn(len(sources) * sample_split)
         sources = [[source] for source in sources]
@@ -127,14 +139,18 @@ def futures(sim, comm=MPI.COMM_WORLD, root=0, chunksize=1, sample_split: int = 1
 
     rank = comm.Get_rank()
     A = None
+    sources = None
     if rank == 0:
         A = sim.A
+        sources = sim.sources
 
     assert root == 0
 
     global global_A
+    global global_sources
     assert global_A is None
     global_A = bcast_csr_matrix(A, comm)
+    global_sources = comm.bcast(sources, root=root)
     MPI.COMM_WORLD.Barrier()
 
     with MPICommExecutor(comm=comm, root=root) as executor:

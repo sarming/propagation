@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 
 from propagation.optimize import edge_probability_from_retweet_probability
-
 from . import propagation, read
 
 
@@ -89,7 +88,8 @@ class Simulation:
         if sources is None:  # start once from each source with given author_feature
             return self.sources[author_feature]
         elif isinstance(sources, int):
-            return self.sample_source(author_feature, size=sources)
+            return (author_feature, sources)
+            # return self.sample_source(author_feature, size=sources)
         try:
             try:
                 return sources[feature]
