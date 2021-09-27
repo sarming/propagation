@@ -122,10 +122,10 @@ class SearchSpace:
             return rnd_point()
         return [rnd_point() for _ in range(n)]
 
+    @functools.cache
     def all_points(self):
         values = product(*[all_values(bound) for bound in self.bounds.values()])
-        for v in values:
-            yield dict(zip(self.bounds.keys(), v))
+        return [dict(zip(self.bounds.keys(), v)) for v in values]
 
     def size(self):
         return np.prod([bound_size(bound) for bound in self.bounds.values()])
