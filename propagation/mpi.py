@@ -171,6 +171,7 @@ def futures(sim, comm=MPI.COMM_WORLD, root=0, chunksize=1, sample_split=1, fixed
             old_simulator = sim.simulator
             sim.simulator = simulate
             yield sim
+            executor.shutdown(wait=False, cancel_futures=True)
             sim.simulator = old_simulator
 
     global_A = None

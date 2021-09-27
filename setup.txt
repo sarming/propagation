@@ -2,6 +2,8 @@ wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 bash Miniconda3-latest-Linux-x86_64.sh
 bash
 conda config --set auto_activate_base false
-conda create -n propagation -c conda-forge python pandas numpy scipy mpi4py numba bayesian-optimization
+conda create -n propagation -c conda-forge python pandas numpy scipy numba bayesian-optimization
 conda activate propagation
-# conda install -c conda-forge jupyterlab black git
+conda config --env --add channels conda-forge
+# conda install jupyterlab networkx matplotlib black git plotnine
+# conda install mpi4py

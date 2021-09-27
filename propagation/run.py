@@ -26,6 +26,7 @@ def set_excepthook():
 
     def newhook(*args, **kwargs):
         oldhook(*args, **kwargs)
+        sys.stdout.flush()
         MPI.COMM_WORLD.Abort(1)
 
     sys.excepthook = newhook
@@ -343,10 +344,7 @@ def main():
 
             print("runtime:", time.time() - t)
             print("totaltime:", time.time() - start_time)
-            print("ru_self:", resource.getrusage(resource.RUSAGE_SELF))
-            print("ru_children:", resource.getrusage(resource.RUSAGE_CHILDREN), flush=True)
-            if hasattr(resource, 'RUSAGE_BOTH'):
-                print("ru_both:", resource.getrusage(resource.RUSAGE_BOTH), flush=True)
+            print("rusage:", resource.getrusage(resource.RUSAGE_SELF), flush=True)
             MPI.COMM_WORLD.Abort(0)
 
 

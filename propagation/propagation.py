@@ -148,6 +148,7 @@ def simulate(A, params, sources, samples=1, return_stats=True, seed=None):
     Returns:
         (int, int): Mean retweets and retweet probability over all runs.
     """
+    # print('.', end='', flush=True)
     p = params['edge_probability']
     corr = params['corr']
     depth = params['max_depth']
