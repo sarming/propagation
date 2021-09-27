@@ -1,3 +1,4 @@
+import gc
 import time
 from abc import ABC
 from typing import Callable
@@ -124,3 +125,18 @@ class WithPrint(Wrapper):
 
     def state(self):
         return self.wrapped.state()
+
+
+class WithGC(Wrapper):
+    def __init__(self, o: FindRoot, generation: int = 2):
+        super().__init__(o)
+        self.generation = generation
+        self.collected = 0
+
+    def __iter__(self):
+        for res in self.wrapped:
+            self.collected += gc.collect(self.generation)
+            yield res
+
+    def state(self):
+        return self.wrapped.state(), self.collected

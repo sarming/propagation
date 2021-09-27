@@ -1,4 +1,5 @@
 from .bayesian import Bayesian
+from .collections import FindRootParallel, DictFindRoot
 from .findroot import FindRoot, FindRootFactory, Result, ObjectiveFun, Fun
 from .localsearch import (
     GridSearch,
@@ -8,8 +9,7 @@ from .localsearch import (
 )
 from .monotone import MonotoneRoot
 from .searchspace import Point, SearchSpace
-from .wrap import WithAllTimeBest, WithCallback, WithHistory, WithPrint, WithTimeout
-from .collections import FindRootParallel, DictFindRoot
+from .wrap import WithAllTimeBest, WithCallback, WithGC, WithHistory, WithPrint, WithTimeout
 
 __all__ = [
     SearchSpace,
@@ -29,6 +29,7 @@ __all__ = [
     #
     WithAllTimeBest,
     WithCallback,
+    WithGC,
     WithHistory,
     WithPrint,
     WithTimeout,
