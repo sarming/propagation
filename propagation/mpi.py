@@ -92,12 +92,11 @@ def bcast_csr_matrix(A=None, comm=MPI.COMM_WORLD):
 global_A = None
 
 
-def worker(args):
+def worker(params, sources, samples, return_stats, seed):
     """Worker function for futures implentation below."""
-    # print(args)
-    r = propagation.simulate(global_A, *args)
+    r = propagation.simulate(global_A, params, sources, samples, return_stats, seed)
 
-    if args[3]:  # return_stats
+    if return_stats:  # return_stats
         return r
     else:
         return list(list(r)[0])
@@ -112,11 +111,15 @@ def futures(sim, comm=MPI.COMM_WORLD, root=0, chunksize=1, sample_split: int = 1
     def simulate(A: None, sources, params, samples=1, return_stats=True, seed=None):
         """Simulate tweets starting from sources, return mean retweets and retweet probability."""
         seeds = seed.spawn(len(sources) * sample_split)
-        sample_calls = [
-            (params, [source], samples // sample_split, return_stats, seed.state)
-            for source, seed in zip(np.repeat(sources, sample_split), seeds)
-        ]
-        results = executor.map(worker, sample_calls, chunksize=chunksize)
+        sources = [[source] for source in sources]
+        sample_calls = (
+            (params, source, samples // sample_split, return_stats, seed.state)
+            for source, seed in zip(sources * sample_split, seeds)
+        )
+
+        results = executor.starmap(
+            worker, sample_calls, chunksize=chunksize, unordered=return_stats
+        )
 
         if return_stats:
             return stats_from_futures(results)
