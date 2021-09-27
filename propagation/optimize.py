@@ -2,6 +2,7 @@ import time
 
 import numpy as np
 import pandas as pd
+
 from optimization import (
     Bayesian,
     DictFindRoot,
@@ -189,16 +190,8 @@ def corr_from_mean_retweets(sim, sources=None, samples=1000, eps=0.1, features=N
     )
 
 
-def gridsearch(sim, sources=None, samples=1000, eps=0.001):
-    dom = SearchSpace(
-        {  # 'edge_probability': (0., 0.3, .001),
-            'discount_factor': (0.0, 1.0, 200 * eps),  # = 0.2 * (eps / 0.001)
-            'corr': (0.0, 0.005, eps),  # = 0.001 * (eps / 0.001)
-        }
-    )
-    print("grid:", dom.bounds)
-    print("gridsize:", dom.size(), flush=True)
-
+def gridsearch(sim, sources=None, samples=1000, dom=None):
+    dom = dom or SearchSpace({'discount_factor': (0.0, 1.0, 0.2), 'corr': (0.0, 0.005, 0.001)})
     opts = optimize_all_features(
         GridSearch, sim, domain=dom, sources=sources, samples=samples, explore_current_point=False
     )

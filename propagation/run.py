@@ -11,6 +11,8 @@ from datetime import datetime
 import pandas as pd
 from mpi4py import MPI
 
+from optimization.searchspace import SearchSpace
+
 # https://stackoverflow.com/a/28154841/153408
 if __name__ == "__main__" and __package__ is None:
     __package__ = "propagation"
@@ -224,7 +226,37 @@ def wmape(sim, real):
     return ((sim - real) / real.mean()).abs().mean()
 
 
+def opt(sim, args):
+    dom = {
+        'discount_factor': (0.0, 1.0, 200 * args.epsilon),  # = 0.2 * (eps / 0.001)
+        'corr': (0.0, 0.005, args.epsilon),  # = 0.001 * (eps / 0.001)
+    }
+    dom = SearchSpace(dom)
+
+    print("grid:", dom.bounds)
+    print("gridsize:", dom.size(), flush=True)
+
+    best, state = optimize.gridsearch(
+        sim,
+        sources=None if args.sources < 1 else args.sources,
+        samples=args.samples,
+        dom=dom,
+    )
+    optimize.set_params(best, sim)
+    sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
+    with open(f'{args.outdir}/optimize-{args.topic}-{args.runid}.pickle', 'bw') as f:
+        pickle.dump((best, state), f)
+    # last history element in first optimization
+    # objective = pd.Series({k: o[0][1][-1] for k, o in opts.items()})
+    # real = sim.stats.mean_retweets
+    # sim = real + objective
+    # print(f'mae: {mae(sim, real)}')
+    # print(f'mape: {mape(sim, real)}')
+    # print(f'wmape: {wmape(sim, real)}')
+
+
 def run(sim, args):
+    print(f'{len(sim.features)} features, {args.sources} sources, {args.samples} samples')
     if args.command == 'learn_discount':
         discount = optimize.discount_from_mean_retweets(sim, samples=args.samples, eps=args.epsilon)
         discount.to_csv(f'{args.outdir}/discount-{args.topic}-{args.runid}.csv')
@@ -238,27 +270,9 @@ def run(sim, args):
         sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
 
     elif args.command == 'optimize':
-        best, state = optimize.gridsearch(
-            sim,
-            # num=1,
-            sources=None if args.sources < 1 else args.sources,
-            samples=args.samples,
-            eps=args.epsilon,
-        )
-        optimize.set_params(best, sim)
-        sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
-        with open(f'{args.outdir}/optimize-{args.topic}-{args.runid}.pickle', 'bw') as f:
-            pickle.dump((best, state), f)
-        # last history element in first optimization
-        # objective = pd.Series({k: o[0][1][-1] for k, o in opts.items()})
-        # real = sim.stats.mean_retweets
-        # sim = real + objective
-        # print(f'mae: {mae(sim, real)}')
-        # print(f'mape: {mape(sim, real)}')
-        # print(f'wmape: {wmape(sim, real)}')
+        opt(sim, args)
 
     elif args.command == 'val':
-        print(f'{len(sim.features)} features, {args.sources} sources, {args.samples} samples')
         r = agg_statistics(
             (feature, sim.simulate(feature, sources=args.sources, samples=args.samples))
             for feature in sim.features
