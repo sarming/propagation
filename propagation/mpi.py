@@ -90,51 +90,78 @@ def bcast_csr_matrix(A=None, comm=MPI.COMM_WORLD):
 
 
 global_A = None
+global_entropy = None
+global_samples = None
+global_params = None
 
 
-def worker(params, sources, samples, return_stats, seed):
+def worker(params, sources, spawn_key, samples=None, return_stats=True):
     """Worker function for futures implentation below."""
-    r = propagation.simulate(global_A, params, sources, samples, return_stats, seed)
+    params = dict(zip(global_params, params))
+    # print(params, flush=True)
+    if samples is None:
+        samples = global_samples
+    seed = np.random.SeedSequence(entropy=global_entropy, spawn_key=spawn_key)
+    r = propagation.simulate(global_A, params, [sources], samples, return_stats, seed)
 
-    if return_stats:  # return_stats
+    if return_stats:
         return r
     else:
         return list(list(r)[0])
         # return [list(source) for source in r]
 
 
+def worker_return_tweets(*args):
+    return worker(*args, return_stats=False)
+
+
 @contextmanager
-def futures(sim, comm=MPI.COMM_WORLD, root=0, chunksize=1, sample_split: int = 1):
+def futures(sim, comm=MPI.COMM_WORLD, root=0, chunksize=1, sample_split=1, fixed_samples=None):
     from mpi4py.futures import MPICommExecutor
 
     # @timecall
     def simulate(A: None, sources, params, samples=1, return_stats=True, seed=None):
         """Simulate tweets starting from sources, return mean retweets and retweet probability."""
         seeds = seed.spawn(len(sources) * sample_split)
-        sources = [[source] for source in sources]
+        sources = sources * sample_split
+        params = list(dict(params).values())
+
         sample_calls = (
-            (params, source, samples // sample_split, return_stats, seed.state)
-            for source, seed in zip(sources * sample_split, seeds)
+            (params, source, seed.state['spawn_key'])
+            if global_samples and global_samples == samples // sample_split
+            else (params, source, seed.state['spawn_key'], samples // sample_split)
+            for source, seed in zip(sources, seeds)
         )
 
-        results = executor.starmap(
-            worker, sample_calls, chunksize=chunksize, unordered=return_stats
-        )
+        w = worker if return_stats else worker_return_tweets
+        results = executor.starmap(w, sample_calls, chunksize=chunksize, unordered=return_stats)
 
         if return_stats:
             return stats_from_futures(results)
         return (chain.from_iterable(islice(results, sample_split)) for _ in sources)
 
-    rank = comm.Get_rank()
-    A = None
-    if rank == 0:
-        A = sim.A
+    global global_A
+    global global_entropy
+    global global_samples
+    global global_params
 
     assert root == 0
-
-    global global_A
     assert global_A is None
-    global_A = bcast_csr_matrix(A, comm)
+
+    rank = comm.Get_rank()
+
+    if rank == 0:
+        global_A = sim.A
+        global_entropy = sim.seed.state['entropy']
+        if fixed_samples:
+            global_samples = fixed_samples // sample_split
+        global_params = list(dict(sim.params).keys())
+
+    global_A = bcast_csr_matrix(global_A, comm)
+    global_entropy = comm.bcast(global_entropy, root=root)
+    global_samples = comm.bcast(global_samples, root=root)
+    global_params = comm.bcast(global_params, root=root)
+
     MPI.COMM_WORLD.Barrier()
 
     with MPICommExecutor(comm=comm, root=root) as executor:

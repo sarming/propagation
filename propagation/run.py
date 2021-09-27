@@ -314,7 +314,12 @@ def main():
         sim = None
 
     # if True: # bypass mpi
-    with mpi.futures(sim, chunksize=1, sample_split=args.sample_split if is_head else None) as sim:
+    with mpi.futures(
+        sim,
+        chunksize=1,
+        sample_split=args.sample_split if is_head else None,
+        fixed_samples=args.samples if is_head else None,
+    ) as sim:
         if sim is not None:
             assert is_head
             print("setuptime:", time.time() - t, flush=True)
