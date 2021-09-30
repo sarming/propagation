@@ -154,6 +154,7 @@ def futures(sim, comm=MPI.COMM_WORLD, root=0, chunksize=1, sample_split=1, fixed
         global_A = sim.A
         global_entropy = sim.seed.state['entropy']
         if fixed_samples:
+            assert fixed_samples % sample_split == 0
             global_samples = fixed_samples // sample_split
         global_params = list(dict(sim.params).keys())
 

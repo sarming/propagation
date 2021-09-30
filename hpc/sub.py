@@ -149,17 +149,16 @@ def learn_opt_val(topic, repetitions=1):
         )
 
 
-def optimize_val(topic, repetitions=1):
-    # jobid, runid = qsub(optimize(topic, sources=64, samples=1000)+' --corr out/corr-neos-1336746.hawk-pbs5.csv --discount out/discount-neos-1336745.hawk-pbs5.csv',
+def optimize_val(topic, val_repetitions=1):
     jobid, runid = sub(
-        optimize(topic, sources=256, samples=1000),
+        optimize(topic, sources=400, samples=1000),
         nodes=256,
         walltime='24:00:00',
         jobname=f'opt-{topic}',
     )
-    for _ in range(repetitions):
+    for _ in range(val_repetitions):
         sub(
-            val(topic, sources=256, samples=1000, params=runid),
+            val(topic, sources=400, samples=1000, params=runid),
             nodes=1,
             walltime='00:30:00',
             jobname=f'val-{runid}',
@@ -201,6 +200,6 @@ if __name__ == '__main__':
         main()
     else:
         for topic in ['neos', 'fpoe', 'socialdistance']:
-            learn_opt_val(topic, repetitions=2)
+            # learn_opt_val(topic, repetitions=2)
             # learn_val(topic, 10)
-            # optimize_val(topic, 2)
+            optimize_val(topic, 3)

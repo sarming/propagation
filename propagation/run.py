@@ -322,19 +322,16 @@ def main():
     if is_head:
         start_time = time.time()
         sim, args = setup()
+        mpi_futures_config = dict(sample_split=args.sample_split, fixed_samples=args.samples)
         t = time.time()
         print("readtime:", t - start_time, flush=True)
     else:
         propagation.compile()
         sim = None
+        mpi_futures_config = {}
 
     # if True: # bypass mpi
-    with mpi.futures(
-        sim,
-        chunksize=1,
-        sample_split=args.sample_split if is_head else None,
-        fixed_samples=args.samples if is_head else None,
-    ) as sim:
+    with mpi.futures(sim, **mpi_futures_config) as sim:
         if sim is not None:
             assert is_head
             print("setuptime:", time.time() - t, flush=True)

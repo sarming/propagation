@@ -1,6 +1,7 @@
 import ast
 import os
 import re
+from datetime import datetime
 from fnmatch import fnmatch
 from os.path import join
 
@@ -10,9 +11,10 @@ import pandas as pd
 def parse_file(filename):
     with open(filename, 'r') as file:
         res = {
-            'jobid': re.search(r'[_-](\d+\.hawk-pbs5)', filename).group(1),
+            'jobid': re.search(r'[_-](\d+)(\.hawk-pbs5-|/)', filename).group(1),
             'filename': os.path.basename(filename),
             'file': filename,
+            'date': pd.to_datetime(re.search(r'(\d{8}T\d{4})', filename).group(1)),
         }
         firstline = file.readline()
         if firstline.strip().isdecimal():
@@ -31,8 +33,8 @@ def parse_stats(s):
         ('nodes', int),
         ('mpiprocs', int),
         ('walltime', str),
-        ('jobid', str),
-        ('date', str),
+        ('jobid', lambda x: x.replace(".hawk-pbs5", "")),
+        ('date', datetime.fromisoformat),
         ('topic', str),
         ('code_version', str),
         ('argv', str),
@@ -50,6 +52,7 @@ def parse_stats(s):
         ('mae', float),
         ('mape', float),
         ('wmape', float),
+        ('gridsize', int),
     )
 
     fields = [
@@ -82,22 +85,25 @@ def parse_stats(s):
 def parse_files(logfiles):
     r = pd.DataFrame(map(parse_file, logfiles), dtype=object)
     r.set_index('jobid', inplace=True)
-    r['nodes'] = r.mpi_size // 128
-    #    r['total_tweets'] = r.featurabses * r.sources * r.samples
-    #    r['total_retweets'] = r.features * r.sources * r.samples * r.mean_retweets
+    r['nodes'] = r.mpi_size.apply(
+        lambda s: s // 48 if s % 48 == 0 else s // 128, convert_dtype=False
+    )
+    r['total_tweets'] = r.features * r.sources * r.samples
+    if 'mean_retweets' in r.columns:
+        r['total_retweets'] = r.features * r.sources * r.samples * r.mean_retweets
     #     display(r.isna(column='totaltime'))
     r = r.sort_index().dropna(subset=['topic'])
     aborted = r[r.totaltime.isna()]
     r.drop(aborted.index, inplace=True)
     #     display(aborted)
     print(f'aborted: {aborted.filename}')
-    r = r.infer_objects()
+    r = r.convert_dtypes()
     return r
 
 
 def outfiles(directory):
     for root, dirs, files in os.walk(directory):
-        dirs[:] = [d for d in dirs if d[0] != '.']  # remove dotdirs
+        dirs[:] = [d for d in dirs if d[0] != '.' and d != 'failed']  # remove dotdirs, failed
         for f in files:
             if fnmatch(f, '*out*') and not fnmatch(f, '.*'):
                 yield join(root, f)
