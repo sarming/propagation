@@ -41,43 +41,53 @@ def pd_setup():
 
 def parse_args():
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--runid')
-    parser.add_argument('--graph', help="graph file (.npz, .metis or .adjlist)")
-    parser.add_argument('--metis_zero_based', action='store_true')
-    parser.add_argument('--tweets', help="tweet file (.csv)")
-    parser.add_argument('--stats', help="stats file (.csv)")
-    parser.add_argument('--params', help="params file (.csv)")
-    parser.add_argument('--discount', help="discount file (.csv)")
-    parser.add_argument('--corr', help="corr file (.csv)")
-    parser.add_argument('--source_map', help="source map file (.csv)")
-    parser.add_argument('--indir', help="input directory (default: data)", default='data')
-    parser.add_argument('--outdir', help="output directory (default: out)", default='out')
-    parser.add_argument(
-        '-f', '--features', help="number of features to simulate", type=int, default=1
+    p = argparse.ArgumentParser()
+    p.add_argument('--runid')
+    p.add_argument('--graph', help="graph file (.npz, .metis or .adjlist)")
+    p.add_argument('--metis_zero_based', action='store_true')
+    p.add_argument('--tweets', help="tweet file (.csv)")
+    p.add_argument('--stats', help="stats file (.csv)")
+    p.add_argument('--params', help="params file (.csv)")
+    p.add_argument('--discount', help="discount file (.csv)")
+    p.add_argument('--corr', help="corr file (.csv)")
+    p.add_argument('--source_map', help="source map file (.csv)")
+    p.add_argument('--indir', help="input directory (default: data)", default='data')
+    p.add_argument('--outdir', help="output directory (default: out)", default='out')
+    p.add_argument(
+        '-f', '--features', help="number of features to simulate (default: 1)", type=int, default=1
     )
-    parser.add_argument(
-        '-a', '--sources', help="number of authors per feature class", type=int, default=1
+    p.add_argument(
+        '-a',
+        '--sources',
+        help="number of authors per feature class (default: 1)",
+        type=int,
+        default=1,
     )
-    parser.add_argument('-s', '--samples', help="number of samples per tweet", type=int, default=1)
-    parser.add_argument(
-        '--epsilon', help="epsilon for parameter learning", type=float, default=0.001
+    p.add_argument(
+        '-s', '--samples', help="number of samples per tweet (default: 1)", type=int, default=1
     )
-    parser.add_argument('--max_depth', help="maximum depth to simulate", type=int)
-    parser.add_argument('--max_nodes', help="maximum retweet count to simulate", type=int)
-    parser.add_argument(
+    p.add_argument(
+        '--epsilon',
+        help="epsilon for parameter learning (default: 0.001)",
+        type=float,
+        default=0.001,
+    )
+    p.add_argument('--max_depth', help="maximum depth to simulate", type=int)
+    p.add_argument('--max_nodes', help="maximum retweet count to simulate", type=int)
+    p.add_argument(
         '--sample_split',
         help="split tasks (default: 1, has to divide 'samples', changes RNG)",
         type=int,
         default=1,
     )
-    parser.add_argument('--seed', help="seed for RNG", type=int)
-    parser.add_argument(
+    p.add_argument('--seed', help="seed for RNG", type=int)
+    p.add_argument(
         "command",
         choices=['learn_discount', 'learn_corr', 'optimize', 'sim', 'simtweets', 'val'],
     )
-    parser.add_argument("topic")
-    args = parser.parse_args()
+    p.add_argument("topic")
+
+    args = p.parse_args()
 
     # Defaults
     if args.runid is None:

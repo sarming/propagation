@@ -30,4 +30,4 @@ echo mpiprocs: "$SLURM_NPROCS" >> $OUTFILE
 echo walltime: {walltime} >>$OUTFILE
 echo jobid: "$SLURM_JOB_ID" >>$OUTFILE
 
-mpiexec {mpiargs} bin/run {args} --outdir=out/$RUNID &>> $OUTFILE
+mpiexec {mpiargs} {exe} {args} --outdir=out/$RUNID &>> $OUTFILE

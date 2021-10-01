@@ -18,6 +18,5 @@ echo nodes: {nodes} > $OUTFILE
 echo mpiprocs: "$SLURM_NPROCS" >> $OUTFILE
 echo walltime: {walltime} >>$OUTFILE
 echo jobid: "$SLURM_JOB_ID" >>$OUTFILE
-echo date: $(date +"%Y-%m-%dT%H:%M:%S") >>$OUTFILE
 
-mpiexec {mpiargs} bin/run {args} --outdir=out/$RUNID &>> $OUTFILE
+mpiexec {mpiargs} {exe} {args} --outdir=out/$RUNID &>> $OUTFILE

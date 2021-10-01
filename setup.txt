@@ -2,15 +2,16 @@ wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 bash Miniconda3-latest-Linux-x86_64.sh
 bash
 conda config --set auto_activate_base false
-conda create -n propagation -c conda-forge python pandas numpy scipy numba bayesian-optimization -y
+conda create -n propagation -y
 conda activate propagation
 conda config --env --add channels conda-forge
+conda install python pandas numpy scipy numba bayesian-optimization -y
 
-# To use OpenMPI from conda
+# Either use OpenMPI from conda:
 # conda install openmpi mpi4py
 
-# To use native MPI distribution
+# Or the native MPI distribution:
 # pip install mpi4py
 
 # Install optional packages
-# conda install jupyterlab networkx matplotlib black git plotnine -y
+# conda install jupyterlab profilehooks networkx matplotlib black git plotnine -y
