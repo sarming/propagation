@@ -1,5 +1,3 @@
-from typing import Optional
-
 import numpy as np
 from bayes_opt import BayesianOptimization, UtilityFunction
 
@@ -13,7 +11,7 @@ class Bayesian:
         f: Fun,
         domain: SearchSpace,
         objective: ObjectiveFun,
-        initial: Optional[Point],
+        initial: Point = None,
         seed=None,
         utility=None,
     ) -> None:
@@ -37,7 +35,7 @@ class Bayesian:
             self.old_point = self.point
             val = self.objective(self.old_result)
 
-            self.opt.register(self.old_point, -val)
+            self.opt.register(self.old_point, -val)  # Negate for minimization instead of max
             self.point = self.opt.suggest(self.utility)
 
             self.result = self.f(self.point)

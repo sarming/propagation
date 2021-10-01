@@ -5,7 +5,7 @@ conda config --set auto_activate_base false
 conda create -n propagation -y
 conda activate propagation
 conda config --env --add channels conda-forge
-conda install python pandas numpy scipy numba bayesian-optimization -y
+conda install python pandas numpy scipy numba bayesian-optimization frozendict -y
 
 # Either use OpenMPI from conda:
 # conda install openmpi mpi4py

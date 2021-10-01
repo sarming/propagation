@@ -3,6 +3,7 @@ from itertools import product
 from math import floor
 
 import numpy as np
+from frozendict import frozendict
 
 
 def in_bound(value, bound):
@@ -72,16 +73,7 @@ def bisect(mid, bound):
     return lower, upper
 
 
-@functools.total_ordering
-class Point(dict):  # https://stackoverflow.com/a/1151686
-    def __key(self):
-        return (tuple(self.keys()), tuple(self.values()))
-
-    def __hash__(self):
-        return hash(frozenset(self.keys()), frozenset(self.values()))
-
-    def __lt__(self, other):
-        return self.__key() < other.__key()
+Point = frozendict
 
 
 class SearchSpace:
