@@ -1,5 +1,6 @@
 import ast
 import os
+import pickle
 import re
 from datetime import datetime
 from fnmatch import fnmatch
@@ -101,9 +102,35 @@ def parse_files(logfiles):
     return r
 
 
-def outfiles(directory):
+def nofilter(_):
+    return True
+
+
+def walk(directory, dirfilter=nofilter, filefilter=nofilter):
     for root, dirs, files in os.walk(directory):
-        dirs[:] = [d for d in dirs if d[0] != '.' and d != 'failed']  # remove dotdirs, failed
+        dirs[:] = [d for d in dirs if dirfilter(d)]
         for f in files:
-            if fnmatch(f, '*out*') and not fnmatch(f, '.*'):
+            if filefilter(f):
                 yield join(root, f)
+
+
+def walk_skip_dot(directory, dirfilter=nofilter, filefilter=nofilter):
+    yield from walk(
+        directory,
+        lambda d: d[0] != '.' and dirfilter(d),
+        lambda f: not fnmatch(f, '.*') and filefilter(f),
+    )
+
+
+def outfiles(directory):
+    yield from walk_skip_dot(directory, filefilter=lambda f: fnmatch(f, '*out*'))
+
+
+def picklefiles(directory):
+    yield from walk_skip_dot(directory, filefilter=lambda f: fnmatch(f, '*.pickle'))
+
+
+def load_pickle(filename):
+    with open(filename, "rb") as file:
+        obj = pickle.load(file)
+    return obj
