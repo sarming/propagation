@@ -322,9 +322,9 @@ def main():
     if is_head:
         start_time = time.time()
         sim, args = setup()
-        mpi_futures_config = dict(sample_split=args.sample_split, fixed_samples=args.samples)
         t = time.time()
         print("readtime:", t - start_time, flush=True)
+        mpi_futures_config = dict(sample_split=args.sample_split, fixed_samples=args.samples)
     else:
         propagation.compile()
         sim = None
