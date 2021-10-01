@@ -116,8 +116,12 @@ def worker_return_tweets(*args):
 
 
 @contextmanager
-def futures(sim, comm=MPI.COMM_WORLD, root=0, chunksize=1, sample_split=1, fixed_samples=None):
+def futures(sim=None, comm=MPI.COMM_WORLD, root=0, chunksize=1, sample_split=1, fixed_samples=None):
     from mpi4py.futures import MPICommExecutor
+
+    if comm.Get_size() == 1:
+        yield sim
+        return
 
     # @timecall
     def simulate(A: None, sources, params, samples=1, return_stats=True, seed=None):

@@ -334,15 +334,13 @@ def main():
         sim, args = setup()
         t = time.time()
         print("readtime:", t - start_time, flush=True)
-        mpi_futures_config = dict(sample_split=args.sample_split, fixed_samples=args.samples)
+        mpi_sim = mpi.futures(sim=sim, sample_split=args.sample_split, fixed_samples=args.samples)
     else:
         propagation.compile()
-        sim = None
-        mpi_futures_config = {}
+        mpi_sim = mpi.futures()
 
-    # if True: # bypass mpi
-    with mpi.futures(sim, **mpi_futures_config) as sim:
-        if sim is not None:
+    with mpi_sim as sim:
+        if sim:
             assert is_head
             print("setuptime:", time.time() - t, flush=True)
             t = time.time()
@@ -352,7 +350,7 @@ def main():
             print("runtime:", time.time() - t)
             print("totaltime:", time.time() - start_time)
             print("rusage:", resource.getrusage(resource.RUSAGE_SELF), flush=True)
-            MPI.COMM_WORLD.Abort(0)
+            # MPI.COMM_WORLD.Abort(0)
 
 
 if __name__ == "__main__":
