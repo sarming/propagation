@@ -326,6 +326,28 @@ def run(sim, args):
         print(r)
 
 
+def rusage():
+    keys = (
+        'utime',
+        'stime',
+        'maxrss',
+        'ixrss',
+        'idrss',
+        'isrss',
+        'minflt',
+        'majflt',
+        'nswap',
+        'inblock',
+        'oublock',
+        'msgsnd',
+        'msgrcv',
+        'nsignals',
+        'nvcsw',
+        'nivcsw',
+    )
+    return dict(zip(keys, resource.getrusage(resource.RUSAGE_SELF)))
+
+
 def main():
     is_head = MPI.COMM_WORLD.Get_rank() == 0
 
@@ -349,7 +371,7 @@ def main():
 
             print("runtime:", time.time() - t)
             print("totaltime:", time.time() - start_time)
-            print("rusage:", resource.getrusage(resource.RUSAGE_SELF), flush=True)
+            print("rusage:", rusage(), flush=True)
             # MPI.COMM_WORLD.Abort(0)
 
 

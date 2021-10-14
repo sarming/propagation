@@ -54,6 +54,7 @@ def parse_stats(s):
         ('mape', float),
         ('wmape', float),
         ('gridsize', int),
+        ('rusage', dict),
     )
 
     fields = [
