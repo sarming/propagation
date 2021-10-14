@@ -1,4 +1,5 @@
 from collections import defaultdict
+from contextlib import contextmanager
 
 import networkx as nx
 import pandas as pd
@@ -6,18 +7,17 @@ import pandas as pd
 
 def from_dict(d: dict):
     tree = nx.DiGraph()
-    root = None
     for v, parent in d.items():
         if parent == -1:
             tree.add_node(v)
-            root = v
+            tree.graph["root"] = v
         else:
             tree.add_edge(parent, v)
-    return tree, root
+    return tree
 
 
-def depth_histogram(tree, root):
-    lengths = nx.single_source_shortest_path_length(tree, root)
+def depth_histogram(tree):
+    lengths = nx.single_source_shortest_path_length(tree, tree.graph["root"])
     hist = defaultdict(int)
     for node, depth in lengths.items():
         hist[depth] += 1
@@ -25,37 +25,45 @@ def depth_histogram(tree, root):
     return pd.Series(hist, dtype='Int64')
 
 
-def bfs_nodes(tree, root, node_labels=None):
+def bfs_nodes(tree, node_labels=None):
+    root = tree.graph["root"]
     edges = nx.bfs_edges(tree, root)
     if node_labels:
         return [node_labels[root]] + [node_labels[v] for u, v in edges]
     return [root] + [v for u, v in edges]
 
 
-if __name__ == "__main__":
-    from itertools import starmap
+@contextmanager
+def propagation_tree():
+    from . import propagation
 
-    from . import propagation, read
-    from .simulation import Simulation
-
+    orig = propagation.edge_propagate
     propagation.edge_propagate = propagation.edge_propagate_tree
+    yield
+    propagation.edge_propagate = orig
+
+
+if __name__ == "__main__":
+    from . import read, simulation
 
     datadir = 'data'
     graph, node_labels = read.metis(f'{datadir}/anon_graph_inner_neos_20201110.metis')
     tweets = read.tweets(f'{datadir}/sim_features_neos_20201110.csv', node_labels)
-    sim = Simulation.from_tweets(graph, tweets)
+    sim = simulation.Simulation.from_tweets(graph, tweets)
 
-    run = sim.run(10, samples=1)
-    results = [
-        (feature, from_dict(sample))
-        for (feature, sources) in run
-        for (source, samples) in sources
-        for sample in samples
-    ]
-    for feature, (tree, root) in results:
-        print(', '.join(map(str, list(feature) + bfs_nodes(tree, root, node_labels))))
+    with propagation_tree():
+        run = sim.run(10, samples=1)
+        results = [
+            (feature, from_dict(sample))
+            for (feature, sources) in run
+            for (source, samples) in sources
+            for sample in samples
+        ]
+
+    for feature, tree in results:
+        print(', '.join(map(str, list(feature) + bfs_nodes(tree, node_labels))))
         # print(nx.to_dict_of_dicts(tree))
 
-    trees = list(zip(*results))[1]
-    hist = pd.concat(starmap(depth_histogram, trees), axis=1).fillna(0).transpose()
+    features, trees = list(zip(*results))
+    hist = pd.concat(map(depth_histogram, trees), axis=1).fillna(0).transpose()
     print(hist)
