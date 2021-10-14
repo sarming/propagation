@@ -2,6 +2,7 @@ import ast
 import os
 import pickle
 import re
+from contextlib import contextmanager
 from datetime import datetime
 from fnmatch import fnmatch
 from os.path import join
@@ -133,5 +134,29 @@ def picklefiles(directory):
 
 def load_pickle(filename):
     with open(filename, "rb") as file:
-        obj = pickle.load(file)
+        try:
+            obj = pickle.load(file)
+        except TypeError:
+            file.seek(0)
+            with old_point():
+                obj = pickle.load(file)
     return obj
+
+
+@contextmanager
+def old_point():
+    import optimization
+    import functools
+
+    @functools.total_ordering
+    class Point(dict):  # https://stackoverflow.com/a/1151686
+        def __hash__(self):
+            return hash(frozenset(self.keys()), frozenset(self.values()))
+
+        def __lt__(self, other):
+            return hash(self) < hash(other)
+
+    current = optimization.searchspace.Point
+    optimization.searchspace.Point = Point
+    yield
+    optimization.searchspace.Point = current
