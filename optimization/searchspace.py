@@ -5,6 +5,9 @@ from math import floor
 import numpy as np
 from frozendict import frozendict
 
+# Backward compatibility for functools.cache
+memoize = functools.cache if hasattr(functools, 'cache') else functools.lru_cache(None)
+
 
 def in_bound(value, bound):
     if isinstance(bound, tuple):
@@ -118,7 +121,7 @@ class SearchSpace:
             return rnd_point()
         return [rnd_point() for _ in range(n)]
 
-    @functools.cache
+    @memoize
     def all_points(self):
         values = product(*[all_values(bound) for bound in self.bounds.values()])
         return [dict(zip(self.bounds.keys(), v)) for v in values]
