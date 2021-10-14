@@ -73,7 +73,11 @@ def bisect(mid, bound):
     return lower, upper
 
 
-Point = frozendict
+@functools.total_ordering
+class Point(frozendict):
+    # Ordering is just convenience to allow comparison of tuples containing Points
+    def __lt__(self, other):
+        return hash(self) < hash(other)
 
 
 class SearchSpace:
