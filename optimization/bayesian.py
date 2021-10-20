@@ -35,7 +35,11 @@ class Bayesian:
             self.old_point = self.point
             val = self.objective(self.old_result)
 
-            self.opt.register(self.old_point, -val)  # Negate for minimization instead of max
+            try:
+                self.opt.register(self.old_point, -val)  # Negate for minimization instead of max
+            except KeyError as e:
+                print(e, flush=True)
+
             self.point = self.opt.suggest(self.utility)
 
             self.result = self.f(self.point)
