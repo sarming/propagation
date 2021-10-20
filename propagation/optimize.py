@@ -200,27 +200,22 @@ def gridsearch(sim, sources=None, samples=1000, dom=None):
     return opts.best(), opts.state()
 
 
-def bayesian(sim, sources=None, samples=1000):
-    dom = {
-        # 'edge_probability': (0., 0.3, .001),
-        'discount_factor': (0.0, 1.0, 0.01),
-        'corr': (0.0, 0.005, 0.0001),
-    }
-    print(f'bayes: {dom}')
+def bayesian(sim, sources=None, samples=1000, timeout=None, steps=100, dom=None):
+    dom = dom or SearchSpace({'discount_factor': (0.0, 1.0, 0.001), 'corr': (0.0, 0.005, 0.0001)})
 
+    findroot = Bayesian if timeout == None else WithTimeout.wrap(Bayesian, timeout)
     opts = optimize_all_features(
-        WithTimeout.wrap(Bayesian, 20),
+        findroot,
         sim,
         domain=dom,
         sources=sources,
         samples=samples,
         explore_current_point=True,
         history=True,
-        # callback=lambda res, o, feature: print(f"{feature}: {res}"),
-        num=1,
     )
-    for i, res in zip(range(10000), opts):
-        print(i, res)
+    it = zip(range(steps), opts) if steps is not None else enumerate(opts)
+    for i, res in it:
+        print(i, res, flush=True)
     return opts.best(), opts.state()
 
 

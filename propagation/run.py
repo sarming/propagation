@@ -64,6 +64,12 @@ def parse_args():
         type=float,
         default=0.001,
     )
+    p.add_argument(
+        '--steps',
+        help="number of steps for optimization (default: 10)",
+        type=int,
+        default=10,
+    )
     p.add_argument('--max_depth', help="maximum depth to simulate", type=int)
     p.add_argument('--max_nodes', help="maximum retweet count to simulate", type=int)
     p.add_argument(
@@ -75,7 +81,7 @@ def parse_args():
     p.add_argument('--seed', help="seed for RNG", type=int)
     p.add_argument(
         "command",
-        choices=['learn_discount', 'learn_corr', 'optimize', 'sim', 'simtweets', 'trees', 'val'],
+        choices=commands.cmds.keys(),
     )
     p.add_argument("topic")
 

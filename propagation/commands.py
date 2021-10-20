@@ -7,19 +7,6 @@ from . import optimize, tree
 from .simulation import Simulation
 
 
-def run(sim: Simulation, args):
-    cmds = {
-        'learn_corr': learn_corr,
-        'learn_discount': learn_discount,
-        'optimize': opt,
-        'sim': simstats,
-        'simtweets': simtweets,
-        'trees': simtweets,
-        'val': val,
-    }
-    cmds[args.command](sim, args)
-
-
 def learn_corr(sim: Simulation, args):
     corr = optimize.corr_from_mean_retweets(sim, samples=args.samples, eps=args.epsilon)
     corr.to_csv(f'{args.outdir}/corr-{args.topic}-{args.runid}.csv')
@@ -61,6 +48,28 @@ def opt(sim: Simulation, args):
     # print(f'mae: {mae(sim, real)}')
     # print(f'mape: {mape(sim, real)}')
     # print(f'wmape: {wmape(sim, real)}')
+
+
+def bayes(sim: Simulation, args):
+    dom = {
+        'discount_factor': (0.0, 1.0, 200 * args.epsilon),  # = 0.2 * (eps / 0.001)
+        'corr': (0.0, 0.005, args.epsilon),  # = 0.001 * (eps / 0.001)
+    }
+
+    print("bayes:", dom, flush=True)
+
+    best, state = optimize.bayesian(
+        sim,
+        sources=None if args.sources < 1 else args.sources,
+        samples=args.samples,
+        steps=args.steps,
+        dom=dom,
+    )
+
+    optimize.set_params(best, sim)
+    sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
+    with open(f'{args.outdir}/optimize-{args.topic}-{args.runid}.pickle', 'bw') as f:
+        pickle.dump((best, state), f)
 
 
 def simstats(sim: Simulation, args):
@@ -106,6 +115,22 @@ def val(sim: Simulation, args):
     for stat in ['retweet_probability', 'mean_retweets']:
         for measure in [mae, mape, wmape]:
             print_error(measure, stat)
+
+
+cmds = {
+    'learn_corr': learn_corr,
+    'learn_discount': learn_discount,
+    'optimize': opt,
+    'sim': simstats,
+    'simtweets': simtweets,
+    'trees': simtweets,
+    'val': val,
+    'bayes': bayes,
+}
+
+
+def run(sim: Simulation, args):
+    cmds[args.command](sim, args)
 
 
 # Helper functions:
