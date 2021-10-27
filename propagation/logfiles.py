@@ -31,6 +31,11 @@ def parse_file(filename):
 
 
 def parse_stats(s):
+    def namespace(s):
+        from argparse import Namespace  # noqa: F401
+
+        return vars(eval(s))
+
     std_fields = (
         ('nodes', int),
         ('mpiprocs', int),
@@ -55,7 +60,8 @@ def parse_stats(s):
         ('mape', float),
         ('wmape', float),
         ('gridsize', int),
-        ('rusage', dict),
+        ('rusage', dict, str),
+        ('args', ast.literal_eval, namespace),  # second for Namespace
     )
 
     fields = [
@@ -64,29 +70,39 @@ def parse_stats(s):
         ('csamples', r'\d+ features, \d+ sources, (\d+) samples$', int),
         ('totaltime', r'Total Time Elapsed: (.+)$', float),
     ]
-    fields += [(x, f'{x}: (.+)$', t) for x, t in std_fields]
+    fields += [(x, f'{x}: (.+)$', *t) for x, *t in std_fields]
 
     res = {}
     for f in fields:
-        m = re.search(f[1], s)
+        name, regex, *casts = f
+        m = re.search(regex, s)
         if m:
-            res[f[0]] = f[2](m.group(1))
+            for c in casts:  # Use first successful cast
+                try:
+                    res[name] = c(m.group(1))
+                    break
+                except ValueError:
+                    pass
+            else:
+                raise ValueError(f"Could not parse {name}: {m}")
+    if 'args' in res:
+        res.update(res['args'])
+        del res['args']
 
-    m = re.search('args: (.+)?', s)
-    if m:
-        try:
-            args = ast.literal_eval(m.group(1))
-        except ValueError:
-            from argparse import Namespace  # noqa: F401
+    renames = {'corrs': 'corr', 'discounts': 'discount'}
+    for old, new in renames.items():
+        if old in res:
+            res[new] = res[old]
+            del res[old]
 
-            args = vars(eval(m.group(1)))
-        finally:
-            res.update(args)
     return res
 
 
 def parse_files(logfiles):
     r = pd.DataFrame(map(parse_file, logfiles), dtype=object)
+    if r.empty:
+        print("No files found.")
+        return r
     r.set_index('jobid', inplace=True)
     r['nodes'] = r.mpi_size.apply(
         lambda s: s // 48 if s % 48 == 0 else s // 128, convert_dtype=False
