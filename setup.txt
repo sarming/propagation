@@ -1,17 +1,15 @@
+# Install Miniconda
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 bash Miniconda3-latest-Linux-x86_64.sh
 bash
 conda config --set auto_activate_base false
-conda create -n propagation -y
-conda activate propagation
-conda config --env --add channels conda-forge
-conda install python pandas numpy scipy numba bayesian-optimization frozendict -y
 
-# Either use OpenMPI from conda:
-# conda install openmpi mpi4py
+# Development environment
+conda env create -n snsim -f environment.yml
+conda activate snsim
+flit install --symlink
 
-# Or the native MPI distribution:
-# pip install mpi4py
-
-# Install optional packages
-# conda install jupyterlab profilehooks networkx matplotlib black git plotnine -y
+# Production environment
+conda env create -n snsim -f environment-prod.yml
+conda activate snsim
+pip install mpi4py

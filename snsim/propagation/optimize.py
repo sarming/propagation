@@ -3,7 +3,7 @@ import time
 import numpy as np
 import pandas as pd
 
-from optimization import (
+from ..optimization import (
     Bayesian,
     DictFindRoot,
     FindRootFactory,
@@ -329,7 +329,7 @@ def optimize(sim, sources=None, samples=500):
 
 # sourcery skip: hoist-if-from-if, merge-nested-ifs, remove-redundant-if
 if __name__ == "__main__":
-    from propagation.simulation import Simulation
+    from src.propagation.simulation import Simulation
 
     sim = Simulation.from_files(
         'data/anon_graph_inner_neos_20201110.npz', 'data/sim_features_neos_20201110.csv', seed=3

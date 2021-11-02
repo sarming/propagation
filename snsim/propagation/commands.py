@@ -2,7 +2,6 @@ import pickle
 
 import pandas as pd
 
-from optimization.searchspace import SearchSpace
 from . import optimize, tree
 from .simulation import Simulation
 
@@ -26,7 +25,7 @@ def opt(sim: Simulation, args):
         'discount_factor': (0.0, 1.0, 200 * args.epsilon),  # = 0.2 * (eps / 0.001)
         'corr': (0.0, 0.005, args.epsilon),  # = 0.001 * (eps / 0.001)
     }
-    dom = SearchSpace(dom)
+    dom = optimize.SearchSpace(dom)
 
     print("grid:", dom.bounds)
     print("gridsize:", dom.size(), flush=True)

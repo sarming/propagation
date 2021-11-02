@@ -1,0 +1,48 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "snsim"
+authors = [{name = "Sebastian Arming", email = "sebastian@arming.net"}]
+readme = "README.md"
+classifiers = ["License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)"]
+dynamic = ["version", "description"]
+requires-python = ">=3.6"
+dependencies = [
+    "bayesian-optimization >=1.1.0",
+    "frozendict >=2.0.3",
+    "mpi4py >=3.0.3",
+    "networkx >=2.4",
+    "numba >=0.54.0",
+    "numpy >=1.19",
+    "scipy >=1.5.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+    "pytest-mypy",
+]
+dev = [
+    "beni",
+    "black",
+    "ipython",
+    "jupyterlab >=3.2",
+    "matplotlib >=3.2.2",
+    "plotnine >=0.8",
+    "profilehooks >=1.12.0",
+]
+doc = ["sphinx"]
+
+[project.urls]
+Home = "http://github.com/sarming/propagation"
+
+[tox]
+requires = 'tox-conda'
+# envlist = {py36,py39}
+
+[tool.black]
+line-length = 100
+skip-string-normalization = true

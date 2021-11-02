@@ -6,14 +6,14 @@ import sys
 from mpi4py import MPI
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.path.pardir))
-import propagation.run
+import snsim.propagation.run
 
 
 def main():
-    args = propagation.run.parse_args()
+    args = snsim.propagation.run.parse_args()
     rank = MPI.COMM_WORLD.Get_rank()
     outfile = os.path.join(args.outdir, f"cProfile-{rank}-{args.runid}.pstat")
-    cProfile.run("propagation.run.main()", outfile)
+    cProfile.run("snsim.propagation.run.main()", outfile)
 
 
 if __name__ == "__main__":

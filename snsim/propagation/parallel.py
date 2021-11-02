@@ -5,7 +5,7 @@ import ray
 import scipy as sp
 import scipy.sparse
 
-import propagation
+from . import propagation
 
 
 def ray_simulator(num_chunks=None):

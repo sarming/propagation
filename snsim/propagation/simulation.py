@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from propagation.optimize import edge_probability_from_retweet_probability
+from .optimize import edge_probability_from_retweet_probability
 
 from . import propagation, read
 

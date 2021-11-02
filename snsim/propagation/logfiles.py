@@ -161,8 +161,8 @@ def load_pickle(filename):
 
 @contextmanager
 def old_point():
-    import optimization
     import functools
+    from .. import optimization
 
     @functools.total_ordering
     class Point(dict):  # https://stackoverflow.com/a/1151686
