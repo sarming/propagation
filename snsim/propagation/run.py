@@ -175,10 +175,11 @@ def setup():
     print("date:", datetime.now().isoformat())
     print("mpi_size:", MPI.COMM_WORLD.Get_size())
     print("mpi_vendor:", MPI.get_vendor())
-    code_version = subprocess.run(
-        ['git', 'describe', '--tags', '--dirty'], capture_output=True, text=True
-    ).stdout.strip()
-    print("code_version:", code_version)
+    if sys.version >= '3.7':
+        code_version = subprocess.run(
+            ['git', 'describe', '--tags', '--dirty'], capture_output=True, text=True
+        ).stdout.strip()
+        print("code_version:", code_version)
     print("argv:", ' '.join(sys.argv))
     print("args:", vars(args))
 

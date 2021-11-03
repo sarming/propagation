@@ -1,5 +1,11 @@
+import sys
 from functools import wraps
-from typing import Any, Callable, Iterator, Optional, Protocol, Tuple, TypeVar
+from typing import Any, Callable, Iterator, Optional, Tuple, TypeVar
+
+if sys.version < '3.8':
+    from typing_extensions import Protocol
+else:
+    from typing import Protocol
 
 from .searchspace import Point, SearchSpace
 
