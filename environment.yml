@@ -2,9 +2,9 @@ channels:
 - conda-forge
 dependencies:
   - pip:
-  - flit
-  - beni
-- python>=3.6
+      - flit
+      - beni
+  - python>=3.8
 - pip
 - bayesian-optimization>=1.1.0
 - frozendict>=2.0.3
@@ -19,10 +19,10 @@ dependencies:
 - matplotlib-base>=3.2.2
 - plotnine>=0.8
 - profilehooks>=1.12.0
+  - tox
 - sphinx
 - pytest
 - pytest-cov
 - pytest-mypy
-- tox
 name: snsim
 

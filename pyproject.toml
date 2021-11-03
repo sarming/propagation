@@ -8,7 +8,7 @@ authors = [{name = "Sebastian Arming", email = "sebastian@arming.net"}]
 readme = "README.md"
 classifiers = ["License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)"]
 dynamic = ["version", "description"]
-requires-python = ">=3.6"
+requires-python = ">=3.8"
 dependencies = [
     "bayesian-optimization >=1.1.0",
     "frozendict >=2.0.3",
@@ -45,13 +45,13 @@ legacy_tox_ini = """
 [tox]
 isolated_build = True
 requires = tox-conda
-envlist = {py37,py39}-{openmpi,mpich}
+envlist = {py38,py39}-{openmpi,mpich}
 
 [testenv]
 conda_env =
-    py37-openmpi: tests/env-py37-openmpi.yml
+    py38-openmpi: tests/env-py38-openmpi.yml
     py39-openmpi: tests/env-py39-openmpi.yml
-    py37-mpich: tests/env-py37-mpich.yml
+    py38-mpich: tests/env-py38-mpich.yml
     py39-mpich: tests/env-py39-mpich.yml
 commands =
     pytest {posargs}

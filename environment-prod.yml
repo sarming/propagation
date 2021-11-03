@@ -1,9 +1,9 @@
 channels:
 - conda-forge
 dependencies:
-- pip:
+  - pip:
   - flit
-- python>=3.6
+- python>=3.8
 - pip
 - bayesian-optimization>=1.1.0
 - frozendict>=2.0.3

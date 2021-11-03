@@ -3,8 +3,8 @@ channels:
 dependencies:
   - pip:
       - flit
-  - python=3.7
-  - openmpi
+  - python=3.8
+  - mpich
   - pip
   - bayesian-optimization>=1.1.0
   - frozendict>=2.0.3
