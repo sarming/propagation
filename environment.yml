@@ -1,7 +1,7 @@
 channels:
 - conda-forge
 dependencies:
-- pip:
+  - pip:
   - flit
   - beni
 - python>=3.6
@@ -23,5 +23,6 @@ dependencies:
 - pytest
 - pytest-cov
 - pytest-mypy
+- tox
 name: snsim
 

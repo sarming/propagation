@@ -33,15 +33,30 @@ dev = [
     "matplotlib >=3.2.2",
     "plotnine >=0.8",
     "profilehooks >=1.12.0",
+    "tox",
 ]
 doc = ["sphinx"]
 
 [project.urls]
 Home = "http://github.com/sarming/propagation"
 
+[tool.tox]
+legacy_tox_ini = """
 [tox]
-requires = 'tox-conda'
-# envlist = {py36,py39}
+isolated_build = True
+requires = tox-conda
+envlist = {py37,py39}-{openmpi,mpich}
+
+[testenv]
+conda_env =
+    py37-openmpi: tests/env-py37-openmpi.yml
+    py39-openmpi: tests/env-py39-openmpi.yml
+    py37-mpich: tests/env-py37-mpich.yml
+    py39-mpich: tests/env-py39-mpich.yml
+commands =
+    pytest {posargs}
+    mpiexec -n 2 bin/run sim neos_20201110
+"""
 
 [tool.black]
 line-length = 100
