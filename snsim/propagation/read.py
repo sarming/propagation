@@ -21,11 +21,13 @@ def adjlist(filename, save_as=None):
         for line in f:
             nodes = [labels[int(v)] for v in line.split()]
             mtx[nodes[0], sorted(nodes[1:])] = 1.0
-    return save_labelled_graph(save_as, mtx, node_labels)
+    mtx = mtx.tocsr()
+
+    save_labelled_graph(save_as, mtx, node_labels)
+    return mtx, node_labels
 
 
 def save_labelled_graph(filename, A, node_labels, compressed=False):
-    A = A.tocsr()
     if filename:
         savez = np.savez_compressed if compressed else np.savez
         if isinstance(node_labels, range):  # Store just starting index for ranges
@@ -38,7 +40,6 @@ def save_labelled_graph(filename, A, node_labels, compressed=False):
             shape=A.shape,
             node_labels=node_labels,
         )
-    return A, node_labels
 
 
 def labelled_graph(filename):
@@ -58,13 +59,17 @@ def metis(filename, zero_based=False, save_as=None):
     with open(filename) as f:
         (n, m) = f.readline().split()
         n = int(n)
+        node_labels = range(n) if zero_based else range(1, n + 1)
+
         mtx = lil_matrix((n, n))
         for (node, neighbors) in enumerate(f.readlines()):
             neighbors = [int(v) - (1 if not zero_based else 0) for v in neighbors.split()]
             if neighbors:
                 mtx[node, sorted(neighbors)] = 1.0
-        node_labels = range(n) if zero_based else range(1, n + 1)
-        return save_labelled_graph(save_as, mtx, node_labels)
+        mtx = mtx.tocsr()
+
+        save_labelled_graph(save_as, mtx, node_labels)
+        return mtx, node_labels
 
 
 def tweets(file, node_labels, id_type='metis'):
