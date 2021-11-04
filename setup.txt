@@ -4,14 +4,10 @@ bash Miniconda3-latest-Linux-x86_64.sh
 bash
 conda config --set auto_activate_base false
 
-# Development environment
-conda env create -n snsim -f environment.yml
-conda activate snsim
-conda config --env --add channels conda-forge
-flit install --symlink
-
-# Production environment with native MPI
-conda env create -n snsim-prod -f environment-prod.yml
+# Create Production environment
+conda env create -n snsim-prod -f environment.yml
 conda activate snsim-prod
+
+# Use native MPI
 conda remove mpi4py -c conda-forge
 pip install mpi4py
