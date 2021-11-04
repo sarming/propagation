@@ -7,3 +7,4 @@ information about the library.
 
 Run `bin/run --help` for usage information.
 
+![Tests](https://github.com/sarming/propagation/actions/workflows/tests.yml/badge.svg)
