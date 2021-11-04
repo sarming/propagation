@@ -55,11 +55,11 @@ conda_env =
     py39-openmpi: tests/env-py39-openmpi.yml
     py36-mpich: tests/env-py36-mpich.yml
     py39-mpich: tests/env-py39-mpich.yml
-conda_deps =
-    py36: typing_extensions
+conda_channel = conda-forge
+conda_deps = py36: typing_extensions
 commands =
     pytest {posargs}
-    mpiexec -n 2 bin/run sim neos_20201110
+    mpiexec -n 2 bin/run sim neos_20201110 --outdir={envtmpdir}
 """
 
 [tool.black]
