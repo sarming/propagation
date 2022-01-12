@@ -18,7 +18,7 @@ echo "$epsilon"
 export PATH=$HOME/.local/bin:$PATH
 # DYNAMIC VARIABLES
 cd $CURRENT_WORKDIR
-executable=$CURRENT_WORKDIR/bin/run
+executable=$CURRENT_WORKDIR/src/bin/run
 
 #srun --mpi=pmix_v3 --nodes=1 --ntasks-per-node=20 $executable learn_discount $topic --runid $id -s $samples --epsilon $epsilon --graph input/$graph_file --indir input --outdir output
 

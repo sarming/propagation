@@ -24,19 +24,19 @@ echo "$samples"
 export PATH=$HOME/.local/bin:$PATH
 # DYNAMIC VARIABLES
 cd $CURRENT_WORKDIR
-executable=$CURRENT_WORKDIR/bin/executable
+executable=$CURRENT_WORKDIR/src/bin/run
 
 #srun --mpi=pmix_v3 --nodes=1 --ntasks-per-node=20 python $executable sim $topic --runid $id -f $features -a $sources -s $samples --graph input/$graph_file --source_map input/$source_map_file --params output/params-$topic-$id.csv --indir input --outdir output
 #TODO source_map_file and params
 
 if [ "$stats_file" == "" ]; then
-  mpirun -n $TASKS_PER_NODE $executable sim \
+  mpirun -n $TASKS_PER_NODE python $executable sim \
     $topic --runid $id -f $features -a $sources -s $samples \
     --graph input/$graph_file \
     --indir input \
     --outdir output
 else
-  mpirun -n $TASKS_PER_NODE python $executable/executable sim \
+  mpirun -n $TASKS_PER_NODE python $executable sim \
     $topic --runid $id -f $features -a $sources -s $samples \
     --graph input/$graph_file \
     --stats input/$stats_file \
