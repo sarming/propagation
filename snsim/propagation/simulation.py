@@ -1,9 +1,8 @@
 import numpy as np
 import pandas as pd
 
-from .optimize import edge_probability_from_retweet_probability
-
 from . import propagation, read
+from .optimize import edge_probability_from_retweet_probability
 
 
 def tweet_statistics(tweets, min_size=10):
@@ -34,21 +33,20 @@ def tweet_sources(tweets):
 class Simulation:
     def __init__(self, A, stats, sources, params=None, simulator=propagation.simulate, seed=None):
         self.A = A
-        self.stats = stats
         self.sources = sources
         self.params = pd.DataFrame(
             {
-                'freq': self.stats.tweets / self.stats.tweets.sum(),
+                'freq': stats.tweets / stats.tweets.sum(),
                 'edge_probability': np.NaN,  # will be calculated below
                 'at_least_one': True,
                 'discount_factor': 1.0,
                 'corr': 0.0,
-                'max_nodes': 2 * self.stats.max_retweets,
+                'max_nodes': 2 * stats.max_retweets,
                 'max_depth': 10,
             }
         )
-        self.features = self.stats.index
-
+        self.features = stats.index
+        self.stats = stats
         self.simulator = simulator
 
         if not isinstance(seed, np.random.SeedSequence):
@@ -59,6 +57,15 @@ class Simulation:
         self.params['edge_probability'] = edge_probability_from_retweet_probability(self)
         if params is not None:
             self.params.update(params)
+            # upstream bug: https://github.com/pandas-dev/pandas/issues/4094
+            self.params = self.params.convert_dtypes()
+
+            # If freq information in params, only use the feature vectors in params
+            if 'freq' in params and params.freq.first_valid_index() is not None:
+                self.features = stats.index.intersection(params.index)
+                self.stats = self.stats.reindex(index=self.features, copy=False)
+                self.params = self.params.reindex(index=self.features, copy=False)
+                self.params.freq = self.params.freq / self.params.freq.sum()  # renormalize
 
     @classmethod
     def from_files(cls, graph_file, tweet_file, simulator=propagation.simulate, seed=None):

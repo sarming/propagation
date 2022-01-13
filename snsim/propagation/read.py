@@ -140,6 +140,7 @@ def single_param(file):
 def params(file):
     params = pd.read_csv(file, dtype={'author_feature': str, 'tweet_feature': str})
     params.set_index(['author_feature', 'tweet_feature'], inplace=True)
+    params.freq = params.freq / params.freq.sum()  # renormalize rel. frequencies
     return params
 
 
