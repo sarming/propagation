@@ -85,6 +85,12 @@ default_config = dict(
 host_configs = {
     'local': {'template': 'local.sh', 'sub_cmd': bash, 'procs': None},  # Use nodes as procs
     'hawk': {'template': 'hawk.pbs', 'sub_cmd': qsub_cmd, 'procs': 128},
+    'mach2': {
+        'template': 'mach2.pbs',
+        'sub_cmd': qsub_cmd,
+        'queue': 'f2800',
+        'procs': None,  # Use nodes as procs
+    },
     'supermuc': {
         'template': 'supermuc.sh',
         'sub_cmd': sbatch_cmd,
