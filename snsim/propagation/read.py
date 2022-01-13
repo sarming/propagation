@@ -72,20 +72,22 @@ def metis(filename, zero_based=False, save_as=None):
         return mtx, node_labels
 
 
-def tweets(file, node_labels, id_type='metis'):
-    def str_cat_series(*series):
-        # return list(map(str,zip(*series))) # to support nonbinary features
-        series = list(map(lambda x: x.apply(str), series))
-        return series[0].str.cat(series[1:]).astype('category')
+def str_cat_series(*series):
+    # return list(map(str,zip(*series))) # to support nonbinary features
+    series = list(map(lambda x: x.apply(str), series))
+    return series[0].str.cat(series[1:]).astype('category')
 
+
+def str_cat_df(df, cols):
+    series = (df[c] for c in cols)
+    return str_cat_series(*series)
+
+
+def tweets(file, node_labels, id_type='metis'):
     csv = pd.read_csv(file)
 
-    csv['author_feature'] = str_cat_series(
-        csv['verified'], csv['activity'], csv['defaultprofile'], csv['userurl']
-    )
-    csv['tweet_feature'] = str_cat_series(
-        csv['hashtag'], csv['tweeturl'], csv['mentions'], csv['media']
-    )
+    csv['author_feature'] = str_cat_df(csv, ['verified', 'activity', 'defaultprofile', 'userurl'])
+    csv['tweet_feature'] = str_cat_df(csv, ['hashtag', 'tweeturl', 'mentions', 'media'])
 
     if isinstance(node_labels, range):
         a, b = node_labels.start, node_labels.stop
