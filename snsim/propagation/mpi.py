@@ -137,6 +137,7 @@ def split(
         assert sim is not None
 
         head_rank = heads.Get_rank()
+        args.split = head_rank
 
         features = sim.features.to_list()
         features = features[head_rank::n_splits]

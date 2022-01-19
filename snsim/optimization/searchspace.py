@@ -40,6 +40,20 @@ def all_values(bound):
         yield from bound
 
 
+def split(bound, n_splits, split):
+    size = bound_size(bound)
+    if isinstance(bound, tuple):
+        lb, ub, width = bound
+        assert size % n_splits == 0
+        split_width = width * size / n_splits
+        lb = discretize(lb, bound)
+        return (lb + split_width * split, lb + split_width * (split + 1), width)
+    else:
+        assert size % n_splits == 0
+        split_width = size / n_splits
+        return bound[split_width * split : split_width * (split + 1)]
+
+
 def random_value(bound, rng=np.random.default_rng()):
     if isinstance(bound, tuple):
         lb, ub, _ = bound

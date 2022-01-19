@@ -25,6 +25,15 @@ def opt(sim: Simulation, args):
         'discount_factor': (0.0, 1.0, 200 * args.epsilon),  # = 0.2 * (eps / 0.001)
         'corr': (0.0, 0.005, args.epsilon),  # = 0.001 * (eps / 0.001)
     }
+
+    dom = {
+        'discount_factor': (0.0, 1.0, 250 * args.epsilon),  # = 0.25 * (eps / 0.001)
+        'corr': (0.0, 0.004, args.epsilon),  # = 0.001 * (eps / 0.001)
+    }
+    from ..optimization.searchspace import split
+
+    dom = {k: split(v, 2, args.split) for k, v in dom.items()}
+
     dom = optimize.SearchSpace(dom)
 
     print("grid:", dom.bounds)

@@ -79,6 +79,7 @@ def parse_args():
         default=1,
     )
     p.add_argument('--seed', help="seed for RNG", type=int)
+    p.add_argument('--split', help="", default=1, type=int)
     p.add_argument(
         "command",
         choices=commands.cmds.keys(),
