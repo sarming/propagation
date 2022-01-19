@@ -62,10 +62,14 @@ class Simulation:
 
             # If freq information in params, only use the feature vectors in params
             if 'freq' in params and params.freq.first_valid_index() is not None:
-                self.features = stats.index.intersection(params.index)
-                self.stats = self.stats.reindex(index=self.features, copy=False)
-                self.params = self.params.reindex(index=self.features, copy=False)
+                self.reindex(stats.index.intersection(params.index))
                 self.params.freq = self.params.freq / self.params.freq.sum()  # renormalize
+
+    def reindex(self, features):
+        self.features = features
+        self.stats = self.stats.reindex(index=features, copy=False)
+        self.params = self.params.reindex(index=features, copy=False)
+        self.sources = self.sources.reindex(index=features.droplevel(1).unique(), copy=False)
 
     @classmethod
     def from_files(cls, graph_file, tweet_file, simulator=propagation.simulate, seed=None):
@@ -174,7 +178,7 @@ if __name__ == "__main__":
     # import sys, ray
     # ray.init(address=sys.argv[1], redis_password=sys.argv[2])
     # ray.init(num_cpus=50, memory=1000000000)
-    datadir = 'data'
+    datadir = '../../data'
     # datadir = '/Users/ian/Nextcloud'
     # datadir = '/home/sarming'
     # datadir = '/home/d3000/d300345'
@@ -185,8 +189,9 @@ if __name__ == "__main__":
     # stats = Simulation.tweet_statistics(tweets)
     # features = stats.index
     sim = Simulation.from_files(
-        f'{datadir}/outer_neos.npz', f'{datadir}/sim_features_neos_20200311.csv'
+        f'{datadir}/anon_graph_inner_neos_20201110.npz', f'{datadir}/sim_features_neos_20201110.csv'
     )
+    sim.reindex(sim.features)
 
     # pool = Simulation.pool_from_files(f'{datadir}/outer_neos.npz', f'{datadir}/sim_features_neos.csv')
     # print(

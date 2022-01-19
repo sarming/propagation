@@ -157,11 +157,10 @@ def build_sim(args):
         sim.params['corr'] = read.single_param(args.corr)
 
     # Sort features by decreasing expected runtime
-    sim.stats.sort_values(
-        by=['mean_retweets', 'retweet_probability'], ascending=False, inplace=True
-    )
-    sim.features = sim.stats.index  # TODO check if necessary
-    sim.params = sim.params.reindex(index=sim.features)
+    features_sorted = sim.stats.sort_values(
+        by=['mean_retweets', 'retweet_probability'], ascending=False
+    ).index
+    sim.reindex(features_sorted)
 
     return sim
 
@@ -220,23 +219,26 @@ def main():
         print(f'{len(sim.features)} features, {args.sources} sources, {args.samples} samples')
         t = time.time()
         print("readtime:", t - start_time, flush=True)
-        mpi_sim = mpi.futures(sim=sim, sample_split=args.sample_split, fixed_samples=args.samples)
+        # mpi_sim = mpi.futures(sim=sim, sample_split=args.sample_split, fixed_samples=args.samples)
+        split = mpi.split(
+            sim=sim, args=args, sample_split=args.sample_split, fixed_samples=args.samples
+        )
     else:
         propagation.compile()
-        mpi_sim = mpi.futures()
+        split = mpi.split()
 
-    with mpi_sim as sim:
+    with split as (args, sim):
         if sim:
-            assert is_head
-            print("setuptime:", time.time() - t, flush=True)
-            t = time.time()
-
+            if is_head:
+                print("setuptime:", time.time() - t, flush=True)
+                t = time.time()
             commands.run(sim, args)
 
-            print("runtime:", time.time() - t)
-            print("totaltime:", time.time() - start_time)
-            print("rusage:", rusage(), flush=True)
-            # MPI.COMM_WORLD.Abort(0)
+    if is_head:
+        print("runtime:", time.time() - t)
+        print("totaltime:", time.time() - start_time)
+        print("rusage:", rusage(), flush=True)
+        # MPI.COMM_WORLD.Abort(0)
 
 
 if __name__ == "__main__":
