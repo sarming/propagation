@@ -2,7 +2,6 @@ from contextlib import contextmanager
 from itertools import chain, islice
 
 import numpy as np
-import pandas as pd
 from mpi4py import MPI
 from scipy.sparse import csr_matrix
 
@@ -116,35 +115,20 @@ def bcast_sim(sim, comm, root=0):
     return sim
 
 
-@contextmanager
-def split(
-    n_splits=2, sim=None, comm=MPI.COMM_WORLD, root=0, args={}, *futures_args, **futures_kwargs
-):
-    assert comm.Get_size() % n_splits == 0
+def split(n_heads=None, comm=MPI.COMM_WORLD, root=0):
+    n_heads = comm.bcast(n_heads, root=root)
+    assert comm.Get_size() % n_heads == 0
 
     global_rank = comm.Get_rank()
-    split_comm = comm.Split(global_rank % n_splits)
+    split_comm = comm.Split(global_rank % n_heads)
     split_rank = split_comm.Get_rank()
-    split_root = root % n_splits
-    assert split_rank == global_rank // n_splits
+    split_root = root % n_heads
+    assert split_rank == global_rank // n_heads
 
-    heads = comm.Split(split_rank)
+    head_comm = comm.Split(split_rank)
     if split_rank == split_root:
-        sim = bcast_sim(sim, heads, root)
-        args = heads.bcast(args, root)
-        futures_args = heads.bcast(futures_args, root)
-        futures_kwargs = heads.bcast(futures_kwargs, root)
-        assert sim is not None
-
-        head_rank = heads.Get_rank()
-
-        features = sim.features.to_list()
-        features = features[head_rank::n_splits]
-        features = pd.MultiIndex.from_tuples(features, names=("author_feature", "tweet_feature"))
-        sim.reindex(features)
-
-    with futures(sim, comm=split_comm, root=split_root, *futures_args, **futures_kwargs) as sim:
-        yield args, sim
+        return split_comm, head_comm
+    return split_comm, None
 
 
 global_A = None

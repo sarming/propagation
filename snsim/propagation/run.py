@@ -79,10 +79,8 @@ def parse_args():
         default=1,
     )
     p.add_argument('--seed', help="seed for RNG", type=int)
-    p.add_argument(
-        "command",
-        choices=commands.cmds.keys(),
-    )
+    p.add_argument('--heads', help="number of simulation heads (default: 1)", type=int, default=1)
+    p.add_argument("command", choices=commands.cmds.keys())
     p.add_argument("topic")
 
     args = p.parse_args()
@@ -160,7 +158,8 @@ def build_sim(args):
     features_sorted = sim.stats.sort_values(
         by=['mean_retweets', 'retweet_probability'], ascending=False
     ).index
-    sim.reindex(features_sorted)
+    sim.features = features_sorted
+    # sim.reindex(features_sorted)
 
     return sim
 
@@ -211,30 +210,47 @@ def rusage():
 
 
 def main():
-    is_head = MPI.COMM_WORLD.Get_rank() == 0
+    world_head = MPI.COMM_WORLD.Get_rank() == 0
 
-    if is_head:
+    if world_head:
         start_time = time.time()
         sim, args = setup()
         print(f'{len(sim.features)} features, {args.sources} sources, {args.samples} samples')
         t = time.time()
         print("readtime:", t - start_time, flush=True)
-        # mpi_sim = mpi.futures(sim=sim, sample_split=args.sample_split, fixed_samples=args.samples)
-        split = mpi.split(
-            sim=sim, args=args, sample_split=args.sample_split, fixed_samples=args.samples
-        )
+        split_comm, head_comm = mpi.split(args.heads)
     else:
         propagation.compile()
-        split = mpi.split()
+        sim, args = None, None
+        split_comm, head_comm = mpi.split()
 
-    with split as (args, sim):
+    if head_comm:
+        sim = mpi.bcast_sim(sim, head_comm)
+        args = head_comm.bcast(args)
+        assert args is not None
+        assert sim is not None
+
+        head_rank = head_comm.Get_rank()
+        features = sim.features.to_list()
+        features = features[head_rank :: args.heads]
+        features = pd.MultiIndex.from_tuples(features, names=("author_feature", "tweet_feature"))
+        sim.features = features
+        # sim.reindex(features)
+
+        mpi_sim = mpi.futures(
+            sim=sim, comm=split_comm, sample_split=args.sample_split, fixed_samples=args.samples
+        )
+    else:
+        mpi_sim = mpi.futures(comm=split_comm)
+
+    with mpi_sim as sim:
         if sim:
-            if is_head:
+            if world_head:
                 print("setuptime:", time.time() - t, flush=True)
                 t = time.time()
-            commands.run(sim, args)
+            commands.run(sim, args, head_comm)
 
-    if is_head:
+    if world_head:
         print("runtime:", time.time() - t)
         print("totaltime:", time.time() - start_time)
         print("rusage:", rusage(), flush=True)

@@ -18,9 +18,10 @@ def learn_discount(sim: Simulation, args):
     discount.to_csv(f'{args.outdir}/discount-{args.topic}-{args.runid}.csv')
     sim.params['discount_factor'] = discount
     sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
+    print(discount)
 
 
-def opt(sim: Simulation, args):
+def opt(sim: Simulation, args, head_comm):
     dom = {
         'discount_factor': (0.0, 1.0, 200 * args.epsilon),  # = 0.2 * (eps / 0.001)
         'corr': (0.0, 0.005, args.epsilon),  # = 0.001 * (eps / 0.001)
@@ -36,9 +37,13 @@ def opt(sim: Simulation, args):
         samples=args.samples,
         dom=dom,
     )
-    optimize.set_params(best, sim)
-    sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
-    with open(f'{args.outdir}/optimize-{args.topic}-{args.runid}.pickle', 'bw') as f:
+    rank = head_comm.Get_rank()
+    all_best = head_comm.gather(best)
+    if rank == 0:
+        best = dict(item for best in all_best for item in best.items())
+        optimize.set_params(best, sim)
+        sim.params.to_csv(f'{args.outdir}/params-{args.topic}-{args.runid}.csv')
+    with open(f'{args.outdir}/optimize-{args.topic}-{args.runid}-{rank}.pickle', 'bw') as f:
         pickle.dump((best, state), f)
     # last history element in first optimization
     # objective = pd.Series({k: o[0][1][-1] for k, o in opts.items()})
@@ -128,8 +133,8 @@ cmds = {
 }
 
 
-def run(sim: Simulation, args):
-    cmds[args.command](sim, args)
+def run(sim: Simulation, args, head_comm):
+    cmds[args.command](sim, args, head_comm)
 
 
 # Helper functions:
