@@ -13,17 +13,6 @@ from mpi4py import MPI
 from . import commands, mpi, propagation, read, simulation
 
 
-def set_excepthook():
-    oldhook = sys.excepthook
-
-    def newhook(*args, **kwargs):
-        oldhook(*args, **kwargs)
-        sys.stdout.flush()
-        MPI.COMM_WORLD.Abort(1)
-
-    sys.excepthook = newhook
-
-
 def pd_setup():
     pd.set_option('display.max_columns', None)
     pd.set_option('display.max_rows', None)
@@ -31,9 +20,32 @@ def pd_setup():
     pd.set_option('display.width', 1000)
 
 
+def _exit(status=0):
+    sys.stdout.flush()
+    sys.stderr.flush()
+    MPI.COMM_WORLD.Abort(status)
+
+
+def set_excepthook():
+    oldhook = sys.excepthook
+
+    def newhook(*args, **kwargs):
+        oldhook(*args, **kwargs)
+        _exit(1)
+
+    sys.excepthook = newhook
+
+
+class ErrorCatchingArgumentParser(argparse.ArgumentParser):
+    def exit(self, status=0, message=None):
+        if message:
+            print(message)
+        _exit(status)
+
+
 def parse_args():
     """Parse command line arguments."""
-    p = argparse.ArgumentParser()
+    p = ErrorCatchingArgumentParser()
     p.add_argument('--runid')
     p.add_argument('--graph', help="graph file (.npz, .metis or .adjlist)")
     p.add_argument('--metis_zero_based', action='store_true')
@@ -254,7 +266,7 @@ def main():
         print("runtime:", time.time() - t)
         print("totaltime:", time.time() - start_time)
         print("rusage:", rusage(), flush=True)
-        # MPI.COMM_WORLD.Abort(0)
+        # _exit(0)
 
 
 if __name__ == "__main__":
