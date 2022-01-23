@@ -241,6 +241,7 @@ def main():
         args = head_comm.bcast(args)
         assert args is not None
         assert sim is not None
+        head_comm.Barrier()
 
         head_rank = head_comm.Get_rank()
         features = sim.features.to_list()
@@ -263,6 +264,7 @@ def main():
             commands.run(sim, args, head_comm)
             with open(f'{args.outdir}/mem-{head_rank}.txt', 'w') as f:
                 f.write(f'{rusage()}\n')
+            head_comm.Barrier()
 
     if world_head:
         print("runtime:", time.time() - t)

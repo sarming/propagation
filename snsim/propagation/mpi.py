@@ -209,7 +209,7 @@ def futures(sim=None, comm=MPI.COMM_WORLD, root=0, chunksize=1, sample_split=1, 
     global_samples = comm.bcast(global_samples, root=root)
     global_params = comm.bcast(global_params, root=root)
 
-    MPI.COMM_WORLD.Barrier()
+    comm.Barrier()
 
     with MPICommExecutor(comm=comm, root=root) as executor:
         if executor is None:
