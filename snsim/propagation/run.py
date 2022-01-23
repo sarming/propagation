@@ -261,6 +261,8 @@ def main():
                 print("setuptime:", time.time() - t, flush=True)
                 t = time.time()
             commands.run(sim, args, head_comm)
+            with open(f'{args.outdir}/mem-{head_rank}.txt', 'w') as f:
+                f.write(f'{rusage()}\n')
 
     if world_head:
         print("runtime:", time.time() - t)
