@@ -92,6 +92,7 @@ def parse_args():
     )
     p.add_argument('--seed', help="seed for RNG", type=int)
     p.add_argument('--heads', help="number of simulation heads (default: 1)", type=int, default=1)
+    p.add_argument('-j', type=int, required=True)
     p.add_argument("command", choices=commands.cmds.keys())
     p.add_argument("topic")
 
@@ -243,12 +244,11 @@ def main():
         assert sim is not None
         head_comm.Barrier()
 
-        head_rank = head_comm.Get_rank()
+        head_rank = args.j
         features = sim.features.to_list()
-        features = features[head_rank :: args.heads]
+        features = features[head_rank::8]
         features = pd.MultiIndex.from_tuples(features, names=("author_feature", "tweet_feature"))
-        sim.features = features
-        # sim.reindex(features)
+        sim.reindex(features)
 
         mpi_sim = mpi.futures(
             sim=sim, comm=split_comm, sample_split=args.sample_split, fixed_samples=args.samples
