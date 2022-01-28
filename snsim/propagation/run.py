@@ -231,40 +231,29 @@ def main():
         print(f'{len(sim.features)} features, {args.sources} sources, {args.samples} samples')
         t = time.time()
         print("readtime:", t - start_time, flush=True)
-        split_comm, head_comm = mpi.split(args.heads)
     else:
         propagation.compile()
         sim, args = None, None
-        split_comm, head_comm = mpi.split()
 
-    if head_comm:
-        sim = mpi.bcast_sim(sim, head_comm)
-        args = head_comm.bcast(args)
-        assert args is not None
-        assert sim is not None
-        head_comm.Barrier()
+    if world_head:
+    head_rank = args.j
+    features = sim.features.to_list()
+    features = features[head_rank::8]
+    features = pd.MultiIndex.from_tuples(features, names=("author_feature", "tweet_feature"))
+    sim.reindex(features)
 
-        head_rank = args.j
-        features = sim.features.to_list()
-        features = features[head_rank::8]
-        features = pd.MultiIndex.from_tuples(features, names=("author_feature", "tweet_feature"))
-        sim.reindex(features)
-
-        mpi_sim = mpi.futures(
-            sim=sim, comm=split_comm, sample_split=args.sample_split, fixed_samples=args.samples
-        )
+    mpi_sim = mpi.futures(sim=sim, sample_split=args.sample_split, fixed_samples=args.samples)
     else:
-        mpi_sim = mpi.futures(comm=split_comm)
+        mpi_sim = mpi.futures()
 
     with mpi_sim as sim:
         if sim:
             if world_head:
                 print("setuptime:", time.time() - t, flush=True)
                 t = time.time()
-            commands.run(sim, args, head_comm)
+            commands.run(sim, args)
             with open(f'{args.outdir}/mem-{head_rank}.txt', 'w') as f:
                 f.write(f'{rusage()}\n')
-            head_comm.Barrier()
 
     if world_head:
         print("runtime:", time.time() - t)
