@@ -236,13 +236,13 @@ def main():
         sim, args = None, None
 
     if world_head:
-    head_rank = args.j
-    features = sim.features.to_list()
-    features = features[head_rank::8]
-    features = pd.MultiIndex.from_tuples(features, names=("author_feature", "tweet_feature"))
-    sim.reindex(features)
+        head_rank = args.j
+        features = sim.features.to_list()
+        features = features[head_rank::8]
+        features = pd.MultiIndex.from_tuples(features, names=("author_feature", "tweet_feature"))
+        sim.reindex(features)
 
-    mpi_sim = mpi.futures(sim=sim, sample_split=args.sample_split, fixed_samples=args.samples)
+        mpi_sim = mpi.futures(sim=sim, sample_split=args.sample_split, fixed_samples=args.samples)
     else:
         mpi_sim = mpi.futures()
 
