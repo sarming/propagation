@@ -86,6 +86,7 @@ def simtweets(sim: Simulation, args):
     r = explode(r)
     r.to_csv(f'{args.outdir}/results-{args.command}-{args.topic}-{args.runid}.csv', index=False)
     print(r)
+    print("WARNING: node labels given are internal ids (add 1 for metis id)")
 
 
 def val(sim: Simulation, args):
@@ -175,6 +176,7 @@ def explode_tweets(tweet_results) -> pd.DataFrame:
 
 
 def explode_trees(results) -> pd.DataFrame:
+    # TODO: Works only on singlecore
     with tree.propagation_tree():
         r = explode_tweets(results)
     r.rename(columns={'retweets': 'tree'}, inplace=True)

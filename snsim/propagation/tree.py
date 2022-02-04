@@ -25,6 +25,23 @@ def depth_histogram(tree):
     return pd.Series(hist, dtype='Int64')
 
 
+def shortest_path_histogram(graph, tree_or_tuple):
+    hist = defaultdict(int)
+    if isinstance(tree_or_tuple, tuple):
+        root = tree_or_tuple[0]
+        nodes = tree_or_tuple[1]
+    else:
+        root = tree_or_tuple.graph["root"]
+        nodes = tree_or_tuple.nodes()
+    for node in nodes:
+        try:
+            length = nx.shortest_path_length(graph, root, node)
+        except nx.NetworkXNoPath:
+            continue
+        hist[length] += 1
+    return pd.Series(hist, dtype='Int64')
+
+
 def bfs_nodes(tree, node_labels=None):
     root = tree.graph["root"]
     edges = nx.bfs_edges(tree, root)

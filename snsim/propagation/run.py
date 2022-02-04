@@ -183,6 +183,9 @@ def setup():
     print("argv:", ' '.join(sys.argv))
     print("args:", vars(args))
 
+    if args.command == 'trees' and MPI.COMM_WORLD.Get_size() > 1:
+        raise "Trees command does not support MPI."
+
     sim = build_sim(args)
 
     print("seed:", sim.seed.entropy)
