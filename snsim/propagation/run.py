@@ -225,11 +225,16 @@ def main():
     world_head = MPI.COMM_WORLD.Get_rank() == 0
 
     if world_head:
+        print(f"start: {datetime.now().isoformat()}", flush=True)
         start_time = time.time()
-        sim, args = setup()
-        print(f'{len(sim.features)} features, {args.sources} sources, {args.samples} samples')
+    MPI.COMM_WORLD.Barrier()
+    if world_head:
+        print(f"barriertime:", time.time() - start_time, flush=True)
         t = time.time()
-        print("readtime:", t - start_time, flush=True)
+        sim, args = setup()
+        print("readtime:", time.time() - t, flush=True)
+        t = time.time()
+        print(f'{len(sim.features)} features, {args.sources} sources, {args.samples} samples')
         split_comm, head_comm = mpi.split(args.heads)
     else:
         propagation.compile()

@@ -20,5 +20,7 @@ echo -n "mpiprocs: " >> $OUTFILE
 cat $PBS_NODEFILE|wc -l >>$OUTFILE
 echo walltime: {walltime} >> $OUTFILE
 echo jobid: "$PBS_JOBID" >> $OUTFILE
+env >> out/$RUNID/env
+echo mpiexec: "$(date -Ins)" >> $OUTFILE
 
 mpiexec {mpiargs} {exe} {args} --outdir=out/$RUNID >>$OUTFILE 2>&1

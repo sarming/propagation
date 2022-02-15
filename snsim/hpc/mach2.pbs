@@ -1,0 +1,22 @@
+#!/bin/csh
+#PBS -N {jobname}
+#PBS -l select=ncpus={nodes}:mpiprocs={nodes}
+#PBS -l walltime={walltime}
+
+cd $PBS_O_WORKDIR
+
+conda activate snsim
+
+set RUNID={jobname}_$PBS_JOBID
+mkdir out/$RUNID
+set OUTFILE=out/$RUNID/out-$RUNID-`date +"%Y%m%dT%H%M"`.txt
+
+echo nodes: {nodes} > $OUTFILE
+echo -n "mpiprocs: " >> $OUTFILE
+cat $PBS_NODEFILE|wc -l >>$OUTFILE
+echo walltime: {walltime} >> $OUTFILE
+echo jobid: "$PBS_JOBID" >> $OUTFILE
+env >> out/$RUNID/env
+echo mpiexec: "$(date -Ins)" >> $OUTFILE
+
+mpiexec {mpiargs} {exe} {args} --outdir=out/$RUNID >>& $OUTFILE
