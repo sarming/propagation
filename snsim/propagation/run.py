@@ -249,8 +249,14 @@ def main():
         head_comm.Barrier()
 
         head_rank = head_comm.Get_rank()
-        features = sim.features.to_list()
-        features = features[head_rank :: args.heads]
+        # sort features by number of tweets
+        features = sorted(sim.features, key=lambda f: sim.stats.loc[f].tweets)
+        # round down to nearest multiple of heads
+        num_features = args.heads * (len(features) // args.heads)
+        print(f"features: {num_features}")
+        if num_features < len(features):
+            print("Warning not all features used!")
+        features = features[head_rank : num_features : args.heads]
         features = pd.MultiIndex.from_tuples(features, names=("author_feature", "tweet_feature"))
         sim.features = features
         # sim.reindex(features)
