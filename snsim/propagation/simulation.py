@@ -110,6 +110,7 @@ class Simulation:
         if feature is None:
             default_params = pd.Series(
                 {
+                    'freq': 0.0,
                     'edge_probability': pd.NA,
                     'at_least_one': True,
                     'discount_factor': 1.0,

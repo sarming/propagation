@@ -10,7 +10,7 @@ if __name__ == "__main__" and __package__ is None:
     import os
     import sys
 
-    __package__ = "propagation"
+    __package__ = "snsim.propagation"
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.path.pardir))
 
 from . import mpi, propagation, read
