@@ -161,7 +161,7 @@ def simulate(A, params, sources, samples=1, return_stats=True, seed=None):
     set_seed(seed.generate_state(1)[0])
 
     retweets = (
-        (
+        [
             edge_propagate(
                 A,
                 source,
@@ -173,7 +173,7 @@ def simulate(A, params, sources, samples=1, return_stats=True, seed=None):
                 at_least_one=at_least_one,
             )
             for _ in range(samples)
-        )
+        ]
         for source in sources
     )
     if return_stats:
