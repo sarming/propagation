@@ -21,22 +21,23 @@ def depth_histogram(tree):
     hist = defaultdict(int)
     for node, depth in lengths.items():
         hist[depth] += 1
-    # return hist
+    # hist[0] -= 1  # remove root
     return pd.Series(hist, dtype='Int64')
 
 
 def shortest_path_histogram(graph, tree_or_tuple):
     hist = defaultdict(int)
-    if isinstance(tree_or_tuple, tuple):
-        root = tree_or_tuple[0]
-        nodes = tree_or_tuple[1]
+    if isinstance(tree_or_tuple, tuple):  # Warning: we assume METIS ids here
+        root = tree_or_tuple[0] - 1
+        nodes = [x - 1 for x in tree_or_tuple[1]]
     else:
         root = tree_or_tuple.graph["root"]
         nodes = tree_or_tuple.nodes()
     for node in nodes:
         try:
             length = nx.shortest_path_length(graph, root, node)
-        except nx.NetworkXNoPath:
+        except (nx.NetworkXNoPath, nx.NodeNotFound):
+            print(f"No path from {root} to {node}")
             continue
         hist[length] += 1
     return pd.Series(hist, dtype='Int64')
