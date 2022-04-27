@@ -36,7 +36,7 @@ if [ "$stats_file" == "" ]; then
     --indir input \
     --outdir output
 else
-  mpirun -n $TASKS_PER_NODE python $executable sim \
+  mpirun -n $TASKS_PER_NODE python $executable stats \
     $topic --runid $id -f $features -a $sources -s $samples \
     --graph input/$graph_file \
     --stats input/$stats_file \

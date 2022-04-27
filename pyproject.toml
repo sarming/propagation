@@ -64,7 +64,7 @@ conda_deps = py36: typing_extensions
 setenv =  FLIT_NO_NETWORK = true
 commands =
     pytest {posargs}
-    mpiexec -n 2 bin/run sim neos_20201110 --outdir={envtmpdir}
+    mpiexec -n 2 bin/run stats neos_20201110 --outdir={envtmpdir}
 """
 
 [tool.black]
