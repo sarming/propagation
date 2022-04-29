@@ -29,7 +29,7 @@ inputs:
 
   hpc_skip_cleanup:
     description: Can we skip after running the job
-    default: True
+    default: False
 
   hpc_workdir_prefix:
     description: Working directory for submitting the jobs
@@ -37,27 +37,23 @@ inputs:
 
   hpc_mpi_load_command:
     description: (Module) load command for MPI
-    default: "module load openmpi/4.0.0_gcc620"
+    default: ""
 
-  hpc_conda_activate_command:
-    description: Command to activate Conda environment
-    default: "source /work/miniconda3/bin/activate propagation"
+  hpc_activate_command:
+    description: Command to activate Spack or Conda environment
+    default: ""
 
 
 
   ## Job Options
 
-  job_skip_cleanup:
-    description: Skip cleaning
-    default: True
+  job_id:
+    description: ID of deployment/run. Temporary hack.
+    default: 001
 
   job_option_type:
     description: Type of Job
     default: "SBATCH"
-
-  job_max_time:
-    description: Duration of the Job
-    default: "00:30:00"
 
   job_num_nodes:
     description: Number of Nodes for the Job
@@ -67,15 +63,17 @@ inputs:
     description: Number of Tasks per Node #todo check if it means cores
     default: 20
 
-  job_partition:
-    default: standard
+  job_max_time:
+    description: Duration of the Job
+    default: "00:30:00"
 
   job_memory:
-    default: 32G
+    default: 8G
 
-  job_id:
-    description: ID of deployment/run. Temporary hack.
-    default: 001
+  job_skip_cleanup:
+    description: Skip cleaning
+    default: False
+
 
   # Source code
   git_repo:

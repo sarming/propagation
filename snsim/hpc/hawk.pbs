@@ -1,0 +1,24 @@
+#!/bin/bash
+#PBS -N {jobname}
+#PBS -l select={nodes}:node_type=rome:ncpus={procs}:mpiprocs={procs}
+#PBS -l walltime={walltime}
+#PBS -W group_list=s33594
+
+cd $PBS_O_WORKDIR
+
+#module load openmpi
+#module load gcc/9.2.0  openmpi/4.0.4
+module load python/3.8
+module load mpi4py
+
+export RUNID={jobname}_$PBS_JOBID
+mkdir out/$RUNID
+OUTFILE=out/$RUNID/out-$RUNID-$(date +"%Y%m%dT%H%M").txt
+
+echo nodes: {nodes} > $OUTFILE
+echo -n "mpiprocs: " >> $OUTFILE
+cat $PBS_NODEFILE|wc -l >>$OUTFILE
+echo walltime: {walltime} >> $OUTFILE
+echo jobid: "$PBS_JOBID" >> $OUTFILE
+
+mpiexec {mpiargs} {exe} {args} --outdir=out/$RUNID >>$OUTFILE 2>&1

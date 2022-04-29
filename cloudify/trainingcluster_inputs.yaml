@@ -16,14 +16,14 @@ hpc_monitor_entrypoint: ""
 hpc_skip_cleanup: False
 hpc_workdir_prefix: SN_cfy
 hpc_mpi_load_command: ":" # shell no-op
-hpc_conda_activate_command: "source /work/miniconda3/bin/activate prop_mpi"
+hpc_activate_command: "source /work/miniconda3/bin/activate prop_mpi"
 
 
 # Job specifications
-job_skip_cleanup: True
+job_skip_cleanup: False
 job_option_type: "SBATCH"
 #job_max_time: "01:00:00"
-#job_num_nodes: 1
+job_num_nodes: 1
 job_tasks_per_node: 20
 job_partition: hidalgo
 job_memory: 8G
@@ -32,12 +32,12 @@ job_id: 123
 
 # Source code
 git_repo: "https://github.com/sarming/propagation"
-git_branch: master
+git_branch: "master"
 
 
 # Input
 topic: "neos"
-graph_type: inner
+graph_type: "outer"
 sourcemap_url: "default" #requires some value, otherwise input variables are shuffled
 stats_url: "default"
 
@@ -55,7 +55,7 @@ sim_samples: 4
 ckan_api_key: ""
 
 learn_output_dataset:
-  config: {entrypoint: "https://ckan.hidalgo-project.eu",  key: "<insert api key>"}
+  config: { entrypoint: "https://ckan.hidalgo-project.eu",  key: "<insert api key>" }
   dataset:
     #author: ''
     #license: GNU Free Documentation License
@@ -72,7 +72,7 @@ learn_output_dataset:
   type: ckan
 
 sim_output_dataset:
-  config: {entrypoint: "https://ckan.hidalgo-project.eu",  key: "<insert api key>"}
+  config: { entrypoint: "https://ckan.hidalgo-project.eu",  key: "<insert api key>" }
   dataset:
     #author: ''
     #license: GNU Free Documentation License

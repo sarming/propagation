@@ -1,0 +1,21 @@
+channels:
+  - conda-forge
+dependencies:
+  - pip:
+      - flit
+  - python=3.9
+  - mpich
+  - pip
+  - bayesian-optimization>=1.1.0
+  - frozendict>=2.0.3
+  - mpi4py>=3.0.3
+  - networkx>=2.4
+  - numba<=0.53.1
+  - numpy>=1.19.5
+  - pandas>=1.0.5
+  - scipy>=1.5.3
+  - pytest
+  - pytest-cov
+  - pytest-mypy
+name: snsim
+

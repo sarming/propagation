@@ -23,79 +23,76 @@ git clone -b $git_branch $git_repo src
 mkdir input
 mkdir output
 
-
-if [ "$topic" == "neos" ] || [ "$topic" == "fpoe" ]
-    then
-        topic_date="${topic}_20200311"
-elif  [ "$topic" == "schalke" ] || [ "$topic" == "bvb" ]
-    then
-        topic_date="${topic}_20200409"
-elif  [ "$topic" == "vegan" ]
-    then
-        topic_date="${topic}_20200407"
+if [ "$topic" == "neos" ] || [ "$topic" == "fpoe" ] || [ "$topic" == "political" ]; then
+  graph_date="20201110"
+elif [ "$topic" == "schalke" ] || [ "$topic" == "bvb" ] || [ "$topic" == "vegan" ]; then
+  graph_date="20201110"
 else
-    echo "not a valid topic"
-    topic_date=""
+  echo "not a valid topic"
+  graph_date=""
 fi
 
-if [ "$graph_type" == "outer" ]
-    then
-        graph_url="https://ckan.hidalgo-project.eu/dataset/02ef431b-7fb5-4fe5-9ea2-828e2038b395/resource/e369c14a-4732-497d-a5f3-0807e874108c/download/anonymized_outer_graph_${topic_date}.adjlist"
-elif [ "$graph_type" == "inner" ]
-    then
-        graph_url="https://ckan.hidalgo-project.eu/dataset/89b3941a-23a3-4073-868c-717fafa7e50a/resource/ebc224ac-1a59-4ee4-9154-9be4cd552741/download/anonymized_inner_graph_${topic_date}.adjlist"
+if [ "$graph_type" == "outer" ]; then
+  graph_url="https://ckan.hidalgo-project.eu/dataset/1ee0bda5-86bb-4adf-9179-4af087467b86/resource/b2bda13c-7f53-4742-85f5-9458dbdf6700/download/anon_graph_outer_${topic}_${graph_date}.metis.gz"
+elif [ "$graph_type" == "inner" ]; then
+  graph_url="https://ckan.hidalgo-project.eu/dataset/543a67f1-7648-43c0-be84-566e38b0fa54/resource/5eb0bb39-3bc6-4875-a084-93010e34f6e7/download/anon_graph_inner_${topic}_${graph_date}.metis"
 else
-    graph_url=""
-    echo "not a valid graph_url"
+  graph_url=""
+  echo "graph_url not valid"
 fi
 
-graph_file="anonymized_${graph_type}_graph_${topic}.adjlist"
+graph_file="anon_graph_${graph_type}_${topic}.metis"
 
-tweets_url="https://ckan.hidalgo-project.eu/dataset/7ca9e0d7-3ec0-4c13-8d6e-9aeb37e50c8e/resource/3a309fc4-bc99-477f-ba19-8c73b947b8ae/download/sim_features_${topic_date}.csv"
+tweets_url="https://ckan.hidalgo-project.eu/dataset/a71570f1-45fc-43ee-be7f-65f189f5e7b9/resource/8b913a69-beed-4ad3-ba44-f53f7b41c1c7/download/sim_features_${topic}_${graph_date}.csv"
 tweets_file="sim_features_${topic}.csv"
 
 #download files
-wget $graph_url -O input/$graph_file
-wget $tweets_url -O input/$tweets_file
+if [ "$graph_type" == "outer" ]; then
+  wget -nc $graph_url -O input/$graph_file".gz"
+  gzip -dk input/$graph_file".gz"
 
-if [ -z "$sourcemap_url" ] || [ "$sourcemap_url" == "default" ]
-    then
-        echo "no source map as input"
-        sourcemap_file=""
-    else
-        sourcemap_file="$(basename -- $sourcemap_url)"
-        curl -H"Authorization: $ckan_api_key" $sourcemap_url --output input/$sourcemap_file
+elif [ "$graph_type" == "inner" ]; then
+  wget -nc $graph_url -O input/$graph_file
+else
+  echo "not a valid graph type"
 fi
 
-if [ -z "$stats_url" ] || [ "$stats_url" == "default" ]
-    then
-        echo "no stats file as input"
-        stats_file=""
-    else
-        stats_file="$(basename -- $stats_url)"
-        curl -H"Authorization: $ckan_api_key" $stats_url --output input/$stats_file
+wget -N $tweets_url -O input/$tweets_file
+
+if [ -z "$sourcemap_url" ] || [ "$sourcemap_url" == "default" ]; then
+  echo "no source map as input"
+  sourcemap_file=""
+else
+  sourcemap_file="$(basename -- $sourcemap_url)"
+  curl -H"Authorization: $ckan_api_key" $sourcemap_url --output input/$sourcemap_file
 fi
 
+if [ -z "$stats_url" ] || [ "$stats_url" == "default" ]; then
+  echo "no stats file as input"
+  stats_file=""
+else
+  stats_file="$(basename -- $stats_url)"
+  curl -H"Authorization: $ckan_api_key" $stats_url --output input/$stats_file
+fi
 
 #write config file for execution
 configfile="config.txt"
-if [ -f "$configfile" ]
-    then
-        echo "config is already present"
-    else
-        touch $configfile
-        echo "GIT_REPO=$git_repo" >> $configfile
-        echo "GIT_BRANCH=$git_branch" >> $configfile
-        echo "TOPIC=$topic" >> $configfile
-        echo "JOB_ID=$job_id" >> $configfile
-        echo "TASKS_PER_NODE=$tasks_per_node" >> $configfile
-        echo "CURRENT_WORKDIR=$CURRENT_WORKDIR" >> $configfile
-        echo "GRAPH_FILE=$graph_file" >> $configfile
-        echo "SOURCEMAP_FILE=$sourcemap_file" >> $configfile
-        echo "STATS_FILE=$stats_file" >> $configfile
-        echo "PARAM_SAMPLES=$param_samples" >> $configfile
-        echo "PARAM_EPSILON=$param_epsilon" >> $configfile
-        echo "SIM_FEATURES=$sim_features" >> $configfile
-        echo "SIM_SOURCES=$sim_sources" >> $configfile
-        echo "SIM_SAMPLES=$sim_samples" >> $configfile
+if [ -f "$configfile" ]; then
+  echo "config is already present"
+else
+  touch $configfile
+  echo "GIT_REPO=$git_repo" >>$configfile
+  echo "GIT_BRANCH=$git_branch" >>$configfile
+  echo "TOPIC=$topic" >>$configfile
+  echo "JOB_ID=$job_id" >>$configfile
+  echo "TASKS_PER_NODE=$tasks_per_node" >>$configfile
+  echo "CURRENT_WORKDIR=$CURRENT_WORKDIR" >>$configfile
+  echo "GRAPH_FILE=$graph_file" >>$configfile
+  echo "SOURCEMAP_FILE=$sourcemap_file" >>$configfile
+  echo "STATS_FILE=$stats_file" >>$configfile
+  echo "PARAM_SAMPLES=$param_samples" >>$configfile
+  echo "PARAM_EPSILON=$param_epsilon" >>$configfile
+  echo "SIM_FEATURES=$sim_features" >>$configfile
+  echo "SIM_SOURCES=$sim_sources" >>$configfile
+  echo "SIM_SAMPLES=$sim_samples" >>$configfile
 fi

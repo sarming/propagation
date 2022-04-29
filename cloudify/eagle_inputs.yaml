@@ -18,7 +18,7 @@ hpc_monitor_entrypoint: ""
 hpc_skip_cleanup: False
 hpc_workdir_prefix: SN_cfy
 hpc_mpi_load_command: "module load openmpi/4.0.0_gcc620"
-hpc_conda_activate_command: "conda activate propagation"
+hpc_activate_command: "conda activate propagation"
 
 # Job specifications
 job_skip_cleanup: False
@@ -56,7 +56,7 @@ sim_samples: 4
 ckan_api_key: ""
 
 learn_output_dataset:
-  config: {entrypoint: "https://ckan.hidalgo-project.eu",  key: "<insert api key>"}
+  config: { entrypoint: "https://ckan.hidalgo-project.eu",  key: "<insert api key>" }
   dataset:
     #author: ''
     #license: GNU Free Documentation License
@@ -73,7 +73,7 @@ learn_output_dataset:
   type: ckan
 
 sim_output_dataset:
-  config: {entrypoint: "https://ckan.hidalgo-project.eu",  key: "<insert api key>"}
+  config: { entrypoint: "https://ckan.hidalgo-project.eu",  key: "<insert api key>" }
   dataset:
     #author: ''
     #license: GNU Free Documentation License
