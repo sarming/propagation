@@ -27,13 +27,9 @@ inputs:
         type: string
     ckan_dataset_in:    
         type: string
-    ckan_resource_input:
-        type: name
     ckan_resource_output:
         type: croupier.datatypes.ckan_resource
-    job_option_type:    
-        type: string
-    job_num_nodes:    
+    job_num_nodes:
         type: string
     job_tasks_per_node:    
         type: string
@@ -101,7 +97,7 @@ inputs:
 
 node_templates:
     vault:
-        type: croupier.nodes.vault
+        type: croupier.nodes.Vault
         properties:
             user: { get_input: vault_user }
             token: { get_input: vault_token}
@@ -127,82 +123,80 @@ node_templates:
     learn_job:
         type: croupier.nodes.Job
         properties:
-        job_options:
-            type: { get_input: job_option_type }
-            nodes: { get_input: job_num_nodes }
-            tasks_per_node: { get_input: job_tasks_per_node }
-            max_time: { get_input: job_max_time }
-            memory: { get_input: job_memory }
-            pre:
-            - { get_input: hpc_mpi_load_command }
-            command: "src/cloudify/learn.sh"
-        deployment:
-            bootstrap: "scripts/pre_configuring.sh"
-            inputs:
-            - { get_input: git_repo }
-            - { get_input: git_branch }
-            - { get_input: graph_type }
-            - { get_input: sourcemap_resource_name }
-            - { get_input: stats_resource_name }
-            - { get_input: topic }
-            - { get_input: job_id }
-            - { get_input: job_tasks_per_node }
-            - { get_input: param_samples }
-            - { get_input: param_epsilon }
-            - { get_input: sim_features }
-            - { get_input: sim_sources }
-            - { get_input: sim_samples }
-        skip_cleanup: { get_input: job_skip_cleanup }
-    relationships:
-      - type: job_managed_by_wm
-        target: hpc_interface
-      - type: input
-        target: input_folder
-      - type: input
-        target: input_graph_inner
-      - type: input
-        target: input_graph_outer
-      - type: input
-        target: input_tweets
-      - type: output
-        target: output_learn
+            job_options:
+                nodes: { get_input: job_num_nodes }
+                tasks_per_node: { get_input: job_tasks_per_node }
+                max_time: { get_input: job_max_time }
+                memory: { get_input: job_memory }
+                commands:
+                    - { get_input: hpc_mpi_load_command }
+                    - "src/cloudify/learn.sh"
+            deployment:
+                bootstrap: "scripts/pre_configuring.sh"
+                inputs:
+                    - { get_input: git_repo }
+                    - { get_input: git_branch }
+                    - { get_input: graph_type }
+                    - { get_input: sourcemap_resource_name }
+                    - { get_input: stats_resource_name }
+                    - { get_input: topic }
+                    - { get_input: job_id }
+                    - { get_input: job_tasks_per_node }
+                    - { get_input: param_samples }
+                    - { get_input: param_epsilon }
+                    - { get_input: sim_features }
+                    - { get_input: sim_sources }
+                    - { get_input: sim_samples }
+            skip_cleanup: { get_input: job_skip_cleanup }
+        relationships:
+          - type: task_managed_by_interface
+            target: hpc_interface
+          - type: input
+            target: input_folder
+          - type: input
+            target: input_graph_inner
+          - type: input
+            target: input_graph_outer
+          - type: input
+            target: input_tweets
+          - type: output
+            target: output_learn
 
     sim_job:
         type: croupier.nodes.Job
         properties:
-        job_options:
-            type: { get_input: job_option_type }
-            nodes: { get_input: job_num_nodes }
-            tasks_per_node: { get_input: job_tasks_per_node }
-            max_time: { get_input: job_max_time }
-            memory: { get_input: job_memory }
-            pre:
-            - { get_input: hpc_mpi_load_command }
-            command: "src/cloudify/sim.sh"
-        deployment:
-            bootstrap: "scripts/pre_configuring.sh"
-            inputs:
-            - { get_input: git_repo }
-            - { get_input: git_branch }
-            - { get_input: graph_type }
-            - { get_input: sourcemap_resource_name }
-            - { get_input: stats_resource_name }
-            - { get_input: topic }
-            - { get_input: job_id }
-            - { get_input: job_tasks_per_node }
-            - { get_input: param_samples }
-            - { get_input: param_epsilon }
-            - { get_input: sim_features }
-            - { get_input: sim_sources }
-            - { get_input: sim_samples }
-        skip_cleanup: { get_input: job_skip_cleanup }
+            job_options:
+                nodes: { get_input: job_num_nodes }
+                tasks_per_node: { get_input: job_tasks_per_node }
+                max_time: { get_input: job_max_time }
+                memory: { get_input: job_memory }
+                commands:
+                    - { get_input: hpc_mpi_load_command }
+                    - "src/cloudify/sim.sh"
+            deployment:
+                bootstrap: "scripts/pre_configuring.sh"
+                inputs:
+                    - { get_input: git_repo }
+                    - { get_input: git_branch }
+                    - { get_input: graph_type }
+                    - { get_input: sourcemap_resource_name }
+                    - { get_input: stats_resource_name }
+                    - { get_input: topic }
+                    - { get_input: job_id }
+                    - { get_input: job_tasks_per_node }
+                    - { get_input: param_samples }
+                    - { get_input: param_epsilon }
+                    - { get_input: sim_features }
+                    - { get_input: sim_sources }
+                    - { get_input: sim_samples }
+            skip_cleanup: { get_input: job_skip_cleanup }
         relationships:
-        - type: job_managed_by_interface
-          target: hpc_interface
-        - type: job_depends_on
-          target: learn_job
-        - type: output
-          target: output_sim
+            - type: task_managed_by_interface
+              target: hpc_interface
+            - type: job_depends_on
+              target: learn_job
+            - type: output
+              target: output_sim
               
     input_graph_inner:
         type: croupier.nodes.FileDataSource
@@ -274,7 +268,7 @@ node_templates:
         type: croupier.nodes.CKAN_resource
         properties:
             resource:
-                name: { concat: [ "sim_features_",{ get_input: topic },"_",{get_input: graph_date},".csv" ] }
+                name: { concat: [ "sim_features_",{ get_input: topic },"_20201110.csv" ] }
         relationships:
             - type: ds_located_at
               target: ckan_dataset_in_tweets
