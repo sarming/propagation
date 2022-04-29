@@ -7,8 +7,8 @@ hpc_config:
 # TRAINING INFRASTRUCTURE ACCOUNT
 hpc_credentials:
   host: 62.3.171.192
-  user: <insert username>
-  private_key: <insert private key>
+  user: sebastian
+  private_key: {get_secret: sebastian_key}
 
 hpc_job_prefix: SN_
 hpc_monitor_period: 60
@@ -37,7 +37,7 @@ git_branch: "master"
 
 # Input
 topic: "neos"
-graph_type: "outer"
+graph_type: "inner"
 sourcemap_url: "default" #requires some value, otherwise input variables are shuffled
 stats_url: "default"
 
@@ -52,14 +52,14 @@ sim_samples: 4
 
 
 # CKAN
-ckan_api_key: ""
+ckan_api_key:  { get_secret: sebastian_ckan }
 
 learn_output_dataset:
-  config: { entrypoint: "https://ckan.hidalgo-project.eu",  key: "<insert api key>" }
+  config: { entrypoint: "https://ckan.hidalgo-project.eu",  key: {get_secret: sebastian_ckan } }
   dataset:
     #author: ''
     #license: GNU Free Documentation License
-    id: <insert package id>
+    id: test_out
     #name: 
     #organization:
     #  name: 
@@ -72,11 +72,11 @@ learn_output_dataset:
   type: ckan
 
 sim_output_dataset:
-  config: { entrypoint: "https://ckan.hidalgo-project.eu",  key: "<insert api key>" }
+  config: { entrypoint: "https://ckan.hidalgo-project.eu",  key: {get_secret: sebastian_ckan } }
   dataset:
     #author: ''
     #license: GNU Free Documentation License
-    id: <insert package id>
+    id: test_out
     #name:
     #organization:
     #  name: 

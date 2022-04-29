@@ -1,0 +1,486 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
+    # HPC plugin
+    - plugin:croupier
+
+inputs:
+    hpc_interface_config:
+        type: croupier.datatypes.wm_config
+    hpc_host:
+        type: string
+    hpc_base_dir:
+        type: string
+        description: HPC working directory
+    job_prefix:
+        type: string
+        description: Job prefix
+        default: SN_
+    internet_access:
+        type: boolean
+    workdir_prefix:
+        type: string
+    vault_user:
+        type: string
+    vault_token:
+        type: string
+    ckan_dataset_in:    
+        type: string
+    ckan_resource_input:
+        type: name
+    ckan_resource_output:
+        type: croupier.datatypes.ckan_resource
+    job_option_type:    
+        type: string
+    job_num_nodes:    
+        type: string
+    job_tasks_per_node:    
+        type: string
+    job_max_time:    
+        type: string
+    job_memory:    
+        type: string
+    hpc_mpi_load_command:
+        type: string
+        description: (Module) load command for MPI
+    hpc_activate_command:
+        type: string
+        description: Command to activate Spack or Conda environment
+    git_repo:
+        type: string
+    git_branch:    
+        type: string
+    graph_type:    
+        type: string
+    sourcemap_url:    
+        type: string
+    stats_url:    
+        type: string
+    topic:    
+        type: string
+    job_id:    
+        type: string
+    param_samples:    
+        type: string
+        description: Number of Samples for Parameter Learning
+        default: 100
+    param_epsilon:
+        type: string
+        description: Epsilon for Parameter Learning
+        default: 0.001
+    sim_features:
+        type: string
+        description: Number of Features for Simulation
+        default: 10000
+    sim_sources:
+        type: string
+        description: Number of Sources for Simulation
+        default: 1
+    sim_samples:
+        type: string
+        description: Number of Samples for Simulation
+        default: 1
+    ckan_api_key:
+        type: string
+    job_skip_cleanup:
+        type: boolean
+    sim_output_dataset:    
+        type: string
+    learn_output_dataset:
+        type: string
+    sourcemap_resource_name:
+        type: string
+    sourcemap_dataset_id:
+        type: string
+    stats_resource_name:
+        type: string
+    stats_dataset_id:
+        type: string
+
+
+node_templates:
+    vault:
+        type: croupier.nodes.vault
+        properties:
+            user: { get_input: vault_user }
+            token: { get_input: vault_token}
+
+    hpc_interface:
+        type: croupier.nodes.InfrastructureInterface
+        properties:
+            config: { get_input: hpc_interface_config }
+            credentials: 
+                host: { get_input: hpc_host }
+            job_prefix: { get_input: job_prefix }
+            base_dir: { get_input: hpc_base_dir }
+            # seconds
+            monitoring_options:
+                monitor_period: 15
+            skip_cleanup: true
+            workdir_prefix: { get_input: workdir_prefix }
+            internet_access: { get_input: internet_access }
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    learn_job:
+        type: croupier.nodes.Job
+        properties:
+        job_options:
+            type: { get_input: job_option_type }
+            nodes: { get_input: job_num_nodes }
+            tasks_per_node: { get_input: job_tasks_per_node }
+            max_time: { get_input: job_max_time }
+            memory: { get_input: job_memory }
+            pre:
+            - { get_input: hpc_mpi_load_command }
+            command: "src/cloudify/learn.sh"
+        deployment:
+            bootstrap: "scripts/pre_configuring.sh"
+            inputs:
+            - { get_input: git_repo }
+            - { get_input: git_branch }
+            - { get_input: graph_type }
+            - { get_input: sourcemap_resource_name }
+            - { get_input: stats_resource_name }
+            - { get_input: topic }
+            - { get_input: job_id }
+            - { get_input: job_tasks_per_node }
+            - { get_input: param_samples }
+            - { get_input: param_epsilon }
+            - { get_input: sim_features }
+            - { get_input: sim_sources }
+            - { get_input: sim_samples }
+        skip_cleanup: { get_input: job_skip_cleanup }
+    relationships:
+      - type: job_managed_by_wm
+        target: hpc_interface
+      - type: input
+        target: input_folder
+      - type: input
+        target: input_graph_inner
+      - type: input
+        target: input_graph_outer
+      - type: input
+        target: input_tweets
+      - type: output
+        target: output_learn
+
+    sim_job:
+        type: croupier.nodes.Job
+        properties:
+        job_options:
+            type: { get_input: job_option_type }
+            nodes: { get_input: job_num_nodes }
+            tasks_per_node: { get_input: job_tasks_per_node }
+            max_time: { get_input: job_max_time }
+            memory: { get_input: job_memory }
+            pre:
+            - { get_input: hpc_mpi_load_command }
+            command: "src/cloudify/sim.sh"
+        deployment:
+            bootstrap: "scripts/pre_configuring.sh"
+            inputs:
+            - { get_input: git_repo }
+            - { get_input: git_branch }
+            - { get_input: graph_type }
+            - { get_input: sourcemap_resource_name }
+            - { get_input: stats_resource_name }
+            - { get_input: topic }
+            - { get_input: job_id }
+            - { get_input: job_tasks_per_node }
+            - { get_input: param_samples }
+            - { get_input: param_epsilon }
+            - { get_input: sim_features }
+            - { get_input: sim_sources }
+            - { get_input: sim_samples }
+        skip_cleanup: { get_input: job_skip_cleanup }
+        relationships:
+        - type: job_managed_by_interface
+          target: hpc_interface
+        - type: job_depends_on
+          target: learn_job
+        - type: output
+          target: output_sim
+              
+    input_graph_inner:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: { concat: [ "input/anon_graph_inner_",{ get_input: topic },".metis" ] }
+        relationships:
+            - type: ds_located_at
+              target: hpc_interface
+
+    input_graph_outer:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: { concat: [ "input/anon_graph_outer_",{ get_input: topic },".metis.gz" ] }
+        relationships:
+            - type: ds_located_at
+              target: hpc_interface
+
+    input_tweets:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: { concat: [ "input/sim_features_",{ get_input: topic },".csv" ] }
+        relationships:
+            - type: ds_located_at
+              target: hpc_interface
+
+    input_folder:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: "input/"
+        relationships:
+            - type: ds_located_at
+              target: hpc_interface
+
+    output_sim:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: { concat: [ "output/results-",{ get_input: topic },"-",{ get_input: job_id },".csv" ] }
+        relationships:
+            - type: ds_located_at
+              target: hpc_interface
+
+    output_learn:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: { concat: [ "output/params-",{ get_input: topic },"-",{ get_input: job_id },".csv" ] }
+        relationships:
+            - type: ds_located_at
+              target: hpc_interface
+
+    ckan_resource_input_graph_outer:
+        type: croupier.nodes.CKAN_resource
+        properties:
+            resource:
+                name: { concat: [ "anon_graph_outer_",{ get_input: topic },"_20201110.metis.gz" ] }
+        relationships:
+            - type: ds_located_at
+              target: ckan_dataset_in_graph_outer
+
+    ckan_resource_input_graph_inner:
+        type: croupier.nodes.CKAN_resource
+        properties:
+            resource:
+                name: { concat: [ "anon_graph_inner_",{ get_input: topic },"_20201110.metis" ] }
+        relationships:
+            - type: ds_located_at
+              target: ckan_dataset_in_graph_inner
+
+    ckan_resource_input_tweets:
+        type: croupier.nodes.CKAN_resource
+        properties:
+            resource:
+                name: { concat: [ "sim_features_",{ get_input: topic },"_",{get_input: graph_date},".csv" ] }
+        relationships:
+            - type: ds_located_at
+              target: ckan_dataset_in_tweets
+
+    ckan_resource_input_sourcemap:
+        type: croupier.nodes.CKAN_resource
+        properties:
+            resource:
+                name: { get_input: sourcemap_resource_name }
+        relationships:
+            - type: ds_located_at
+              target: ckan_dataset_in_sourcemap
+
+    ckan_resource_input_stats:
+        type: croupier.nodes.CKAN_resource
+        properties:
+            resource:
+                name: { get_input: stats_resource_name }
+        relationships:
+            - type: ds_located_at
+              target: ckan_dataset_in_stats
+
+    ckan_resource_output_learn:
+        type: croupier.nodes.CKAN_resource
+        properties:
+            resource:
+                name: { concat: [ "params-",{ get_input: topic },"-",{ get_input: job_id },".csv" ] }
+                description: "Resulting Parameters from Parameter Learning."
+        relationships:
+            - type: ds_located_at
+              target: ckan_dataset_out_learn
+
+    ckan_resource_output_sim:
+        type: croupier.nodes.CKAN_resource
+        properties:
+            resource:
+                name: { concat: [ "results-",{ get_input: topic },"-",{ get_input: job_id },".csv" ] }
+                description: "Resulting Simulation."
+        relationships:
+            - type: ds_located_at
+              target: ckan_dataset_out_sim
+
+    ckan_dataset_in_tweets:
+        type: croupier.nodes.CKAN_dataset
+        properties:
+            endpoint: https://ckan.hidalgo-project.eu/
+            supported_protocols:
+                - CKANAPI
+                - HTTP
+            internet_access: true
+            dataset_info:
+                package_id: a71570f1-45fc-43ee-be7f-65f189f5e7b9
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    ckan_dataset_in_graph_outer:
+        type: croupier.nodes.CKAN_dataset
+        properties:
+            endpoint: https://ckan.hidalgo-project.eu/
+            supported_protocols:
+                - CKANAPI
+                - HTTP
+            internet_access: true
+            dataset_info:
+                package_id: 1ee0bda5-86bb-4adf-9179-4af087467b86
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    ckan_dataset_in_graph_inner:
+        type: croupier.nodes.CKAN_dataset
+        properties:
+            endpoint: https://ckan.hidalgo-project.eu/
+            supported_protocols:
+                - CKANAPI
+                - HTTP
+            internet_access: true
+            dataset_info:
+                package_id: 543a67f1-7648-43c0-be84-566e38b0fa54
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    ckan_dataset_in_sourcemap:
+        type: croupier.nodes.CKAN_dataset
+        properties:
+            endpoint: https://ckan.hidalgo-project.eu/
+            supported_protocols:
+                - CKANAPI
+                - HTTP
+            internet_access: true
+            dataset_info:
+                package_id: { get_input: sourcemap_dataset_id }
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+    
+    ckan_dataset_in_stats:
+        type: croupier.nodes.CKAN_dataset
+        properties:
+            endpoint: https://ckan.hidalgo-project.eu/
+            supported_protocols:
+                - CKANAPI
+                - HTTP
+            internet_access: true
+            dataset_info:
+                package_id: { get_input: stats_dataset_id }
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    ckan_dataset_out_sim:
+        type: croupier.nodes.CKAN_dataset
+        properties:
+            endpoint: https://ckan.hidalgo-project.eu/
+            supported_protocols:
+                - CKANAPI
+                - HTTP
+            internet_access: true
+            dataset_info:
+                name: { get_input: sim_output_dataset }
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    ckan_dataset_out_learn:
+        type: croupier.nodes.CKAN_dataset
+        properties:
+            endpoint: https://ckan.hidalgo-project.eu/
+            supported_protocols:
+                - CKANAPI
+                - HTTP
+            internet_access: true
+            dataset_info:
+                name: { get_input: learn_output_dataset }
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    dt_in_graph_inner:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: CKANAPI
+        relationships:
+            - type: from_source
+              target: ckan_resource_input_graph_inner
+            - type: to_target
+              target: input_graph_inner
+
+    dt_in_graph_outer:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: CKANAPI
+        relationships:
+            - type: from_source
+              target: ckan_resource_input_graph_outer
+            - type: to_target
+              target: input_graph_outer
+
+    dt_in_tweets:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: CKANAPI
+        relationships:
+            - type: from_source
+              target: ckan_resource_input_tweets
+            - type: to_target
+              target: input_tweets
+
+    dt_in_sourcemap:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: CKANAPI
+        relationships:
+            - type: from_source
+              target: ckan_resource_input_sourcemap
+            - type: to_target
+              target: input_folder
+
+    dt_in_stats:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: CKANAPI
+        relationships:
+            - type: from_source
+              target: ckan_resource_input_stats
+            - type: to_target
+              target: input_folder
+
+    dt_out_sim:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: CKANAPI
+        relationships:
+            - type: from_source
+              target: output_sim
+            - type: to_target
+              target: ckan_resource_output_sim
+
+    dt_out_learn:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: CKANAPI
+        relationships:
+            - type: from_source
+              target: output_learn
+            - type: to_target
+              target: ckan_resource_output_learn

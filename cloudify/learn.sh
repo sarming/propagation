@@ -1,8 +1,5 @@
 #!/bin/bash -l
 
-source $HOME/miniconda3/etc/profile.d/conda.sh
-conda activate propagation
-
 source $PWD/config.txt
 
 topic="$TOPIC" #"neos"
@@ -22,7 +19,7 @@ executable=$CURRENT_WORKDIR/src/bin/run
 
 #srun --mpi=pmix_v3 --nodes=1 --ntasks-per-node=20 $executable learn_discount $topic --runid $id -s $samples --epsilon $epsilon --graph input/$graph_file --indir input --outdir output
 
-mpirun -n $TASKS_PER_NODE $executable learn_discount $topic \
+mpiexec -n $TASKS_PER_NODE $executable learn_discount $topic \
   --runid $id -s $samples --epsilon $epsilon \
   --graph input/$graph_file \
   --indir input \

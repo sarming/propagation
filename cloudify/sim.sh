@@ -1,8 +1,5 @@
 #!/bin/bash -l
 
-source $HOME/miniconda3/etc/profile.d/conda.sh
-conda activate propagation
-
 source $PWD/config.txt
 
 topic="$TOPIC"
@@ -30,13 +27,13 @@ executable=$CURRENT_WORKDIR/src/bin/run
 #TODO source_map_file and params
 
 if [ "$stats_file" == "" ]; then
-  mpirun -n $TASKS_PER_NODE python $executable sim \
+  mpiexec -n $TASKS_PER_NODE python $executable sim \
     $topic --runid $id -f $features -a $sources -s $samples \
     --graph input/$graph_file \
     --indir input \
     --outdir output
 else
-  mpirun -n $TASKS_PER_NODE python $executable stats \
+  mpiexec -n $TASKS_PER_NODE python $executable stats \
     $topic --runid $id -f $features -a $sources -s $samples \
     --graph input/$graph_file \
     --stats input/$stats_file \
