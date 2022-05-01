@@ -1,14 +1,14 @@
 # HPC infrastructure
 hpc_base_dir: $HOME
-hpc_config:
+hpc_interface_config:
   country_tz: Europe/Madrid
   workload_manager: SLURM
 
 # TRAINING INFRASTRUCTURE ACCOUNT
-hpc_credentials:
-  host: 62.3.171.192
-  user: sebastian
-  private_key: {get_secret: sebastian_key}
+hpc_host: 62.3.171.192
+vault_user: sebastian
+vault_token: {get_secret: sebastian_ckan }
+hpc_private_key: {get_secret: sebastian_key}
 
 hpc_job_prefix: SN_
 hpc_monitor_period: 60
@@ -53,6 +53,13 @@ sim_samples: 4
 
 # CKAN
 ckan_api_key:  { get_secret: sebastian_ckan }
+
+ckan_resource_output:
+  type: "file"
+  name: "sna_output"
+  description: "Output"
+  format: "csv"
+  url: "https://ckan.hidalgo-project.eu/dataset/test_out"
 
 learn_output_dataset:
   config: { entrypoint: "https://ckan.hidalgo-project.eu",  key: {get_secret: sebastian_ckan } }

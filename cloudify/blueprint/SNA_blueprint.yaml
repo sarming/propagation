@@ -25,10 +25,10 @@ inputs:
         type: string
     vault_token:
         type: string
+    hpc_private_key:
+        type: string
     ckan_dataset_in:    
         type: string
-    ckan_resource_output:
-        type: croupier.datatypes.ckan_resource
     job_num_nodes:
         type: string
     job_tasks_per_node:    
@@ -108,6 +108,8 @@ node_templates:
             config: { get_input: hpc_interface_config }
             credentials: 
                 host: { get_input: hpc_host }
+                user: { get_input: vault_user }
+                private_key: { get_input: hpc_private_key }
             job_prefix: { get_input: job_prefix }
             base_dir: { get_input: hpc_base_dir }
             # seconds

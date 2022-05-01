@@ -2,25 +2,20 @@
 
 source $PWD/config.txt
 
-topic="$TOPIC" #"neos"
-id="$JOB_ID"   #123
-
-graph_file="$GRAPH_FILE"
-echo "$graph_file"
-samples="$PARAM_SAMPLES" #20
-echo "$samples"
-epsilon="$PARAM_EPSILON" #0.1
-echo "$epsilon"
+echo "$TOPIC"
+echo "$JOB_ID"
+echo "$GRAPH_FILE"
+echo "$SOURCEMAP_FILE"
+echo "$STATS_FILE"
+echo "$PARAM_SAMPLES"
+echo "$PARAM_EPSILON"
 
 export PATH=$HOME/.local/bin:$PATH
 # DYNAMIC VARIABLES
 cd $CURRENT_WORKDIR
 executable=$CURRENT_WORKDIR/src/bin/run
 
-#srun --mpi=pmix_v3 --nodes=1 --ntasks-per-node=20 $executable learn_discount $topic --runid $id -s $samples --epsilon $epsilon --graph input/$graph_file --indir input --outdir output
-
-mpiexec -n $TASKS_PER_NODE $executable learn_discount $topic \
-  --runid $id -s $samples --epsilon $epsilon \
-  --graph input/$graph_file \
-  --indir input \
+mpiexec -n $TASKS_PER_NODE $executable learn_discount $TOPIC \
+  --runid $JOB_ID -s $PARAM_SAMPLES --epsilon $PARAM_EPSILON \
+  --graph input/$GRAPH_FILE --source_map input/$SOURCEMAP_FILE --stats input/$STATS_FILE \
   --outdir output

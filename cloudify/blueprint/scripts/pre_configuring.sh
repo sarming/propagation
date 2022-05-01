@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 git_repo=$1
 git_branch=$2
 graph_type=$3
@@ -23,6 +22,7 @@ mkdir output
 
 if [ "$graph_type" == "outer" ]; then
   gzip -dk "input/anon_graph_${graph_type}_${topic}.metis.gz"
+fi
 
 graph_file="anon_graph_${graph_type}_${topic}.metis"
 
