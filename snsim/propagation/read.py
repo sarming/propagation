@@ -127,8 +127,12 @@ def source_map(file):
     return sources.dropna().groupby('author_feature')['source'].unique()
 
 
-def save_source_map(file, source_map):
-    source_map.explode().reset_index(level=0).set_index('source').to_csv(file)
+def save_source_map(file, source_map: pd.DataFrame):
+    import warnings
+
+    with warnings.catch_warnings():  # Upstream bug: https://github.com/pandas-dev/pandas/issues/45629
+        warnings.simplefilter("ignore", category=FutureWarning)
+        source_map.explode().reset_index(level=0).set_index('source').to_csv(file)
 
 
 def single_param(file):

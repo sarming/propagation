@@ -101,8 +101,7 @@ def parse_args():
         args.graph = f'{args.indir}/anon_graph_inner_{args.topic}.npz'
         if not os.path.isfile(args.graph):
             args.graph = args.graph.replace('npz', 'metis')
-    # if not args.tweets and not args.stats: TODO
-    if not args.tweets:
+    if not args.tweets and not args.stats:
         args.tweets = f'{args.indir}/sim_features_{args.topic}.csv'
     if not args.tweets and not args.source_map:
         raise ValueError("Either --tweets or --source_map has to be provided!")
@@ -137,6 +136,7 @@ def build_sim(args):
         tweets = read.tweets(args.tweets, node_labels, id_type)
         stats = simulation.tweet_statistics(tweets)
         source_map = simulation.tweet_sources(tweets)
+        read.save_source_map(args.tweets + '.source_map', source_map)
     if args.stats:
         stats = read.stats(args.stats)
     if args.source_map:
