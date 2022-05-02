@@ -17,9 +17,9 @@ inputs:
         type: string
         description: Job prefix
         default: SN_
-    internet_access:
+    hpc_internet_access:
         type: boolean
-    workdir_prefix:
+    hpc_workdir_prefix:
         type: string
     vault_user:
         type: string
@@ -27,8 +27,8 @@ inputs:
         type: string
     hpc_private_key:
         type: string
-    ckan_dataset_in:    
-        type: string
+#    job_type:
+#        type: string
     job_num_nodes:
         type: string
     job_tasks_per_node:    
@@ -116,8 +116,8 @@ node_templates:
             monitoring_options:
                 monitor_period: 15
             skip_cleanup: true
-            workdir_prefix: { get_input: workdir_prefix }
-            internet_access: { get_input: internet_access }
+            workdir_prefix: { get_input: hpc_workdir_prefix }
+            internet_access: { get_input: hpc_internet_access }
         relationships:
             - type: retrieve_credentials_from_vault
               target: vault
@@ -126,6 +126,7 @@ node_templates:
         type: croupier.nodes.Job
         properties:
             job_options:
+#                type: { get_input: job_type }
                 nodes: { get_input: job_num_nodes }
                 tasks_per_node: { get_input: job_tasks_per_node }
                 max_time: { get_input: job_max_time }
@@ -168,6 +169,7 @@ node_templates:
         type: croupier.nodes.Job
         properties:
             job_options:
+#                type: { get_input: job_type }
                 nodes: { get_input: job_num_nodes }
                 tasks_per_node: { get_input: job_tasks_per_node }
                 max_time: { get_input: job_max_time }
